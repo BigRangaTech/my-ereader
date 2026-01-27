@@ -1,0 +1,14 @@
+/build/
+/.cache/
+*.user
+*.user.*
+*.qmlc
+*.jsc
+*.o
+*.obj
+*.so
+*.dll
+*.dylib
+*.apk
+*.aab
+*.log
