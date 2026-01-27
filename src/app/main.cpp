@@ -2,7 +2,9 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 
+#include "AppInfo.h"
 #include "LibraryModel.h"
+#include "LicenseManager.h"
 #include "ReaderController.h"
 #include "SyncManager.h"
 #include "TtsController.h"
@@ -11,9 +13,11 @@ int main(int argc, char *argv[]) {
   QGuiApplication app(argc, argv);
 
   QCoreApplication::setOrganizationName("MyEreader");
-  QCoreApplication::setApplicationName("MyEreader");
+  QCoreApplication::setApplicationName(AppInfo::kName);
+  QCoreApplication::setApplicationVersion(AppInfo::kVersion);
 
   qmlRegisterType<LibraryModel>("Ereader", 1, 0, "LibraryModel");
+  qmlRegisterType<LicenseManager>("Ereader", 1, 0, "LicenseManager");
   qmlRegisterType<ReaderController>("Ereader", 1, 0, "ReaderController");
   qmlRegisterType<SyncManager>("Ereader", 1, 0, "SyncManager");
   qmlRegisterType<TtsController>("Ereader", 1, 0, "TtsController");

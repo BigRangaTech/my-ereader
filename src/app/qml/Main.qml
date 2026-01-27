@@ -31,6 +31,10 @@ ApplicationWindow {
     id: tts
   }
 
+  LicenseManager {
+    id: licenseManager
+  }
+
   Component.onCompleted: {
     libraryModel.openDefault()
   }
@@ -116,6 +120,12 @@ ApplicationWindow {
               text: "Add"
               onClicked: fileDialog.open()
               font.family: root.uiFont
+            }
+
+            Button {
+              text: "About"
+              font.family: root.uiFont
+              onClicked: aboutDialog.open()
             }
           }
         }
@@ -298,6 +308,115 @@ ApplicationWindow {
           color: Theme.accent
           font.pixelSize: 12
           font.family: root.uiFont
+        }
+      }
+    }
+  }
+
+  Dialog {
+    id: aboutDialog
+    title: "About & Licenses"
+    modal: true
+    standardButtons: Dialog.Close
+    width: Math.min(960, root.width - 80)
+    height: Math.min(680, root.height - 80)
+
+    property var entries: []
+    property string selectedPath: ""
+
+    onOpened: {
+      entries = licenseManager.licenses()
+      if (entries.length > 0) {
+        selectedPath = entries[0].path
+      }
+    }
+
+    contentItem: Rectangle {
+      color: Theme.panel
+      radius: 16
+
+      ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 16
+        spacing: 12
+
+        Text {
+          text: "My Ereader"
+          color: Theme.textPrimary
+          font.pixelSize: 22
+          font.family: root.uiFont
+        }
+
+        Text {
+          text: "Bundled third-party licenses"
+          color: Theme.textMuted
+          font.pixelSize: 14
+          font.family: root.uiFont
+        }
+
+        RowLayout {
+          Layout.fillWidth: true
+          Layout.fillHeight: true
+          spacing: 12
+
+          Rectangle {
+            Layout.preferredWidth: 260
+            Layout.fillHeight: true
+            radius: 12
+            color: Theme.panelHighlight
+
+            ListView {
+              anchors.fill: parent
+              anchors.margins: 8
+              clip: true
+              model: aboutDialog.entries
+              delegate: Rectangle {
+                width: parent.width
+                height: 44
+                radius: 8
+                color: aboutDialog.selectedPath === modelData.path ? Theme.accentAlt : "transparent"
+
+                MouseArea {
+                  anchors.fill: parent
+                  onClicked: {
+                    aboutDialog.selectedPath = modelData.path
+                  }
+                }
+
+                Text {
+                  anchors.verticalCenter: parent.verticalCenter
+                  anchors.left: parent.left
+                  anchors.leftMargin: 10
+                  text: modelData.name
+                  color: aboutDialog.selectedPath === modelData.path ? "#0f141a" : Theme.textPrimary
+                  font.pixelSize: 13
+                  font.family: root.uiFont
+                  elide: Text.ElideRight
+                  width: parent.width - 20
+                }
+              }
+            }
+          }
+
+          Rectangle {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            radius: 12
+            color: Theme.panelHighlight
+
+            TextArea {
+              anchors.fill: parent
+              anchors.margins: 12
+              readOnly: true
+              wrapMode: TextArea.Wrap
+              text: aboutDialog.selectedPath.length > 0
+                    ? licenseManager.readFile(aboutDialog.selectedPath)
+                    : "Select a license"
+              color: Theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+            }
+          }
         }
       }
     }

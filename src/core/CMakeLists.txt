@@ -1,5 +1,6 @@
 add_library(core STATIC
   LibraryModel.cpp
+  LicenseManager.cpp
   ReaderController.cpp
 )
 
