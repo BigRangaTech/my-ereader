@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(MyEreader LANGUAGES CXX)
+project(MyEreader LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -17,6 +17,7 @@ if(ENABLE_TTS)
 endif()
 
 add_subdirectory(src/core)
+add_subdirectory(src/crypto)
 add_subdirectory(src/formats)
 add_subdirectory(src/sync)
 add_subdirectory(src/tts)

@@ -12,3 +12,5 @@
 *.apk
 *.aab
 *.log
+/poppler
+/monocypher
