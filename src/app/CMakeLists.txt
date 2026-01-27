@@ -21,3 +21,14 @@ target_link_libraries(ereader PRIVATE
   sync
   tts
 )
+
+if (PopplerQt6_FOUND)
+  target_link_libraries(ereader PRIVATE Poppler::Qt6)
+endif()
+
+if (UNIX AND NOT APPLE)
+  set_target_properties(ereader PROPERTIES
+    BUILD_RPATH "$ORIGIN"
+    INSTALL_RPATH "$ORIGIN"
+  )
+endif()

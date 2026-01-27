@@ -41,6 +41,7 @@ cmake --build build
 - docs/CRYPTO.md
 - docs/THIRD_PARTY.md
 - third_party/README.md
+- docs/POPPLER.md
 
 ## License
 GPL-2.0-or-later

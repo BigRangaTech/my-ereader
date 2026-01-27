@@ -12,5 +12,5 @@
 *.apk
 *.aab
 *.log
-/poppler
-/monocypher
+/third_party/build/
+/third_party/install/

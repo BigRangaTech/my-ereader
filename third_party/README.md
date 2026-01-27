@@ -13,12 +13,15 @@ that is built and bundled into prebuilt binaries.
 ## Current vendors
 - Monocypher
   - Source: `third_party/monocypher/`
+  - Upstream: https://github.com/BigRangaTech/Monocypher (tag `v001`)
   - License: `third_party/monocypher/LICENCE.md`
   - Notes: custom crypto backend
 - Poppler
   - Source: `poppler/`
+  - Upstream: https://github.com/BigRangaTech/my-poppler (tag `001`)
   - License: see `poppler/` tree
   - Notes: built and bundled in prebuilt binaries
+  - Build: `scripts/build_poppler.sh`
 - Monocypher snapshot (legacy)
   - Source: `monocypher-4.0.2/`
   - Notes: older snapshot kept during migration; remove when consolidated

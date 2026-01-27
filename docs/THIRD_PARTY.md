@@ -14,3 +14,4 @@
 - Purpose: PDF rendering
 - License: see `poppler/` tree
 - Source: `poppler/`
+- Build: `scripts/build_poppler.sh`

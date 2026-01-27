@@ -1,0 +1,11 @@
+if (USE_BUNDLED_POPPLER)
+  set(POPPLER_BUNDLED_ROOT "${CMAKE_SOURCE_DIR}/third_party/install/poppler")
+  if (EXISTS "${POPPLER_BUNDLED_ROOT}")
+    list(PREPEND CMAKE_PREFIX_PATH "${POPPLER_BUNDLED_ROOT}")
+  endif()
+endif()
+
+find_package(PopplerQt6 QUIET)
+if (PopplerQt6_FOUND)
+  add_compile_definitions(HAVE_POPPLER_QT6=1)
+endif()

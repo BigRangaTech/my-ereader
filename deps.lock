@@ -1,6 +1,6 @@
 # deps.lock
 # Format: name | upstream | commit/tag | local path | license file
 
-monocypher | https://github.com/LoupVaillant/Monocypher | unknown | third_party/monocypher | third_party/monocypher/LICENCE.md
-poppler | https://gitlab.freedesktop.org/poppler/poppler | unknown | poppler | poppler/README.md
+monocypher | https://github.com/BigRangaTech/Monocypher | v001 | third_party/monocypher | third_party/monocypher/LICENCE.md
+poppler | https://github.com/BigRangaTech/my-poppler | 001 | poppler | poppler/README.md
 monocypher-snapshot | https://github.com/LoupVaillant/Monocypher | 4.0.2 | monocypher-4.0.2 | monocypher-4.0.2/README.md
