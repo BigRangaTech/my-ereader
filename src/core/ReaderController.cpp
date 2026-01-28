@@ -34,6 +34,8 @@ bool ReaderController::openFile(const QString &path) {
     qInfo() << "ReaderController: loaded" << m_imagePaths.size()
             << "image(s), first:" << firstImage
             << "exists:" << QFileInfo::exists(firstImage);
+    m_document->ensureImage(0);
+    m_document->ensureImage(1);
   } else {
     m_currentImageIndex = -1;
   }
@@ -166,6 +168,8 @@ bool ReaderController::nextImage() {
     return false;
   }
   m_currentImageIndex++;
+  m_document->ensureImage(m_currentImageIndex);
+  m_document->ensureImage(m_currentImageIndex + 1);
   emit currentChanged();
   return true;
 }
@@ -178,6 +182,8 @@ bool ReaderController::prevImage() {
     return false;
   }
   m_currentImageIndex--;
+  m_document->ensureImage(m_currentImageIndex);
+  m_document->ensureImage(m_currentImageIndex + 1);
   emit currentChanged();
   return true;
 }
@@ -193,6 +199,8 @@ bool ReaderController::goToImage(int index) {
     return true;
   }
   m_currentImageIndex = index;
+  m_document->ensureImage(m_currentImageIndex);
+  m_document->ensureImage(m_currentImageIndex + 1);
   emit currentChanged();
   return true;
 }

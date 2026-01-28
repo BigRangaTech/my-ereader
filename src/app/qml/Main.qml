@@ -548,7 +548,7 @@ ApplicationWindow {
 
           WheelHandler {
             acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-            onWheel: {
+            onWheel: function(wheel) {
               const step = wheel.angleDelta.y > 0 ? 0.1 : -0.1
               zoom = clampZoom(zoom + step)
             }

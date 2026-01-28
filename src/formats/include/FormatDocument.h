@@ -13,4 +13,5 @@ public:
   virtual QStringList chaptersText() const { return {}; }
   virtual QStringList imagePaths() const { return {}; }
   virtual QString coverPath() const { return {}; }
+  virtual bool ensureImage(int index) { Q_UNUSED(index) return true; }
 };
