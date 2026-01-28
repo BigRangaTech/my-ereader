@@ -17,13 +17,6 @@ bool CryptoVault::encryptFile(const QString &inputPath,
                               const QString &outputPath,
                               const QString &passphrase,
                               QString *error) {
-  if (!m_backend || !m_backend->isAvailable()) {
-    if (error) {
-      *error = "Crypto backend unavailable";
-    }
-    return false;
-  }
-
   QFile inputFile(inputPath);
   if (!inputFile.open(QIODevice::ReadOnly)) {
     if (error) {
@@ -33,6 +26,43 @@ bool CryptoVault::encryptFile(const QString &inputPath,
   }
 
   const QByteArray plaintext = inputFile.readAll();
+  return encryptFromBytes(outputPath, passphrase, plaintext, error);
+}
+
+bool CryptoVault::decryptFile(const QString &inputPath,
+                              const QString &outputPath,
+                              const QString &passphrase,
+                              QString *error) {
+  QByteArray plaintext;
+  if (!decryptToBytes(inputPath, passphrase, &plaintext, error)) {
+    return false;
+  }
+  QFile outputFile(outputPath);
+  if (!outputFile.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+    if (error) {
+      *error = "Failed to write output file";
+    }
+    return false;
+  }
+  if (outputFile.write(plaintext) != plaintext.size()) {
+    if (error) {
+      *error = "Failed to write full output";
+    }
+    return false;
+  }
+  return true;
+}
+
+bool CryptoVault::encryptFromBytes(const QString &outputPath,
+                                   const QString &passphrase,
+                                   const QByteArray &plaintext,
+                                   QString *error) {
+  if (!m_backend || !m_backend->isAvailable()) {
+    if (error) {
+      *error = "Crypto backend unavailable";
+    }
+    return false;
+  }
   const QByteArray salt = m_backend->generateSalt();
   const QByteArray nonce = m_backend->generateNonce();
   const CryptoKdfParams params = m_backend->defaultKdfParams();
@@ -57,10 +87,10 @@ bool CryptoVault::encryptFile(const QString &inputPath,
   return writeVault(outputPath, salt, nonce, ciphertext, params, error);
 }
 
-bool CryptoVault::decryptFile(const QString &inputPath,
-                              const QString &outputPath,
-                              const QString &passphrase,
-                              QString *error) {
+bool CryptoVault::decryptToBytes(const QString &inputPath,
+                                 const QString &passphrase,
+                                 QByteArray *outPlaintext,
+                                 QString *error) {
   if (!m_backend || !m_backend->isAvailable()) {
     if (error) {
       *error = "Crypto backend unavailable";
@@ -93,18 +123,8 @@ bool CryptoVault::decryptFile(const QString &inputPath,
     return false;
   }
 
-  QFile outputFile(outputPath);
-  if (!outputFile.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-    if (error) {
-      *error = "Failed to write output file";
-    }
-    return false;
-  }
-  if (outputFile.write(plaintext) != plaintext.size()) {
-    if (error) {
-      *error = "Failed to write full output";
-    }
-    return false;
+  if (outPlaintext) {
+    *outPlaintext = plaintext;
   }
   return true;
 }

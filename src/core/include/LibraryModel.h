@@ -33,6 +33,9 @@ public:
   Q_INVOKABLE bool openAt(const QString &dbPath);
   Q_INVOKABLE bool addBook(const QString &filePath);
   Q_INVOKABLE void close();
+  Q_INVOKABLE bool openEncryptedVault(const QString &vaultPath, const QString &passphrase);
+  Q_INVOKABLE bool saveEncryptedVault(const QString &vaultPath, const QString &passphrase);
+  Q_INVOKABLE QString connectionName() const;
 
   bool ready() const;
   int count() const;
@@ -50,6 +53,10 @@ private:
   LibraryItem makeItemFromFile(const QString &filePath);
   QString computeFileHash(const QString &filePath);
   void setLastError(const QString &error);
+  bool openInMemory();
+  bool deserializeToMemory(const QByteArray &dbBytes);
+  QByteArray serializeFromMemory();
+  void *sqliteHandle() const;
 
   bool m_ready = false;
   QString m_lastError;

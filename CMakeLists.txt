@@ -23,6 +23,8 @@ endif()
 list(PREPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 include(PopplerBundled)
 
+find_package(SQLite3 REQUIRED)
+
 add_subdirectory(src/core)
 add_subdirectory(src/crypto)
 add_subdirectory(src/formats)

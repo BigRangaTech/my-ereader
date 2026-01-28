@@ -8,7 +8,15 @@
 #include <QFileInfo>
 #include <QSqlError>
 #include <QSqlQuery>
+#include <QSqlDriver>
 #include <QStandardPaths>
+
+#include <cstring>
+
+#include <sqlite3.h>
+
+#include "CryptoBackend.h"
+#include "CryptoVault.h"
 
 LibraryModel::LibraryModel(QObject *parent) : QAbstractListModel(parent) {}
 
@@ -89,6 +97,63 @@ bool LibraryModel::openAt(const QString &dbPath) {
   return openDatabase(dbPath);
 }
 
+bool LibraryModel::openEncryptedVault(const QString &vaultPath, const QString &passphrase) {
+  if (vaultPath.isEmpty()) {
+    setLastError("Vault path is empty");
+    return false;
+  }
+  auto backend = CryptoBackendFactory::createDefault();
+  CryptoVault vault(std::move(backend));
+  QString error;
+  QByteArray dbBytes;
+  if (!vault.decryptToBytes(vaultPath, passphrase, &dbBytes, &error)) {
+    setLastError(error.isEmpty() ? "Failed to decrypt vault" : error);
+    qWarning() << "LibraryModel: decrypt failed" << m_lastError;
+    return false;
+  }
+
+  if (!openInMemory()) {
+    return false;
+  }
+  if (!deserializeToMemory(dbBytes)) {
+    setLastError("Failed to load decrypted database");
+    return false;
+  }
+  if (!ensureSchema()) {
+    return false;
+  }
+  reload();
+  setLastError("");
+  qInfo() << "LibraryModel: in-memory DB ready";
+  qInfo() << "LibraryModel: opened encrypted vault in memory";
+  return true;
+}
+
+bool LibraryModel::saveEncryptedVault(const QString &vaultPath, const QString &passphrase) {
+  if (vaultPath.isEmpty()) {
+    setLastError("Vault path is empty");
+    return false;
+  }
+  if (!m_db.isOpen()) {
+    setLastError("Database not open");
+    return false;
+  }
+  const QByteArray dbBytes = serializeFromMemory();
+  if (dbBytes.isEmpty()) {
+    setLastError("Failed to serialize database");
+    return false;
+  }
+  auto backend = CryptoBackendFactory::createDefault();
+  CryptoVault vault(std::move(backend));
+  QString error;
+  if (!vault.encryptFromBytes(vaultPath, passphrase, dbBytes, &error)) {
+    setLastError(error.isEmpty() ? "Failed to encrypt vault" : error);
+    return false;
+  }
+  qInfo() << "LibraryModel: saved encrypted vault";
+  return true;
+}
+
 bool LibraryModel::addBook(const QString &filePath) {
   if (!m_ready) {
     setLastError("Library database not ready");
@@ -133,6 +198,8 @@ int LibraryModel::count() const { return m_items.size(); }
 
 QString LibraryModel::lastError() const { return m_lastError; }
 
+QString LibraryModel::connectionName() const { return m_connectionName; }
+
 bool LibraryModel::openDatabase(const QString &dbPath) {
   m_connectionName = QString("library_%1").arg(reinterpret_cast<quintptr>(this));
   m_db = QSqlDatabase::addDatabase("QSQLITE", m_connectionName);
@@ -165,6 +232,20 @@ bool LibraryModel::ensureSchema() {
           "format TEXT,"
           "file_hash TEXT,"
           "added_at TEXT"
+          ")")) {
+    setLastError(query.lastError().text());
+    return false;
+  }
+  if (!query.exec(
+          "CREATE TABLE IF NOT EXISTS annotations ("
+          "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+          "library_item_id INTEGER NOT NULL,"
+          "locator TEXT NOT NULL,"
+          "type TEXT NOT NULL,"
+          "text TEXT,"
+          "color TEXT,"
+          "created_at TEXT,"
+          "FOREIGN KEY(library_item_id) REFERENCES library_items(id)"
           ")")) {
     setLastError(query.lastError().text());
     return false;
@@ -211,6 +292,59 @@ void LibraryModel::close() {
   m_ready = false;
   emit readyChanged();
   emit countChanged();
+}
+
+bool LibraryModel::openInMemory() {
+  return openDatabase(":memory:");
+}
+
+void *LibraryModel::sqliteHandle() const {
+  if (!m_db.isOpen()) {
+    return nullptr;
+  }
+  QVariant handle = m_db.driver()->handle();
+  if (!handle.isValid()) {
+    return nullptr;
+  }
+  return handle.value<void *>();
+}
+
+bool LibraryModel::deserializeToMemory(const QByteArray &dbBytes) {
+  sqlite3 *db = static_cast<sqlite3 *>(sqliteHandle());
+  if (!db) {
+    qWarning() << "LibraryModel: sqlite handle missing";
+    return false;
+  }
+  if (dbBytes.isEmpty()) {
+    return false;
+  }
+  unsigned char *buffer = static_cast<unsigned char *>(sqlite3_malloc(dbBytes.size()));
+  if (!buffer) {
+    return false;
+  }
+  memcpy(buffer, dbBytes.constData(), static_cast<size_t>(dbBytes.size()));
+  const int rc = sqlite3_deserialize(db, "main", buffer, dbBytes.size(), dbBytes.size(),
+                                     SQLITE_DESERIALIZE_FREEONCLOSE);
+  if (rc != SQLITE_OK) {
+    qWarning() << "LibraryModel: sqlite deserialize failed" << rc;
+    return false;
+  }
+  return true;
+}
+
+QByteArray LibraryModel::serializeFromMemory() {
+  sqlite3 *db = static_cast<sqlite3 *>(sqliteHandle());
+  if (!db) {
+    return {};
+  }
+  sqlite3_int64 size = 0;
+  unsigned char *data = sqlite3_serialize(db, "main", &size, 0);
+  if (!data || size <= 0) {
+    return {};
+  }
+  QByteArray out(reinterpret_cast<const char *>(data), static_cast<int>(size));
+  sqlite3_free(data);
+  return out;
 }
 
 LibraryItem LibraryModel::makeItemFromFile(const QString &filePath) {

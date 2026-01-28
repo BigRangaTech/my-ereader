@@ -18,6 +18,16 @@ public:
                    const QString &passphrase,
                    QString *error);
 
+  bool encryptFromBytes(const QString &outputPath,
+                        const QString &passphrase,
+                        const QByteArray &plaintext,
+                        QString *error);
+
+  bool decryptToBytes(const QString &inputPath,
+                      const QString &passphrase,
+                      QByteArray *outPlaintext,
+                      QString *error);
+
 private:
   bool writeVault(const QString &outputPath,
                   const QByteArray &salt,

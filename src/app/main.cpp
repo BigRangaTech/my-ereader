@@ -4,6 +4,7 @@
 #include <QQmlContext>
 
 #include "AppInfo.h"
+#include "AnnotationModel.h"
 #include "LibraryModel.h"
 #include "Logger.h"
 #include "LicenseManager.h"
@@ -22,6 +23,7 @@ int main(int argc, char *argv[]) {
   QCoreApplication::setApplicationVersion(AppInfo::kVersion);
 
   qmlRegisterType<LibraryModel>("Ereader", 1, 0, "LibraryModel");
+  qmlRegisterType<AnnotationModel>("Ereader", 1, 0, "AnnotationModel");
   qmlRegisterType<LicenseManager>("Ereader", 1, 0, "LicenseManager");
   qmlRegisterType<ReaderController>("Ereader", 1, 0, "ReaderController");
   qmlRegisterType<SyncManager>("Ereader", 1, 0, "SyncManager");

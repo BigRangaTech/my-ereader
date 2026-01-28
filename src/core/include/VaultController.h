@@ -9,6 +9,7 @@ class VaultController : public QObject {
   Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
   Q_PROPERTY(QString vaultPath READ vaultPath CONSTANT)
   Q_PROPERTY(QString dbPath READ dbPath CONSTANT)
+  Q_PROPERTY(QObject *libraryModel READ libraryModel WRITE setLibraryModel NOTIFY libraryModelChanged)
 
 public:
   enum State { Locked, Unlocked, NeedsSetup, Error };
@@ -20,6 +21,8 @@ public:
   QString lastError() const;
   QString vaultPath() const;
   QString dbPath() const;
+  QObject *libraryModel() const;
+  void setLibraryModel(QObject *model);
 
   Q_INVOKABLE void initialize();
   Q_INVOKABLE bool unlock(const QString &passphrase);
@@ -29,6 +32,7 @@ public:
 signals:
   void stateChanged();
   void lastErrorChanged();
+  void libraryModelChanged();
 
 private:
   void setState(State state);
@@ -38,4 +42,5 @@ private:
   QString m_lastError;
   QString m_vaultPath;
   QString m_dbPath;
+  QObject *m_libraryModel = nullptr;
 };

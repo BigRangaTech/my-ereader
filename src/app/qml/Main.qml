@@ -38,6 +38,10 @@ ApplicationWindow {
     id: libraryModel
   }
 
+  AnnotationModel {
+    id: annotationModel
+  }
+
   ReaderController {
     id: reader
   }
@@ -56,6 +60,7 @@ ApplicationWindow {
 
   VaultController {
     id: vault
+    libraryModel: libraryModel
   }
 
   property string sessionPassphrase: ""
@@ -67,10 +72,8 @@ ApplicationWindow {
   Connections {
     target: vault
     onStateChanged: {
-      if (vault.state === VaultController.Unlocked) {
-        libraryModel.openAt(vault.dbPath)
-      } else if (vault.state === VaultController.Locked) {
-        libraryModel.close()
+      if (vault.state === VaultController.Locked) {
+        annotationModel.attachDatabase("")
         if (!unlockDialog.visible) {
           unlockDialog.open()
         }
@@ -78,6 +81,15 @@ ApplicationWindow {
         if (!setupDialog.visible) {
           setupDialog.open()
         }
+      }
+    }
+  }
+
+  Connections {
+    target: libraryModel
+    onReadyChanged: {
+      if (libraryModel.ready) {
+        annotationModel.attachConnection(libraryModel.connectionName())
       }
     }
   }
@@ -90,6 +102,70 @@ ApplicationWindow {
       const path = selectedFile.toString().replace("file://", "")
       if (path.length > 0) {
         libraryModel.addBook(path)
+      }
+    }
+  }
+
+  Dialog {
+    id: annotationDialog
+    title: "Add Annotation"
+    modal: true
+    standardButtons: Dialog.Ok | Dialog.Cancel
+
+    property string errorText: ""
+    property string locatorText: ""
+    property string noteText: ""
+
+    onOpened: {
+      errorText = ""
+      locatorField.text = ""
+      noteField.text = ""
+      locatorText = ""
+      noteText = ""
+    }
+
+    onAccepted: {
+      if (locatorField.text.trim().length === 0) {
+        errorText = "Locator required (page/chapter)"
+        return
+      }
+      if (!annotationModel.addAnnotation(locatorField.text, "note", noteField.text, "#ffb347")) {
+        errorText = annotationModel.lastError
+        return
+      }
+      annotationDialog.close()
+    }
+
+    contentItem: Rectangle {
+      color: theme.panel
+      radius: 12
+      width: 420
+      height: 240
+
+      ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 16
+        spacing: 10
+
+        TextField {
+          id: locatorField
+          placeholderText: "Locator (page/chapter id)"
+        }
+
+        TextArea {
+          id: noteField
+          placeholderText: "Note"
+          wrapMode: TextArea.Wrap
+          Layout.fillWidth: true
+          Layout.fillHeight: true
+        }
+
+        Text {
+          text: annotationDialog.errorText
+          color: theme.accent
+          font.pixelSize: 12
+          font.family: root.uiFont
+        }
       }
     }
   }
@@ -399,9 +475,10 @@ ApplicationWindow {
               MouseArea {
                 anchors.fill: parent
                 onClicked: {
-                  if (reader.openFile(model.path)) {
-                    stack.push(readerPage)
-                  }
+                if (reader.openFile(model.path)) {
+                  annotationModel.libraryItemId = model.id
+                  stack.push(readerPage)
+                }
                 }
               }
 
@@ -519,6 +596,12 @@ ApplicationWindow {
             }
 
             Button {
+              text: "Annotate"
+              font.family: root.uiFont
+              onClicked: annotationDialog.open()
+            }
+
+            Button {
               text: "Lock"
               font.family: root.uiFont
               visible: vault.state === VaultController.Unlocked
@@ -542,15 +625,82 @@ ApplicationWindow {
           width: parent.width
           height: parent.height - 120
 
-          Flickable {
-            id: textScroll
+          RowLayout {
             anchors.fill: parent
-            anchors.margins: 20
-            contentWidth: textBlock.width
-            contentHeight: textBlock.height
-            clip: true
+            anchors.margins: 12
+            spacing: 12
 
-            Text {
+            Rectangle {
+              Layout.preferredWidth: 280
+              Layout.fillHeight: true
+              radius: 12
+              color: theme.panelHighlight
+
+              ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 10
+                spacing: 8
+
+                Text {
+                  text: "Annotations"
+                  color: theme.textPrimary
+                  font.pixelSize: 16
+                  font.family: root.uiFont
+                }
+
+                ListView {
+                  id: annotationList
+                  Layout.fillWidth: true
+                  Layout.fillHeight: true
+                  clip: true
+                  model: annotationModel
+                  delegate: Rectangle {
+                    width: parent.width
+                    height: 70
+                    radius: 8
+                    color: index % 2 === 0 ? theme.panel : theme.panelHighlight
+
+                    Column {
+                      anchors.fill: parent
+                      anchors.margins: 8
+                      spacing: 4
+
+                      Text {
+                        text: model.locator + " • " + model.type
+                        color: theme.textMuted
+                        font.pixelSize: 11
+                        font.family: root.uiFont
+                        elide: Text.ElideRight
+                      }
+
+                      Text {
+                        text: model.text
+                        color: theme.textPrimary
+                        font.pixelSize: 13
+                        font.family: root.uiFont
+                        wrapMode: Text.WordWrap
+                        elide: Text.ElideRight
+                      }
+                    }
+
+                    MouseArea {
+                      anchors.fill: parent
+                      onPressAndHold: annotationModel.deleteAnnotation(model.id)
+                    }
+                  }
+                }
+              }
+            }
+
+            Flickable {
+              id: textScroll
+              Layout.fillWidth: true
+              Layout.fillHeight: true
+              contentWidth: textBlock.width
+              contentHeight: textBlock.height
+              clip: true
+
+              Text {
               id: textBlock
               width: textScroll.width
               text: reader.currentText
@@ -560,6 +710,7 @@ ApplicationWindow {
               wrapMode: Text.WordWrap
               lineHeight: 1.4
               lineHeightMode: Text.ProportionalHeight
+              }
             }
           }
         }
