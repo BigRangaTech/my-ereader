@@ -363,6 +363,97 @@ ApplicationWindow {
     }
   }
 
+  Component {
+    id: textReader
+
+    Flickable {
+      id: textScroll
+      anchors.fill: parent
+      anchors.margins: 8
+      contentWidth: textBlock.width
+      contentHeight: textBlock.height
+      clip: true
+
+      Text {
+        id: textBlock
+        width: textScroll.width
+        text: reader.currentText
+        color: theme.textPrimary
+        font.pixelSize: 20
+        font.family: root.readingFont
+        wrapMode: Text.WordWrap
+        lineHeight: 1.4
+        lineHeightMode: Text.ProportionalHeight
+      }
+    }
+  }
+
+  Component {
+    id: imageReader
+
+    Item {
+      anchors.fill: parent
+
+      ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 8
+        spacing: 8
+
+        Rectangle {
+          Layout.fillWidth: true
+          Layout.preferredHeight: 36
+          radius: 8
+          color: theme.panelHighlight
+
+          RowLayout {
+            anchors.fill: parent
+            anchors.margins: 6
+            spacing: 8
+
+            Button {
+              text: "Prev"
+              onClicked: reader.prevImage()
+              enabled: reader.currentImageIndex > 0
+            }
+
+            Button {
+              text: "Next"
+              onClicked: reader.nextImage()
+              enabled: reader.currentImageIndex + 1 < reader.imageCount
+            }
+
+            Text {
+              text: reader.imageCount > 0
+                    ? qsTr("%1 / %2").arg(reader.currentImageIndex + 1).arg(reader.imageCount)
+                    : ""
+              color: theme.textMuted
+              font.pixelSize: 12
+              font.family: root.uiFont
+            }
+          }
+        }
+
+        Flickable {
+          Layout.fillWidth: true
+          Layout.fillHeight: true
+          contentWidth: imageItem.width
+          contentHeight: imageItem.height
+          clip: true
+
+          Image {
+            id: imageItem
+            source: reader.currentImagePath
+            fillMode: Image.PreserveAspectFit
+            asynchronous: true
+            cache: false
+            width: parent.width
+            height: parent.height
+          }
+        }
+      }
+    }
+  }
+
   StackView {
     id: stack
     anchors.fill: parent
@@ -694,25 +785,11 @@ ApplicationWindow {
               }
             }
 
-            Flickable {
-              id: textScroll
+            Loader {
               Layout.fillWidth: true
               Layout.fillHeight: true
-              contentWidth: textBlock.width
-              contentHeight: textBlock.height
-              clip: true
-
-              Text {
-              id: textBlock
-              width: textScroll.width
-              text: reader.currentText
-              color: theme.textPrimary
-              font.pixelSize: 20
-              font.family: root.readingFont
-              wrapMode: Text.WordWrap
-              lineHeight: 1.4
-              lineHeightMode: Text.ProportionalHeight
-              }
+              active: true
+              sourceComponent: reader.hasImages ? imageReader : textReader
             }
           }
         }

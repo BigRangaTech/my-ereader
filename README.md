@@ -19,6 +19,15 @@ A fast, secure, offline-first ebook reader for Linux and Android built with Qt 6
 5) FB2
 6) DJVU
 
+## Format status (initial)
+- EPUB: implemented (basic text + TOC)
+- PDF: implemented (basic text extraction)
+- FB2: implemented (basic text)
+- CBZ: implemented (image extraction)
+- CBR: implemented if bsdtar/unrar/unar is available
+- MOBI/AZW3: planned
+- DJVU: planned (not implemented yet)
+
 ## Updates
 - Desktop: git pull updates (fast-forward only)
 - Android: update path to be defined later

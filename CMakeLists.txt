@@ -11,6 +11,7 @@ set(CMAKE_AUTOUIC ON)
 
 option(ENABLE_TTS "Enable TextToSpeech" ON)
 option(USE_BUNDLED_POPPLER "Use bundled Poppler (third_party/install/poppler)" ON)
+option(USE_BUNDLED_LIBARCHIVE "Use bundled libarchive (third_party/install/libarchive)" ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Quick Qml QuickControls2 Network Sql Xml)
 if(ENABLE_TTS)
@@ -22,6 +23,7 @@ endif()
 
 list(PREPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 include(PopplerBundled)
+include(LibarchiveBundled)
 
 find_package(SQLite3 REQUIRED)
 

@@ -26,6 +26,12 @@ bool ReaderController::openFile(const QString &path) {
   m_currentTitle = m_document->title();
   m_chapterTitles = m_document->chapterTitles();
   m_chapterTexts = m_document->chaptersText();
+  m_imagePaths = m_document->imagePaths();
+  if (!m_imagePaths.isEmpty()) {
+    m_currentImageIndex = 0;
+  } else {
+    m_currentImageIndex = -1;
+  }
   if (!m_chapterTexts.isEmpty()) {
     m_currentChapterIndex = 0;
     m_currentText = m_chapterTexts.at(0);
@@ -51,6 +57,8 @@ void ReaderController::close() {
   m_chapterTitles.clear();
   m_chapterTexts.clear();
   m_currentChapterIndex = -1;
+  m_imagePaths.clear();
+  m_currentImageIndex = -1;
   m_isOpen = false;
   qInfo() << "ReaderController: closed";
   emit currentChanged();
@@ -64,6 +72,15 @@ int ReaderController::currentChapterIndex() const { return m_currentChapterIndex
 QString ReaderController::currentChapterTitle() const {
   if (m_currentChapterIndex >= 0 && m_currentChapterIndex < m_chapterTitles.size()) {
     return m_chapterTitles.at(m_currentChapterIndex);
+  }
+  return {};
+}
+bool ReaderController::hasImages() const { return !m_imagePaths.isEmpty(); }
+int ReaderController::currentImageIndex() const { return m_currentImageIndex; }
+int ReaderController::imageCount() const { return m_imagePaths.size(); }
+QString ReaderController::currentImagePath() const {
+  if (m_currentImageIndex >= 0 && m_currentImageIndex < m_imagePaths.size()) {
+    return m_imagePaths.at(m_currentImageIndex);
   }
   return {};
 }
@@ -107,4 +124,28 @@ bool ReaderController::jumpToLocator(const QString &locator) {
   }
   setLastError("Locator not found");
   return false;
+}
+
+bool ReaderController::nextImage() {
+  if (m_imagePaths.isEmpty()) {
+    return false;
+  }
+  if (m_currentImageIndex + 1 >= m_imagePaths.size()) {
+    return false;
+  }
+  m_currentImageIndex++;
+  emit currentChanged();
+  return true;
+}
+
+bool ReaderController::prevImage() {
+  if (m_imagePaths.isEmpty()) {
+    return false;
+  }
+  if (m_currentImageIndex - 1 < 0) {
+    return false;
+  }
+  m_currentImageIndex--;
+  emit currentChanged();
+  return true;
 }
