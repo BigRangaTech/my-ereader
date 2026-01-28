@@ -71,7 +71,7 @@ ApplicationWindow {
 
   Connections {
     target: vault
-    onStateChanged: {
+    function onStateChanged() {
       if (vault.state === VaultController.Locked) {
         annotationModel.attachDatabase("")
         if (!unlockDialog.visible) {
@@ -87,7 +87,7 @@ ApplicationWindow {
 
   Connections {
     target: libraryModel
-    onReadyChanged: {
+    function onReadyChanged() {
       if (libraryModel.ready) {
         annotationModel.attachConnection(libraryModel.connectionName())
       }
@@ -111,6 +111,8 @@ ApplicationWindow {
     title: "Add Annotation"
     modal: true
     standardButtons: Dialog.Ok | Dialog.Cancel
+    width: 460
+    height: 260
 
     property string errorText: ""
     property string locatorText: ""
@@ -139,8 +141,6 @@ ApplicationWindow {
     contentItem: Rectangle {
       color: theme.panel
       radius: 12
-      width: 420
-      height: 240
 
       ColumnLayout {
         anchors.fill: parent
@@ -176,6 +176,8 @@ ApplicationWindow {
     modal: true
     standardButtons: Dialog.Ok
     closePolicy: Popup.NoAutoClose
+    width: 460
+    height: 260
 
     property string errorText: ""
 
@@ -205,8 +207,6 @@ ApplicationWindow {
     contentItem: Rectangle {
       color: theme.panel
       radius: 12
-      width: 420
-      height: 220
 
       ColumnLayout {
         anchors.fill: parent
@@ -248,6 +248,8 @@ ApplicationWindow {
     modal: true
     standardButtons: Dialog.Ok
     closePolicy: Popup.NoAutoClose
+    width: 460
+    height: 220
 
     property string errorText: ""
 
@@ -268,8 +270,6 @@ ApplicationWindow {
     contentItem: Rectangle {
       color: theme.panel
       radius: 12
-      width: 420
-      height: 180
 
       ColumnLayout {
         anchors.fill: parent
@@ -305,6 +305,8 @@ ApplicationWindow {
     modal: true
     standardButtons: Dialog.Ok
     closePolicy: Popup.NoAutoClose
+    width: 460
+    height: 220
 
     property string errorText: ""
 
@@ -325,8 +327,6 @@ ApplicationWindow {
     contentItem: Rectangle {
       color: theme.panel
       radius: 12
-      width: 420
-      height: 180
 
       ColumnLayout {
         anchors.fill: parent
@@ -379,8 +379,8 @@ ApplicationWindow {
     id: libraryPage
 
     Item {
-      width: parent.width
-      height: parent.height
+      width: parent ? parent.width : 0
+      height: parent ? parent.height : 0
 
       Column {
         anchors.fill: parent
@@ -426,6 +426,7 @@ ApplicationWindow {
               text: "Add"
               onClicked: fileDialog.open()
               font.family: root.uiFont
+              enabled: libraryModel.ready
             }
 
             Button {
@@ -685,6 +686,7 @@ ApplicationWindow {
 
                     MouseArea {
                       anchors.fill: parent
+                      onClicked: reader.jumpToLocator(model.locator)
                       onPressAndHold: annotationModel.deleteAnnotation(model.id)
                     }
                   }

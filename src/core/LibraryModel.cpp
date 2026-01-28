@@ -26,7 +26,6 @@ LibraryModel::~LibraryModel() {
   }
   if (!m_connectionName.isEmpty()) {
     m_db = QSqlDatabase();
-    QSqlDatabase::removeDatabase(m_connectionName);
   }
 }
 
@@ -281,11 +280,7 @@ void LibraryModel::close() {
     return;
   }
   m_db.close();
-  if (!m_connectionName.isEmpty()) {
-    m_db = QSqlDatabase();
-    QSqlDatabase::removeDatabase(m_connectionName);
-    m_connectionName.clear();
-  }
+  m_db = QSqlDatabase();
   beginResetModel();
   m_items.clear();
   endResetModel();

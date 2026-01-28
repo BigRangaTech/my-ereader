@@ -24,7 +24,15 @@ bool ReaderController::openFile(const QString &path) {
 
   setLastError("");
   m_currentTitle = m_document->title();
-  m_currentText = m_document->readAllText();
+  m_chapterTitles = m_document->chapterTitles();
+  m_chapterTexts = m_document->chaptersText();
+  if (!m_chapterTexts.isEmpty()) {
+    m_currentChapterIndex = 0;
+    m_currentText = m_chapterTexts.at(0);
+  } else {
+    m_currentChapterIndex = -1;
+    m_currentText = m_document->readAllText();
+  }
   m_currentPath = QFileInfo(path).absoluteFilePath();
   m_isOpen = true;
   qInfo() << "ReaderController: opened" << m_currentTitle << m_currentPath;
@@ -40,6 +48,9 @@ void ReaderController::close() {
   m_currentTitle.clear();
   m_currentText.clear();
   m_currentPath.clear();
+  m_chapterTitles.clear();
+  m_chapterTexts.clear();
+  m_currentChapterIndex = -1;
   m_isOpen = false;
   qInfo() << "ReaderController: closed";
   emit currentChanged();
@@ -49,6 +60,13 @@ QString ReaderController::currentTitle() const { return m_currentTitle; }
 QString ReaderController::currentText() const { return m_currentText; }
 QString ReaderController::currentPath() const { return m_currentPath; }
 bool ReaderController::isOpen() const { return m_isOpen; }
+int ReaderController::currentChapterIndex() const { return m_currentChapterIndex; }
+QString ReaderController::currentChapterTitle() const {
+  if (m_currentChapterIndex >= 0 && m_currentChapterIndex < m_chapterTitles.size()) {
+    return m_chapterTitles.at(m_currentChapterIndex);
+  }
+  return {};
+}
 QString ReaderController::lastError() const { return m_lastError; }
 
 void ReaderController::setLastError(const QString &error) {
@@ -57,4 +75,36 @@ void ReaderController::setLastError(const QString &error) {
   }
   m_lastError = error;
   emit lastErrorChanged();
+}
+
+bool ReaderController::jumpToLocator(const QString &locator) {
+  if (m_chapterTexts.isEmpty()) {
+    setLastError("No chapter navigation available");
+    return false;
+  }
+  QString trimmed = locator.trimmed();
+  bool ok = false;
+  int index = trimmed.toInt(&ok);
+  if (ok) {
+    index -= 1; // user-friendly 1-based
+    if (index < 0 || index >= m_chapterTexts.size()) {
+      setLastError("Chapter index out of range");
+      return false;
+    }
+    m_currentChapterIndex = index;
+    m_currentText = m_chapterTexts.at(index);
+    emit currentChanged();
+    return true;
+  }
+  // Try match by title (case-insensitive contains)
+  for (int i = 0; i < m_chapterTitles.size(); ++i) {
+    if (m_chapterTitles.at(i).contains(trimmed, Qt::CaseInsensitive)) {
+      m_currentChapterIndex = i;
+      m_currentText = m_chapterTexts.at(i);
+      emit currentChanged();
+      return true;
+    }
+  }
+  setLastError("Locator not found");
+  return false;
 }

@@ -11,4 +11,5 @@ public:
   virtual QStringList chapterTitles() const = 0;
   virtual QString readAllText() const = 0;
   virtual QStringList chaptersText() const { return {}; }
+  virtual QStringList imagePaths() const { return {}; }
 };

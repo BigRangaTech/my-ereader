@@ -133,6 +133,7 @@ QString stripXhtml(const QByteArray &xhtml) {
   QString out;
   bool lastWasSpace = true;
   bool inEmphasis = false;
+  int ignoreDepth = 0;
 
   auto appendText = [&out, &lastWasSpace](const QString &text) {
     QString t = text;
@@ -158,7 +159,15 @@ QString stripXhtml(const QByteArray &xhtml) {
   while (!xml.atEnd()) {
     xml.readNext();
     if (xml.isStartElement()) {
-      const QString name = xml.name().toString();
+      const QString name = xml.name().toString().toLower();
+      if (name == QLatin1String("style") || name == QLatin1String("script") ||
+          name == QLatin1String("head") || name == QLatin1String("metadata") ||
+          name == QLatin1String("title")) {
+        ignoreDepth++;
+      }
+      if (ignoreDepth > 0) {
+        continue;
+      }
       if (name == QLatin1String("em") || name == QLatin1String("i")) {
         out.append('*');
         inEmphasis = true;
@@ -174,13 +183,26 @@ QString stripXhtml(const QByteArray &xhtml) {
       }
     }
     if (xml.isCharacters() && !xml.isWhitespace()) {
+      if (ignoreDepth > 0) {
+        continue;
+      }
       const QString text = xml.text().toString().trimmed();
       if (!text.isEmpty()) {
         appendText(text);
       }
     }
     if (xml.isEndElement()) {
-      const QString name = xml.name().toString();
+      const QString name = xml.name().toString().toLower();
+      if (ignoreDepth > 0 &&
+          (name == QLatin1String("style") || name == QLatin1String("script") ||
+           name == QLatin1String("head") || name == QLatin1String("metadata") ||
+           name == QLatin1String("title"))) {
+        ignoreDepth--;
+        continue;
+      }
+      if (ignoreDepth > 0) {
+        continue;
+      }
       if (name == QLatin1String("em") || name == QLatin1String("i")) {
         if (inEmphasis) {
           out.append('*');
