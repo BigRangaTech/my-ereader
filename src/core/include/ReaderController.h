@@ -11,6 +11,8 @@ class ReaderController : public QObject {
   Q_OBJECT
   Q_PROPERTY(QString currentTitle READ currentTitle NOTIFY currentChanged)
   Q_PROPERTY(QString currentText READ currentText NOTIFY currentChanged)
+  Q_PROPERTY(QString currentPlainText READ currentPlainText NOTIFY currentChanged)
+  Q_PROPERTY(bool currentTextIsRich READ currentTextIsRich NOTIFY currentChanged)
   Q_PROPERTY(QString currentPath READ currentPath NOTIFY currentChanged)
   Q_PROPERTY(bool isOpen READ isOpen NOTIFY currentChanged)
   Q_PROPERTY(int currentChapterIndex READ currentChapterIndex NOTIFY currentChanged)
@@ -39,6 +41,8 @@ public:
 
   QString currentTitle() const;
   QString currentText() const;
+  QString currentPlainText() const;
+  bool currentTextIsRich() const;
   QString currentPath() const;
   bool isOpen() const;
   int currentChapterIndex() const;
@@ -69,9 +73,12 @@ private:
   std::unique_ptr<FormatDocument> m_document;
   QString m_currentTitle;
   QString m_currentText;
+  QString m_currentPlainText;
   QString m_currentPath;
   QStringList m_chapterTitles;
   QStringList m_chapterTexts;
+  QStringList m_chapterPlainTexts;
+  bool m_textIsRich = false;
   int m_currentChapterIndex = -1;
   QStringList m_imagePaths;
   int m_currentImageIndex = -1;

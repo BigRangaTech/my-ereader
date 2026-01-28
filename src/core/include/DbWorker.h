@@ -40,6 +40,7 @@ signals:
 private:
   bool openDatabase(const QString &dbPath, QString *error);
   bool ensureSchema(QString *error);
+  bool ensureColumn(const QString &table, const QString &column, const QString &type, QString *error);
   QVector<LibraryItem> fetchLibrary(QString *error);
   QVector<AnnotationItem> fetchAnnotations(int libraryItemId, QString *error);
   bool insertLibraryItem(const LibraryItem &item, QString *error);

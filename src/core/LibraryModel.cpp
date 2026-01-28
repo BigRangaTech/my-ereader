@@ -62,6 +62,12 @@ QVariant LibraryModel::data(const QModelIndex &index, int role) const {
     return item.title;
   case AuthorsRole:
     return item.authors;
+  case SeriesRole:
+    return item.series;
+  case PublisherRole:
+    return item.publisher;
+  case DescriptionRole:
+    return item.description;
   case PathRole:
     return item.path;
   case FormatRole:
@@ -75,9 +81,11 @@ QVariant LibraryModel::data(const QModelIndex &index, int role) const {
 
 QHash<int, QByteArray> LibraryModel::roleNames() const {
   return {
-      {IdRole, "id"},        {TitleRole, "title"},
-      {AuthorsRole, "authors"}, {PathRole, "path"},
-      {FormatRole, "format"},   {AddedAtRole, "addedAt"}};
+      {IdRole, "id"},           {TitleRole, "title"},
+      {AuthorsRole, "authors"}, {SeriesRole, "series"},
+      {PublisherRole, "publisher"}, {DescriptionRole, "description"},
+      {PathRole, "path"},       {FormatRole, "format"},
+      {AddedAtRole, "addedAt"}};
 }
 
 bool LibraryModel::openDefault() {

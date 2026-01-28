@@ -390,11 +390,12 @@ ApplicationWindow {
           text: reader.currentText
           color: theme.textPrimary
           font.pixelSize: settings.readingFontSize
-          font.family: root.readingFont
-          wrapMode: Text.WordWrap
-          lineHeight: settings.readingLineHeight
-          lineHeightMode: Text.ProportionalHeight
-        }
+              font.family: root.readingFont
+              wrapMode: Text.WordWrap
+              lineHeight: settings.readingLineHeight
+              lineHeightMode: Text.ProportionalHeight
+              textFormat: reader.currentTextIsRich ? Text.RichText : Text.PlainText
+            }
     }
   }
 
@@ -719,7 +720,7 @@ ApplicationWindow {
 
             delegate: Rectangle {
               radius: 12
-              height: 84
+              height: 106
               width: listView.width
               color: index % 2 === 0 ? theme.panelHighlight : theme.panel
 
@@ -754,7 +755,7 @@ ApplicationWindow {
                 }
 
                 Column {
-                  spacing: 6
+                  spacing: 4
                   anchors.verticalCenter: parent.verticalCenter
 
                   Text {
@@ -767,7 +768,23 @@ ApplicationWindow {
                   }
 
                   Text {
-                    text: model.path
+                    text: {
+                      var parts = [];
+                      if (model.authors && model.authors.length > 0) parts.push(model.authors);
+                      if (model.series && model.series.length > 0) parts.push(model.series);
+                      if (model.publisher && model.publisher.length > 0) parts.push(model.publisher);
+                      return parts.length > 0 ? parts.join(" • ") : ""
+                    }
+                    color: theme.textMuted
+                    font.pixelSize: 12
+                    font.family: root.uiFont
+                    elide: Text.ElideRight
+                    width: listView.width - 180
+                    visible: text.length > 0
+                  }
+
+                  Text {
+                    text: (model.description && model.description.length > 0) ? model.description : model.path
                     color: theme.textMuted
                     font.pixelSize: 12
                     font.family: root.uiFont
@@ -850,7 +867,7 @@ ApplicationWindow {
                 if (tts.speaking) {
                   tts.stop()
                 } else {
-                  tts.speak(reader.currentText)
+                  tts.speak(reader.currentPlainText)
                 }
               }
             }

@@ -17,6 +17,7 @@
 
 #include <sqlite3.h>
 
+#include "FormatRegistry.h"
 #include "CryptoBackend.h"
 #include "CryptoVault.h"
 
@@ -245,6 +246,9 @@ bool DbWorker::ensureSchema(QString *error) {
           "id INTEGER PRIMARY KEY AUTOINCREMENT,"
           "title TEXT,"
           "authors TEXT,"
+          "series TEXT,"
+          "publisher TEXT,"
+          "description TEXT,"
           "path TEXT UNIQUE,"
           "format TEXT,"
           "file_hash TEXT,"
@@ -271,6 +275,46 @@ bool DbWorker::ensureSchema(QString *error) {
     }
     return false;
   }
+  if (!ensureColumn("library_items", "series", "TEXT", error)) {
+    return false;
+  }
+  if (!ensureColumn("library_items", "publisher", "TEXT", error)) {
+    return false;
+  }
+  if (!ensureColumn("library_items", "description", "TEXT", error)) {
+    return false;
+  }
+  return true;
+}
+
+bool DbWorker::ensureColumn(const QString &table,
+                            const QString &column,
+                            const QString &type,
+                            QString *error) {
+  QSqlQuery query(m_db);
+  if (!query.exec(QString("PRAGMA table_info(%1)").arg(table))) {
+    if (error) {
+      *error = query.lastError().text();
+    }
+    return false;
+  }
+  bool exists = false;
+  while (query.next()) {
+    if (query.value(1).toString() == column) {
+      exists = true;
+      break;
+    }
+  }
+  if (exists) {
+    return true;
+  }
+  QSqlQuery alter(m_db);
+  if (!alter.exec(QString("ALTER TABLE %1 ADD COLUMN %2 %3").arg(table, column, type))) {
+    if (error) {
+      *error = alter.lastError().text();
+    }
+    return false;
+  }
   return true;
 }
 
@@ -283,16 +327,20 @@ QVector<LibraryItem> DbWorker::fetchLibrary(QString *error) {
     return items;
   }
   QSqlQuery query(m_db);
-  if (query.exec("SELECT id, title, authors, path, format, file_hash, added_at FROM library_items ORDER BY title")) {
+  if (query.exec("SELECT id, title, authors, series, publisher, description, path, format, file_hash, added_at "
+                 "FROM library_items ORDER BY title")) {
     while (query.next()) {
       LibraryItem item;
       item.id = query.value(0).toInt();
       item.title = query.value(1).toString();
       item.authors = query.value(2).toString();
-      item.path = query.value(3).toString();
-      item.format = query.value(4).toString();
-      item.fileHash = query.value(5).toString();
-      item.addedAt = query.value(6).toString();
+      item.series = query.value(3).toString();
+      item.publisher = query.value(4).toString();
+      item.description = query.value(5).toString();
+      item.path = query.value(6).toString();
+      item.format = query.value(7).toString();
+      item.fileHash = query.value(8).toString();
+      item.addedAt = query.value(9).toString();
       items.push_back(std::move(item));
     }
   } else if (error) {
@@ -337,10 +385,14 @@ QVector<AnnotationItem> DbWorker::fetchAnnotations(int libraryItemId, QString *e
 bool DbWorker::insertLibraryItem(const LibraryItem &item, QString *error) {
   QSqlQuery query(m_db);
   query.prepare(
-      "INSERT OR IGNORE INTO library_items (title, authors, path, format, file_hash, added_at) "
-      "VALUES (?, ?, ?, ?, ?, ?)");
+      "INSERT OR IGNORE INTO library_items "
+      "(title, authors, series, publisher, description, path, format, file_hash, added_at) "
+      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
   query.addBindValue(item.title);
   query.addBindValue(item.authors);
+  query.addBindValue(item.series);
+  query.addBindValue(item.publisher);
+  query.addBindValue(item.description);
   query.addBindValue(item.path);
   query.addBindValue(item.format);
   query.addBindValue(item.fileHash);
@@ -359,10 +411,31 @@ LibraryItem DbWorker::makeItemFromFile(const QString &filePath) {
   LibraryItem item;
   item.title = info.completeBaseName();
   item.authors = "";
+  item.series = "";
+  item.publisher = "";
+  item.description = "";
   item.path = info.absoluteFilePath();
   item.format = info.suffix().toLower();
   item.fileHash = computeFileHash(filePath);
   item.addedAt = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+  const QString ext = item.format;
+  const bool wantsMetadata =
+      (ext == "mobi" || ext == "azw" || ext == "azw3" || ext == "azw4" || ext == "prc");
+  if (wantsMetadata) {
+    auto registry = FormatRegistry::createDefault();
+    QString metaError;
+    auto doc = registry->open(item.path, &metaError);
+    if (doc) {
+      const QString docTitle = doc->title().trimmed();
+      if (!docTitle.isEmpty()) {
+        item.title = docTitle;
+      }
+      item.authors = doc->authors().trimmed();
+      item.series = doc->series().trimmed();
+      item.publisher = doc->publisher().trimmed();
+      item.description = doc->description().trimmed();
+    }
+  }
   return item;
 }
 

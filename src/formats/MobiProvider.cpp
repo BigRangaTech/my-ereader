@@ -5,9 +5,15 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QImageReader>
+#include <QHash>
+#include <QRegularExpression>
 #include <QStandardPaths>
+#include <QUrl>
 #include <QXmlStreamReader>
 #include <cstdlib>
+#include <optional>
+#include <algorithm>
 
 extern "C" {
 #include "mobi.h"
@@ -19,42 +25,86 @@ class MobiDocument : public FormatDocument {
 public:
   MobiDocument(QString title,
                QStringList chapterTitles,
-               QStringList chapterTexts,
-               QString coverPath)
+               QStringList chapterDisplayTexts,
+               QStringList chapterPlainTexts,
+               QString coverPath,
+               QString authors,
+               QString series,
+               QString publisher,
+               QString description,
+               bool richText)
       : m_title(std::move(title)),
         m_chapterTitles(std::move(chapterTitles)),
-        m_chapterTexts(std::move(chapterTexts)),
-        m_coverPath(std::move(coverPath)) {}
+        m_chapterDisplayTexts(std::move(chapterDisplayTexts)),
+        m_chapterPlainTexts(std::move(chapterPlainTexts)),
+        m_coverPath(std::move(coverPath)),
+        m_authors(std::move(authors)),
+        m_series(std::move(series)),
+        m_publisher(std::move(publisher)),
+        m_description(std::move(description)),
+        m_isRichText(richText) {}
 
   QString title() const override { return m_title; }
   QStringList chapterTitles() const override { return m_chapterTitles; }
   QString readAllText() const override {
-    if (!m_allText.isEmpty()) {
-      return m_allText;
+    if (!m_allDisplayText.isEmpty()) {
+      return m_allDisplayText;
     }
     QString joined;
-    for (const QString &chapter : m_chapterTexts) {
+    for (const QString &chapter : m_chapterDisplayTexts) {
       if (!joined.isEmpty()) {
         joined.append("\n\n");
       }
       joined.append(chapter);
     }
-    m_allText = joined;
-    return m_allText;
+    m_allDisplayText = joined;
+    return m_allDisplayText;
   }
-  QStringList chaptersText() const override { return m_chapterTexts; }
+  QString readAllPlainText() const override {
+    if (!m_allPlainText.isEmpty()) {
+      return m_allPlainText;
+    }
+    QString joined;
+    for (const QString &chapter : m_chapterPlainTexts) {
+      if (!joined.isEmpty()) {
+        joined.append("\n\n");
+      }
+      joined.append(chapter);
+    }
+    m_allPlainText = joined;
+    return m_allPlainText;
+  }
+  QStringList chaptersText() const override { return m_chapterDisplayTexts; }
+  QStringList chaptersPlainText() const override { return m_chapterPlainTexts; }
   QString coverPath() const override { return m_coverPath; }
+  QString authors() const override { return m_authors; }
+  QString series() const override { return m_series; }
+  QString publisher() const override { return m_publisher; }
+  QString description() const override { return m_description; }
+  bool isRichText() const override { return m_isRichText; }
 
 private:
   QString m_title;
   QStringList m_chapterTitles;
-  QStringList m_chapterTexts;
-  mutable QString m_allText;
+  QStringList m_chapterDisplayTexts;
+  QStringList m_chapterPlainTexts;
+  mutable QString m_allDisplayText;
+  mutable QString m_allPlainText;
   QString m_coverPath;
+  QString m_authors;
+  QString m_series;
+  QString m_publisher;
+  QString m_description;
+  bool m_isRichText = false;
 };
 
 QString stripXhtml(const QByteArray &xhtml) {
-  QXmlStreamReader xml(xhtml);
+  QByteArray cleaned = xhtml;
+  cleaned.replace("&nbsp;", " ");
+  cleaned.replace("&#160;", " ");
+  cleaned.replace("&shy;", "");
+  cleaned.replace("&#173;", "");
+  QXmlStreamReader xml(cleaned);
   QString out;
   bool lastWasSpace = true;
   bool inEmphasis = false;
@@ -63,6 +113,7 @@ QString stripXhtml(const QByteArray &xhtml) {
   auto appendText = [&out, &lastWasSpace](const QString &text) {
     QString t = text;
     t.replace(QChar(0x00A0), QChar(' '));
+    t.replace(QChar(0x00AD), QChar());
     if (t.isEmpty()) {
       return;
     }
@@ -148,6 +199,158 @@ QString stripXhtml(const QByteArray &xhtml) {
   return out.trimmed();
 }
 
+struct ImageAsset {
+  QString path;
+  int width = 0;
+  int height = 0;
+};
+
+QString tempDirForMobi(const QFileInfo &info);
+QString coverExtensionFromBytes(const unsigned char *data, size_t size);
+
+bool isImageType(MOBIFiletype type) {
+  return type == T_JPG || type == T_GIF || type == T_PNG || type == T_BMP;
+}
+
+QString normalizeHtmlFragment(const QString &html) {
+  QString out = html;
+  out.replace(QRegularExpression("(?is)<script[^>]*>.*?</script>"), "");
+  out.replace(QRegularExpression("(?is)<style[^>]*>.*?</style>"), "");
+  out.replace("&nbsp;", " ");
+  out.replace("&#160;", " ");
+  out.replace("&shy;", "");
+  out.replace("&#173;", "");
+  out.replace(QChar(0x00A0), QChar(' '));
+  out.replace(QChar(0x00AD), QChar());
+  return out;
+}
+
+QHash<size_t, ImageAsset> exportImageResources(const MOBIRawml *rawml, const QFileInfo &info) {
+  QHash<size_t, ImageAsset> assets;
+  if (!rawml || !rawml->resources) {
+    return assets;
+  }
+  const QString outDir = tempDirForMobi(info);
+  QDir().mkpath(outDir);
+  for (MOBIPart *part = rawml->resources; part != nullptr; part = part->next) {
+    if (!part->data || part->size == 0) {
+      continue;
+    }
+    if (!isImageType(part->type)) {
+      continue;
+    }
+    MOBIFileMeta meta = mobi_get_filemeta_by_type(part->type);
+    QString ext = QString::fromLatin1(meta.extension);
+    if (ext.isEmpty()) {
+      ext = coverExtensionFromBytes(part->data, part->size);
+    }
+    const QString outPath =
+        QDir(outDir).filePath(QString("res_%1.%2").arg(part->uid).arg(ext));
+    if (!QFileInfo::exists(outPath)) {
+      QFile outFile(outPath);
+      if (outFile.open(QIODevice::WriteOnly)) {
+        outFile.write(reinterpret_cast<const char *>(part->data),
+                      static_cast<qint64>(part->size));
+        outFile.close();
+      }
+    }
+    ImageAsset asset;
+    asset.path = outPath;
+    QImageReader reader(outPath);
+    const QSize size = reader.size();
+    asset.width = size.width();
+    asset.height = size.height();
+    assets.insert(part->uid, asset);
+  }
+  return assets;
+}
+
+std::optional<size_t> resolveImageUidFromSrc(const QString &src, const MOBIRawml *rawml) {
+  if (!rawml) {
+    return std::nullopt;
+  }
+  const QString trimmed = src.trimmed();
+  if (trimmed.startsWith("kindle:embed:", Qt::CaseInsensitive)) {
+    QString fid = trimmed.mid(QString("kindle:embed:").size());
+    const int cut = fid.indexOf(QRegularExpression("[?#]"));
+    if (cut >= 0) {
+      fid = fid.left(cut);
+    }
+    const QByteArray fidBytes = fid.toLatin1();
+    MOBIPart *part = mobi_get_resource_by_fid(rawml, fidBytes.constData());
+    if (part) {
+      return part->uid;
+    }
+  }
+  bool ok = false;
+  const size_t direct = trimmed.toULongLong(&ok);
+  if (ok) {
+    return direct;
+  }
+  QRegularExpression digitsRe("(\\d+)");
+  auto match = digitsRe.match(trimmed);
+  if (match.hasMatch()) {
+    const size_t number = match.captured(1).toULongLong(&ok);
+    if (ok) {
+      return number;
+    }
+  }
+  return std::nullopt;
+}
+
+QString replaceImageSources(const QString &html,
+                            const MOBIRawml *rawml,
+                            const QHash<size_t, ImageAsset> &assets) {
+  QString out;
+  QRegularExpression imgTagRe("<img\\b[^>]*>", QRegularExpression::CaseInsensitiveOption);
+  QRegularExpression srcRe("src\\s*=\\s*(['\"])([^'\"]+)\\1",
+                           QRegularExpression::CaseInsensitiveOption);
+  QRegularExpression sizeRe("\\b(width|height)\\s*=", QRegularExpression::CaseInsensitiveOption);
+
+  int last = 0;
+  auto it = imgTagRe.globalMatch(html);
+  while (it.hasNext()) {
+    auto match = it.next();
+    out.append(html.mid(last, match.capturedStart() - last));
+    QString tag = match.captured(0);
+    auto srcMatch = srcRe.match(tag);
+    if (!srcMatch.hasMatch()) {
+      out.append(tag);
+      last = match.capturedEnd();
+      continue;
+    }
+    const QString src = srcMatch.captured(2);
+    const auto uid = resolveImageUidFromSrc(src, rawml);
+    if (!uid.has_value() || !assets.contains(uid.value())) {
+      out.append(tag);
+      last = match.capturedEnd();
+      continue;
+    }
+    const ImageAsset asset = assets.value(uid.value());
+    if (asset.path.isEmpty()) {
+      out.append(tag);
+      last = match.capturedEnd();
+      continue;
+    }
+    const QString fileUrl = QUrl::fromLocalFile(asset.path).toString();
+    tag.replace(srcMatch.capturedStart(2),
+                srcMatch.capturedLength(2),
+                fileUrl);
+    if (!sizeRe.match(tag).hasMatch()) {
+      const int targetWidth =
+          asset.width > 0 ? std::min(asset.width, 900) : 900;
+      const int insertPos = tag.lastIndexOf('>');
+      if (insertPos > 0) {
+        tag.insert(insertPos, QString(" width=\"%1\"").arg(targetWidth));
+      }
+    }
+    out.append(tag);
+    last = match.capturedEnd();
+  }
+  out.append(html.mid(last));
+  return out;
+}
+
 QString extractHeading(const QByteArray &xhtml) {
   QXmlStreamReader xml(xhtml);
   bool inHeading = false;
@@ -179,6 +382,184 @@ QString extractHeading(const QByteArray &xhtml) {
   return heading.trimmed();
 }
 
+QStringList extractNcxTitles(const MOBIRawml *rawml) {
+  QStringList titles;
+  if (!rawml || !rawml->ncx) {
+    return titles;
+  }
+  const MOBIIndx *ncx = rawml->ncx;
+  for (size_t i = 0; i < ncx->entries_count; ++i) {
+    const MOBIIndexEntry &entry = ncx->entries[i];
+    if (!entry.label) {
+      continue;
+    }
+    QString label = QString::fromUtf8(entry.label).trimmed();
+    if (!label.isEmpty()) {
+      titles.append(label);
+    }
+  }
+  return titles;
+}
+
+QStringList decodeExthStrings(const MOBIData *data, MOBIExthTag tag) {
+  QStringList out;
+  if (!data) {
+    return out;
+  }
+  MOBIExthHeader *start = nullptr;
+  MOBIExthHeader *record = mobi_next_exthrecord_by_tag(data, tag, &start);
+  while (record) {
+    char *value = mobi_decode_exthstring(data,
+                                         static_cast<const unsigned char *>(record->data),
+                                         record->size);
+    if (value) {
+      const QString decoded = QString::fromUtf8(value).trimmed();
+      free(value);
+      if (!decoded.isEmpty()) {
+        out.append(decoded);
+      }
+    }
+    record = mobi_next_exthrecord_by_tag(data, tag, &start);
+  }
+  return out;
+}
+
+QString decodeFirstExthString(const MOBIData *data, MOBIExthTag tag) {
+  MOBIExthHeader *record = mobi_get_exthrecord_by_tag(data, tag);
+  if (!record) {
+    return {};
+  }
+  char *value = mobi_decode_exthstring(data,
+                                       static_cast<const unsigned char *>(record->data),
+                                       record->size);
+  if (!value) {
+    return {};
+  }
+  const QString decoded = QString::fromUtf8(value).trimmed();
+  free(value);
+  return decoded;
+}
+
+struct OpfMetadata {
+  QString series;
+  QString coverHref;
+  QString title;
+  QStringList creators;
+  QString publisher;
+  QString description;
+};
+
+OpfMetadata extractOpfMetadata(const MOBIRawml *rawml) {
+  OpfMetadata meta;
+  if (!rawml || !rawml->resources) {
+    return meta;
+  }
+  const MOBIPart *opfPart = nullptr;
+  for (MOBIPart *part = rawml->resources; part != nullptr; part = part->next) {
+    if (part->type == T_OPF) {
+      opfPart = part;
+      break;
+    }
+  }
+  if (!opfPart || !opfPart->data || opfPart->size == 0) {
+    return meta;
+  }
+  const QString xmlText = QString::fromUtf8(reinterpret_cast<const char *>(opfPart->data),
+                                            static_cast<int>(opfPart->size));
+  QXmlStreamReader xml(xmlText);
+  QString coverId;
+  QHash<QString, QString> idToHref;
+  while (!xml.atEnd()) {
+    xml.readNext();
+    if (!xml.isStartElement()) {
+      continue;
+    }
+    const QString localName = xml.name().toString().toLower();
+    if (localName == QLatin1String("meta")) {
+      const QString metaName = xml.attributes().value("name").toString();
+      const QString metaContent = xml.attributes().value("content").toString();
+      if (metaName == QLatin1String("cover") && !metaContent.isEmpty()) {
+        coverId = metaContent;
+      }
+      if ((metaName == QLatin1String("calibre:series") || metaName == QLatin1String("series")) &&
+          !metaContent.isEmpty()) {
+        meta.series = metaContent;
+      }
+    } else if (localName == QLatin1String("item")) {
+      const QString id = xml.attributes().value("id").toString();
+      const QString href = xml.attributes().value("href").toString();
+      if (!id.isEmpty() && !href.isEmpty()) {
+        idToHref.insert(id, href);
+      }
+    } else if (localName.endsWith(QLatin1String("title"))) {
+      const QString t = xml.readElementText().trimmed();
+      if (!t.isEmpty()) {
+        meta.title = t;
+      }
+    } else if (localName.endsWith(QLatin1String("creator"))) {
+      const QString t = xml.readElementText().trimmed();
+      if (!t.isEmpty()) {
+        meta.creators.append(t);
+      }
+    } else if (localName.endsWith(QLatin1String("publisher"))) {
+      const QString t = xml.readElementText().trimmed();
+      if (!t.isEmpty()) {
+        meta.publisher = t;
+      }
+    } else if (localName.endsWith(QLatin1String("description"))) {
+      const QString t = xml.readElementText().trimmed();
+      if (!t.isEmpty()) {
+        meta.description = t;
+      }
+    }
+  }
+  if (!coverId.isEmpty() && idToHref.contains(coverId)) {
+    meta.coverHref = idToHref.value(coverId);
+  }
+  return meta;
+}
+
+struct ChapterPayload {
+  QStringList display;
+  QStringList plain;
+  QStringList headings;
+};
+
+ChapterPayload extractMarkupContent(const MOBIRawml *rawml,
+                                    const QHash<size_t, ImageAsset> &assets) {
+  ChapterPayload payload;
+  if (!rawml || !rawml->markup) {
+    return payload;
+  }
+  const MOBIPart *part = rawml->markup;
+  while (part) {
+    if (part->data && part->size > 0) {
+      const QByteArray htmlBytes(reinterpret_cast<const char *>(part->data),
+                                 static_cast<int>(part->size));
+      const QString heading = extractHeading(htmlBytes);
+      const QString plain = stripXhtml(htmlBytes);
+      QString display = QString::fromUtf8(htmlBytes);
+      display = normalizeHtmlFragment(display);
+      display = replaceImageSources(display, rawml, assets);
+      if (!display.contains("<html", Qt::CaseInsensitive)) {
+        display = QString("<div>%1</div>").arg(display);
+      }
+      QString displayTrimmed = display.trimmed();
+      QString plainTrimmed = plain.trimmed();
+      if (!displayTrimmed.isEmpty() || !plainTrimmed.isEmpty()) {
+        if (displayTrimmed.isEmpty()) {
+          displayTrimmed = plainTrimmed;
+        }
+        payload.display.append(displayTrimmed);
+        payload.plain.append(plainTrimmed);
+        payload.headings.append(heading.trimmed());
+      }
+    }
+    part = part->next;
+  }
+  return payload;
+}
+
 QString decodeTitle(const MOBIData *data, const QString &fallback) {
   char *title = mobi_meta_get_title(data);
   if (title) {
@@ -191,28 +572,48 @@ QString decodeTitle(const MOBIData *data, const QString &fallback) {
   return fallback;
 }
 
-QStringList extractMarkupText(const MOBIRawml *rawml, QStringList *chapterTitles) {
-  QStringList chapters;
-  if (!rawml || !rawml->markup) {
-    return chapters;
+QString decodeMetaString(char *value) {
+  if (!value) {
+    return {};
   }
-  const MOBIPart *part = rawml->markup;
-  while (part) {
-    if (part->data && part->size > 0) {
-      const QByteArray html(reinterpret_cast<const char *>(part->data),
-                            static_cast<int>(part->size));
-      if (chapterTitles) {
-        const QString heading = extractHeading(html);
-        chapterTitles->append(heading);
-      }
-      const QString text = stripXhtml(html);
-      if (!text.isEmpty()) {
-        chapters.append(text);
-      }
-    }
-    part = part->next;
+  QString out = QString::fromUtf8(value).trimmed();
+  free(value);
+  return out;
+}
+
+QString describeMobiError(MOBI_RET ret) {
+  switch (ret) {
+  case MOBI_SUCCESS:
+    return "Success";
+  case MOBI_FILE_NOT_FOUND:
+    return "File not found";
+  case MOBI_FILE_ENCRYPTED:
+    return "File is encrypted (DRM)";
+  case MOBI_FILE_UNSUPPORTED:
+    return "Unsupported MOBI file type";
+  case MOBI_DATA_CORRUPT:
+    return "Corrupted MOBI data";
+  case MOBI_DRM_UNSUPPORTED:
+    return "DRM support not included";
+  case MOBI_DRM_KEYNOTFOUND:
+    return "DRM key not found";
+  case MOBI_DRM_EXPIRED:
+    return "DRM license expired";
+  case MOBI_PARAM_ERR:
+    return "Invalid MOBI parameters";
+  case MOBI_INIT_FAILED:
+    return "MOBI init failed";
+  case MOBI_MALLOC_FAILED:
+    return "Out of memory";
+  default:
+    return "Unknown MOBI error";
   }
-  return chapters;
+}
+
+bool isSupportedCompression(uint16_t compression) {
+  return compression == MOBI_COMPRESSION_NONE ||
+         compression == MOBI_COMPRESSION_PALMDOC ||
+         compression == MOBI_COMPRESSION_HUFFCDIC;
 }
 
 QString fallbackRawmlText(const MOBIData *data) {
@@ -282,18 +683,44 @@ QString coverExtensionFromBytes(const unsigned char *data, size_t size) {
   return "raw";
 }
 
-QString extractCover(const MOBIData *data, const QFileInfo &info) {
+QString extractCover(const MOBIData *data,
+                     const MOBIRawml *rawml,
+                     const QFileInfo &info,
+                     const QHash<size_t, ImageAsset> &assets) {
   if (!data) {
     return {};
   }
   MOBIExthHeader *exth = mobi_get_exthrecord_by_tag(data, EXTH_COVEROFFSET);
   if (!exth) {
+    // Try KF8 cover uri
+    const QString kf8Cover = decodeFirstExthString(data, EXTH_KF8COVERURI);
+    if (!kf8Cover.isEmpty()) {
+      const auto uid = resolveImageUidFromSrc(kf8Cover, rawml);
+      if (uid.has_value() && assets.contains(uid.value())) {
+        return assets.value(uid.value()).path;
+      }
+    }
+    // Try OPF cover meta
+    const OpfMetadata opf = extractOpfMetadata(rawml);
+    if (!opf.coverHref.isEmpty()) {
+      const auto uid = resolveImageUidFromSrc(opf.coverHref, rawml);
+      if (uid.has_value() && assets.contains(uid.value())) {
+        return assets.value(uid.value()).path;
+      }
+    }
+    // Fallback to first extracted image
+    if (!assets.isEmpty()) {
+      return assets.constBegin().value().path;
+    }
     return {};
   }
   const uint32_t offset = mobi_decode_exthvalue(
       static_cast<const unsigned char *>(exth->data), exth->size);
   const size_t first_resource = mobi_get_first_resource_record(data);
   const size_t uid = first_resource + offset;
+  if (assets.contains(uid)) {
+    return assets.value(uid).path;
+  }
   MOBIPdbRecord *record = mobi_get_record_by_seqnumber(data, uid);
   if (!record || !record->data || record->size < 4) {
     return {};
@@ -341,7 +768,9 @@ std::unique_ptr<FormatDocument> MobiProvider::open(const QString &path, QString 
   MOBI_RET ret = mobi_load_filename(data, encodedPath.constData());
   if (ret != MOBI_SUCCESS) {
     if (error) {
-      *error = QString("Failed to load MOBI (code %1)").arg(ret);
+      *error = QString("Failed to load MOBI: %1 (code %2)")
+                   .arg(describeMobiError(ret))
+                   .arg(ret);
     }
     mobi_free(data);
     return nullptr;
@@ -354,6 +783,30 @@ std::unique_ptr<FormatDocument> MobiProvider::open(const QString &path, QString 
     mobi_free(data);
     return nullptr;
   }
+  if (data->rh && !isSupportedCompression(data->rh->compression_type)) {
+    if (error) {
+      *error = QString("Unsupported MOBI compression type: %1")
+                   .arg(data->rh->compression_type);
+    }
+    mobi_free(data);
+    return nullptr;
+  }
+
+  if (mobi_is_hybrid(data)) {
+    MOBI_RET kf8ret = mobi_parse_kf8(data);
+    if (kf8ret != MOBI_SUCCESS) {
+      MOBI_RET kf7ret = mobi_parse_kf7(data);
+      if (kf7ret != MOBI_SUCCESS) {
+        if (error) {
+          *error = QString("Failed to parse KF8/KF7 parts (KF8: %1, KF7: %2)")
+                       .arg(describeMobiError(kf8ret))
+                       .arg(describeMobiError(kf7ret));
+        }
+        mobi_free(data);
+        return nullptr;
+      }
+    }
+  }
 
   MOBIRawml *rawml = mobi_init_rawml(data);
   if (!rawml) {
@@ -364,46 +817,119 @@ std::unique_ptr<FormatDocument> MobiProvider::open(const QString &path, QString 
     return nullptr;
   }
 
-  ret = mobi_parse_rawml(rawml, data);
+  ret = mobi_parse_rawml_opt(rawml, data, true, false, true);
   if (ret != MOBI_SUCCESS) {
     if (error) {
-      *error = QString("Failed to parse MOBI (code %1)").arg(ret);
+      *error = QString("Failed to parse MOBI: %1 (code %2)")
+                   .arg(describeMobiError(ret))
+                   .arg(ret);
     }
     mobi_free_rawml(rawml);
     mobi_free(data);
     return nullptr;
   }
 
+  const OpfMetadata opfMeta = extractOpfMetadata(rawml);
   QString title = decodeTitle(data, info.completeBaseName());
-  QStringList chapterTitles;
-  QStringList chapters = extractMarkupText(rawml, &chapterTitles);
-  if (chapters.isEmpty()) {
-    const QString fallback = fallbackRawmlText(data);
-    if (!fallback.isEmpty()) {
-      chapters.append(fallback);
-    }
+  if (title.isEmpty() && !opfMeta.title.isEmpty()) {
+    title = opfMeta.title;
   }
 
-  QString coverPath = extractCover(data, info);
+  QStringList authorList = decodeExthStrings(data, EXTH_AUTHOR);
+  if (authorList.isEmpty()) {
+    const QString author = decodeMetaString(mobi_meta_get_author(data));
+    if (!author.isEmpty()) {
+      authorList.append(author);
+    } else if (!opfMeta.creators.isEmpty()) {
+      authorList = opfMeta.creators;
+    }
+  }
+  const QString authors = authorList.join(", ");
+
+  QString publisher = decodeFirstExthString(data, EXTH_PUBLISHER);
+  if (publisher.isEmpty()) {
+    publisher = decodeMetaString(mobi_meta_get_publisher(data));
+  }
+  if (publisher.isEmpty()) {
+    publisher = opfMeta.publisher;
+  }
+
+  QString description = decodeFirstExthString(data, EXTH_DESCRIPTION);
+  if (description.isEmpty()) {
+    description = decodeMetaString(mobi_meta_get_description(data));
+  }
+  if (description.isEmpty()) {
+    description = opfMeta.description;
+  }
+
+  const QString series = opfMeta.series;
+
+  const auto assets = exportImageResources(rawml, info);
+  QString coverPath = extractCover(data, rawml, info, assets);
+
+  ChapterPayload payload = extractMarkupContent(rawml, assets);
+  QStringList chapterDisplay = payload.display;
+  QStringList chapterPlain = payload.plain;
+  QStringList chapterTitles;
+  QStringList tocTitles = extractNcxTitles(rawml);
+  if (!tocTitles.isEmpty()) {
+    chapterTitles = tocTitles;
+  } else if (!payload.headings.isEmpty()) {
+    chapterTitles = payload.headings;
+  }
+
+  if (chapterDisplay.isEmpty() && chapterPlain.isEmpty()) {
+    const QString fallback = fallbackRawmlText(data);
+    if (!fallback.isEmpty()) {
+      chapterDisplay.append(fallback);
+      chapterPlain.append(fallback);
+    }
+  }
 
   mobi_free_rawml(rawml);
   mobi_free(data);
 
-  if (chapters.isEmpty()) {
+  if (chapterDisplay.isEmpty() && chapterPlain.isEmpty()) {
     if (error) {
       *error = "No readable text found in MOBI";
     }
     return nullptr;
   }
 
-  if (chapterTitles.size() != chapters.size()) {
-    chapterTitles = autoChapterTitles(chapters.size());
-  } else {
-    for (int i = 0; i < chapterTitles.size(); ++i) {
-      if (chapterTitles.at(i).isEmpty()) {
-        chapterTitles[i] = QString("Section %1").arg(i + 1);
+  const int chapterCount = std::max(chapterDisplay.size(), chapterPlain.size());
+  if (chapterDisplay.size() != chapterCount) {
+    chapterDisplay.resize(chapterCount);
+  }
+  if (chapterPlain.size() != chapterCount) {
+    chapterPlain.resize(chapterCount);
+  }
+  if (chapterTitles.size() > chapterCount) {
+    chapterTitles = chapterTitles.mid(0, chapterCount);
+  }
+  if (chapterTitles.size() < chapterCount) {
+    for (int i = chapterTitles.size(); i < chapterCount; ++i) {
+      QString fallback = (i < payload.headings.size()) ? payload.headings.at(i) : QString();
+      if (fallback.isEmpty()) {
+        fallback = QString("Section %1").arg(i + 1);
       }
+      chapterTitles.append(fallback);
     }
   }
-  return std::make_unique<MobiDocument>(title, chapterTitles, chapters, coverPath);
+  for (int i = 0; i < chapterTitles.size(); ++i) {
+    if (chapterTitles.at(i).isEmpty()) {
+      chapterTitles[i] = QString("Section %1").arg(i + 1);
+    }
+  }
+
+  const bool richText = !payload.display.isEmpty();
+  return std::make_unique<MobiDocument>(title,
+                                        chapterTitles,
+                                        chapterDisplay,
+                                        chapterPlain,
+                                        coverPath,
+                                        authors,
+                                        series,
+                                        publisher,
+                                        description,
+                                        richText);
 }

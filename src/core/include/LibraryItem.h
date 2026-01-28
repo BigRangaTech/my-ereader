@@ -8,6 +8,9 @@ struct LibraryItem {
   int id = 0;
   QString title;
   QString authors;
+  QString series;
+  QString publisher;
+  QString description;
   QString path;
   QString format;
   QString fileHash;

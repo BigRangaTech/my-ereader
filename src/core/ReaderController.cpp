@@ -59,14 +59,17 @@ void ReaderController::close() {
   m_document.reset();
   m_currentTitle.clear();
   m_currentText.clear();
+  m_currentPlainText.clear();
   m_currentPath.clear();
   m_chapterTitles.clear();
   m_chapterTexts.clear();
+  m_chapterPlainTexts.clear();
   m_currentChapterIndex = -1;
   m_imagePaths.clear();
   m_currentImageIndex = -1;
   m_imageReloadToken = 0;
   m_coverPath.clear();
+  m_textIsRich = false;
   m_isOpen = false;
   qInfo() << "ReaderController: closed";
   emit currentChanged();
@@ -74,6 +77,8 @@ void ReaderController::close() {
 
 QString ReaderController::currentTitle() const { return m_currentTitle; }
 QString ReaderController::currentText() const { return m_currentText; }
+QString ReaderController::currentPlainText() const { return m_currentPlainText; }
+bool ReaderController::currentTextIsRich() const { return m_textIsRich; }
 QString ReaderController::currentPath() const { return m_currentPath; }
 bool ReaderController::isOpen() const { return m_isOpen; }
 int ReaderController::currentChapterIndex() const { return m_currentChapterIndex; }
@@ -156,8 +161,10 @@ bool ReaderController::applyDocument(std::unique_ptr<FormatDocument> document,
   m_currentTitle = m_document->title();
   m_chapterTitles = m_document->chapterTitles();
   m_chapterTexts = m_document->chaptersText();
+  m_chapterPlainTexts = m_document->chaptersPlainText();
   m_imagePaths = m_document->imagePaths();
   m_coverPath = m_document->coverPath();
+  m_textIsRich = m_document->isRichText();
   if (!m_imagePaths.isEmpty()) {
     m_currentImageIndex = 0;
     m_imageReloadToken = 0;
@@ -174,9 +181,15 @@ bool ReaderController::applyDocument(std::unique_ptr<FormatDocument> document,
   if (!m_chapterTexts.isEmpty()) {
     m_currentChapterIndex = 0;
     m_currentText = m_chapterTexts.at(0);
+    if (!m_chapterPlainTexts.isEmpty()) {
+      m_currentPlainText = m_chapterPlainTexts.at(0);
+    } else {
+      m_currentPlainText = m_document->readAllPlainText();
+    }
   } else {
     m_currentChapterIndex = -1;
     m_currentText = m_document->readAllText();
+    m_currentPlainText = m_document->readAllPlainText();
   }
   m_currentPath = QFileInfo(path).absoluteFilePath();
   if (!m_coverPath.isEmpty()) {
@@ -213,6 +226,11 @@ bool ReaderController::jumpToLocator(const QString &locator) {
     }
     m_currentChapterIndex = index;
     m_currentText = m_chapterTexts.at(index);
+    if (index < m_chapterPlainTexts.size()) {
+      m_currentPlainText = m_chapterPlainTexts.at(index);
+    } else {
+      m_currentPlainText = m_document ? m_document->readAllPlainText() : m_currentText;
+    }
     emit currentChanged();
     return true;
   }
@@ -221,6 +239,11 @@ bool ReaderController::jumpToLocator(const QString &locator) {
     if (m_chapterTitles.at(i).contains(trimmed, Qt::CaseInsensitive)) {
       m_currentChapterIndex = i;
       m_currentText = m_chapterTexts.at(i);
+      if (i < m_chapterPlainTexts.size()) {
+        m_currentPlainText = m_chapterPlainTexts.at(i);
+      } else {
+        m_currentPlainText = m_document ? m_document->readAllPlainText() : m_currentText;
+      }
       emit currentChanged();
       return true;
     }

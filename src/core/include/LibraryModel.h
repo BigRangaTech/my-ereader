@@ -16,6 +16,9 @@ public:
     IdRole = Qt::UserRole + 1,
     TitleRole,
     AuthorsRole,
+    SeriesRole,
+    PublisherRole,
+    DescriptionRole,
     PathRole,
     FormatRole,
     AddedAtRole
