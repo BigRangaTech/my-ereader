@@ -398,7 +398,39 @@ ApplicationWindow {
     id: imageReader
 
     Item {
+      property real zoom: 1.0
+      property real minZoom: 0.5
+      property real maxZoom: 4.0
+      property real pinchStartZoom: 1.0
+      property string fitMode: "page" // page, width, height
+      property real baseScale: 1.0
+      property real sourceW: 1.0
+      property real sourceH: 1.0
+      property real effectiveScale: baseScale * zoom
+      function clampZoom(value) {
+        return Math.max(minZoom, Math.min(maxZoom, value))
+      }
+      function recomputeBase() {
+        if (imageItem.sourceSize.width <= 0 || imageItem.sourceSize.height <= 0) {
+          baseScale = 1.0
+          sourceW = Math.max(1, imageItem.sourceSize.width)
+          sourceH = Math.max(1, imageItem.sourceSize.height)
+          return
+        }
+        sourceW = imageItem.sourceSize.width
+        sourceH = imageItem.sourceSize.height
+        if (fitMode === "width") {
+          baseScale = imageFlick.width / sourceW
+        } else if (fitMode === "height") {
+          baseScale = imageFlick.height / sourceH
+        } else {
+          baseScale = Math.min(imageFlick.width / sourceW, imageFlick.height / sourceH)
+        }
+      }
       anchors.fill: parent
+
+      onWidthChanged: recomputeBase()
+      onHeightChanged: recomputeBase()
 
       ColumnLayout {
         anchors.fill: parent
@@ -428,6 +460,73 @@ ApplicationWindow {
               enabled: reader.currentImageIndex + 1 < reader.imageCount
             }
 
+            Button {
+              text: "Fit Page"
+              onClicked: {
+                fitMode = "page"
+                zoom = 1.0
+                recomputeBase()
+              }
+            }
+
+            Button {
+              text: "Fit Width"
+              onClicked: {
+                fitMode = "width"
+                zoom = 1.0
+                recomputeBase()
+              }
+            }
+
+            Button {
+              text: "Fit Height"
+              onClicked: {
+                fitMode = "height"
+                zoom = 1.0
+                recomputeBase()
+              }
+            }
+
+            Button {
+              text: "-"
+              onClicked: zoom = clampZoom(zoom - 0.1)
+            }
+
+            Button {
+              text: "+"
+              onClicked: zoom = clampZoom(zoom + 0.1)
+            }
+
+            Text {
+              text: qsTr("%1%").arg(Math.round(zoom * 100))
+              color: theme.textMuted
+              font.pixelSize: 12
+              font.family: root.uiFont
+            }
+
+            TextField {
+              Layout.preferredWidth: 60
+              text: reader.imageCount > 0 ? String(reader.currentImageIndex + 1) : ""
+              placeholderText: "Page"
+              inputMethodHints: Qt.ImhDigitsOnly
+              validator: IntValidator { bottom: 1; top: Math.max(1, reader.imageCount) }
+              onAccepted: {
+                const page = parseInt(text)
+                if (!isNaN(page)) {
+                  reader.goToImage(page - 1)
+                }
+              }
+            }
+
+            Slider {
+              Layout.preferredWidth: 180
+              from: 1
+              to: Math.max(1, reader.imageCount)
+              stepSize: 1
+              value: reader.imageCount > 0 ? reader.currentImageIndex + 1 : 1
+              onMoved: reader.goToImage(Math.max(0, Math.round(value - 1)))
+            }
+
             Text {
               text: reader.imageCount > 0
                     ? qsTr("%1 / %2").arg(reader.currentImageIndex + 1).arg(reader.imageCount)
@@ -443,9 +542,36 @@ ApplicationWindow {
           id: imageFlick
           Layout.fillWidth: true
           Layout.fillHeight: true
-          contentWidth: imageItem.paintedWidth
-          contentHeight: imageItem.paintedHeight
+          contentWidth: Math.max(imageItem.width, width)
+          contentHeight: Math.max(imageItem.height, height)
           clip: true
+
+          WheelHandler {
+            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+            onWheel: {
+              const step = wheel.angleDelta.y > 0 ? 0.1 : -0.1
+              zoom = clampZoom(zoom + step)
+            }
+          }
+
+          PinchArea {
+            anchors.fill: parent
+            onPinchStarted: pinchStartZoom = zoom
+            onPinchUpdated: zoom = clampZoom(pinchStartZoom * pinch.scale)
+          }
+
+          TapHandler {
+            acceptedButtons: Qt.LeftButton
+            onDoubleTapped: {
+              if (fitMode === "width") {
+                fitMode = "page"
+              } else {
+                fitMode = "width"
+              }
+              zoom = 1.0
+              recomputeBase()
+            }
+          }
 
           Image {
             id: imageItem
@@ -453,16 +579,23 @@ ApplicationWindow {
             fillMode: Image.PreserveAspectFit
             asynchronous: true
             cache: false
-            width: imageFlick.width
-            height: imageFlick.height
+            width: sourceW * effectiveScale
+            height: sourceH * effectiveScale
+            x: Math.max(0, (imageFlick.width - width) / 2)
+            y: Math.max(0, (imageFlick.height - height) / 2)
+            onSourceChanged: recomputeBase()
             onStatusChanged: {
               if (status === Image.Error) {
                 console.warn("Image load failed", source, errorString)
               } else if (status === Image.Ready) {
                 console.info("Image loaded", source, sourceSize.width, sourceSize.height)
+                recomputeBase()
               }
             }
           }
+
+          ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+          ScrollBar.horizontal: ScrollBar { policy: ScrollBar.AsNeeded }
         }
       }
     }
@@ -675,6 +808,15 @@ ApplicationWindow {
                 reader.close()
                 stack.pop()
               }
+            }
+
+            Image {
+              source: reader.currentCoverUrl
+              visible: reader.currentCoverUrl.toString().length > 0
+              fillMode: Image.PreserveAspectFit
+              width: 40
+              height: 56
+              cache: false
             }
 
             Text {

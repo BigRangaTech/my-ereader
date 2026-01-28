@@ -48,13 +48,34 @@ struct ZipReader {
   }
 };
 
+bool isHiddenPath(const QString &name) {
+  const QString cleaned = QDir::cleanPath(name);
+  if (cleaned.startsWith("__MACOSX")) {
+    return true;
+  }
+  const QStringList parts = cleaned.split('/', Qt::SkipEmptyParts);
+  for (const QString &part : parts) {
+    if (part.startsWith('.')) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool isImageFile(const QString &name) {
+  if (isHiddenPath(name)) {
+    return false;
+  }
   const QString ext = QFileInfo(name).suffix().toLower();
   return ext == "jpg" || ext == "jpeg" || ext == "png" || ext == "webp" || ext == "bmp";
 }
 
-QString tempDirFor(const QString &path) {
-  const QByteArray hash = QCryptographicHash::hash(path.toUtf8(), QCryptographicHash::Sha1).toHex();
+QString tempDirFor(const QFileInfo &info) {
+  const QString key = QString("%1|%2|%3")
+                          .arg(info.absoluteFilePath())
+                          .arg(info.size())
+                          .arg(info.lastModified().toSecsSinceEpoch());
+  const QByteArray hash = QCryptographicHash::hash(key.toUtf8(), QCryptographicHash::Sha1).toHex();
   return QDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation))
       .filePath(QString("ereader_cbz_%1").arg(QString::fromUtf8(hash)));
 }
@@ -146,9 +167,10 @@ QString CbzProvider::name() const { return "CBZ"; }
 QStringList CbzProvider::supportedExtensions() const { return {"cbz", "cbr"}; }
 
 std::unique_ptr<FormatDocument> CbzProvider::open(const QString &path, QString *error) {
-  const QString ext = QFileInfo(path).suffix().toLower();
+  const QFileInfo info(path);
+  const QString ext = info.suffix().toLower();
   if (ext == "cbr") {
-    const QString outDir = tempDirFor(path);
+    const QString outDir = tempDirFor(info);
     QDir().mkpath(outDir);
     bool extracted = false;
 #ifdef HAVE_LIBARCHIVE
@@ -178,7 +200,7 @@ std::unique_ptr<FormatDocument> CbzProvider::open(const QString &path, QString *
       }
       return nullptr;
     }
-    const QString title = QFileInfo(path).completeBaseName();
+    const QString title = info.completeBaseName();
     return std::make_unique<CbzDocument>(title, images);
   }
 
@@ -190,7 +212,7 @@ std::unique_ptr<FormatDocument> CbzProvider::open(const QString &path, QString *
     return nullptr;
   }
 
-  const QString outDir = tempDirFor(path);
+  const QString outDir = tempDirFor(info);
   QDir().mkpath(outDir);
 
   const int count = mz_zip_reader_get_num_files(&zip.archive);

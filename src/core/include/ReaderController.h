@@ -20,6 +20,8 @@ class ReaderController : public QObject {
   Q_PROPERTY(int imageCount READ imageCount NOTIFY currentChanged)
   Q_PROPERTY(QString currentImagePath READ currentImagePath NOTIFY currentChanged)
   Q_PROPERTY(QUrl currentImageUrl READ currentImageUrl NOTIFY currentChanged)
+  Q_PROPERTY(QString currentCoverPath READ currentCoverPath NOTIFY currentChanged)
+  Q_PROPERTY(QUrl currentCoverUrl READ currentCoverUrl NOTIFY currentChanged)
   Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
 
 public:
@@ -30,6 +32,7 @@ public:
   Q_INVOKABLE bool jumpToLocator(const QString &locator);
   Q_INVOKABLE bool nextImage();
   Q_INVOKABLE bool prevImage();
+  Q_INVOKABLE bool goToImage(int index);
 
   QString currentTitle() const;
   QString currentText() const;
@@ -42,6 +45,8 @@ public:
   int imageCount() const;
   QString currentImagePath() const;
   QUrl currentImageUrl() const;
+  QString currentCoverPath() const;
+  QUrl currentCoverUrl() const;
   QString lastError() const;
 
 signals:
@@ -61,6 +66,7 @@ private:
   int m_currentChapterIndex = -1;
   QStringList m_imagePaths;
   int m_currentImageIndex = -1;
+  QString m_coverPath;
   QString m_lastError;
   bool m_isOpen = false;
 };

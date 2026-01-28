@@ -25,6 +25,18 @@ QString stripText(const QString &text) {
   t.replace(QChar(0x00A0), QChar(' '));
   return t.trimmed();
 }
+
+struct SectionContext {
+  QString title;
+  QStringList paragraphs;
+  int depth = 0;
+};
+
+bool isParagraphElement(const QString &name) {
+  return name == QLatin1String("p") || name == QLatin1String("subtitle") ||
+         name == QLatin1String("v") || name == QLatin1String("text-author") ||
+         name == QLatin1String("cite") || name == QLatin1String("annotation");
+}
 } // namespace
 
 QString Fb2Provider::name() const { return "FB2"; }
@@ -44,10 +56,14 @@ std::unique_ptr<FormatDocument> Fb2Provider::open(const QString &path, QString *
   QString title;
   QStringList chapters;
   QStringList sections;
-  QString currentSection;
+  QVector<SectionContext> stack;
+  QString titleBuffer;
+  QString paragraphBuffer;
   bool inTitle = false;
-  bool inSection = false;
+  bool inSectionTitle = false;
+  bool inParagraph = false;
   bool inBinary = false;
+  int sectionDepth = 0;
 
   while (!xml.atEnd()) {
     xml.readNext();
@@ -58,12 +74,17 @@ std::unique_ptr<FormatDocument> Fb2Provider::open(const QString &path, QString *
       } else if (!inBinary && name == QLatin1String("book-title")) {
         inTitle = true;
       } else if (!inBinary && name == QLatin1String("section")) {
-        inSection = true;
-        currentSection.clear();
-      } else if (!inBinary && name == QLatin1String("title")) {
-        // section title captured in text
-      } else if (!inBinary && name == QLatin1String("p")) {
-        // paragraph text handled in characters
+        SectionContext ctx;
+        ctx.depth = ++sectionDepth;
+        stack.append(ctx);
+      } else if (!inBinary && name == QLatin1String("title") && !stack.isEmpty()) {
+        inSectionTitle = true;
+        titleBuffer.clear();
+      } else if (!inBinary && isParagraphElement(name) && !stack.isEmpty()) {
+        inParagraph = true;
+        paragraphBuffer.clear();
+      } else if (!inBinary && name == QLatin1String("empty-line") && !stack.isEmpty()) {
+        stack.last().paragraphs.append(QString());
       }
     } else if (xml.isCharacters() && !xml.isWhitespace()) {
       if (inBinary) {
@@ -74,11 +95,23 @@ std::unique_ptr<FormatDocument> Fb2Provider::open(const QString &path, QString *
         continue;
       }
       if (inTitle) {
-        title = text;
+        if (!title.isEmpty()) {
+          title.append(' ');
+        }
+        title.append(text);
       }
-      if (inSection) {
-        currentSection.append(text);
-        currentSection.append('\n');
+      if (!stack.isEmpty()) {
+        if (inSectionTitle) {
+          if (!titleBuffer.isEmpty()) {
+            titleBuffer.append(' ');
+          }
+          titleBuffer.append(text);
+        } else if (inParagraph) {
+          if (!paragraphBuffer.isEmpty()) {
+            paragraphBuffer.append(' ');
+          }
+          paragraphBuffer.append(text);
+        }
       }
     } else if (xml.isEndElement()) {
       const QString name = xml.name().toString().toLower();
@@ -86,15 +119,32 @@ std::unique_ptr<FormatDocument> Fb2Provider::open(const QString &path, QString *
         inBinary = false;
       } else if (name == QLatin1String("book-title")) {
         inTitle = false;
-      } else if (name == QLatin1String("section")) {
-        inSection = false;
-        if (!currentSection.trimmed().isEmpty()) {
-          sections.append(currentSection.trimmed());
+      } else if (name == QLatin1String("title") && !stack.isEmpty()) {
+        inSectionTitle = false;
+        if (!titleBuffer.trimmed().isEmpty()) {
+          if (stack.last().title.isEmpty()) {
+            stack.last().title = titleBuffer.trimmed();
+          }
+          stack.last().paragraphs.append(titleBuffer.trimmed());
         }
-      } else if (name == QLatin1String("title") && inSection) {
-        const QString sectionTitle = stripText(currentSection.split('\n').value(0));
-        if (!sectionTitle.isEmpty()) {
-          chapters.append(sectionTitle);
+        titleBuffer.clear();
+      } else if (isParagraphElement(name) && !stack.isEmpty()) {
+        if (inParagraph && !paragraphBuffer.trimmed().isEmpty()) {
+          stack.last().paragraphs.append(paragraphBuffer.trimmed());
+        }
+        paragraphBuffer.clear();
+        inParagraph = false;
+      } else if (name == QLatin1String("section") && !stack.isEmpty()) {
+        SectionContext ctx = stack.takeLast();
+        sectionDepth--;
+        if (!ctx.paragraphs.isEmpty()) {
+          const QString sectionText = ctx.paragraphs.join("\n\n").trimmed();
+          if (!sectionText.isEmpty()) {
+            sections.append(sectionText);
+          }
+        }
+        if (ctx.depth == 1 && !ctx.title.isEmpty()) {
+          chapters.append(ctx.title);
         }
       }
     }

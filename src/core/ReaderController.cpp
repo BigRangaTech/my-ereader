@@ -27,6 +27,7 @@ bool ReaderController::openFile(const QString &path) {
   m_chapterTitles = m_document->chapterTitles();
   m_chapterTexts = m_document->chaptersText();
   m_imagePaths = m_document->imagePaths();
+  m_coverPath = m_document->coverPath();
   if (!m_imagePaths.isEmpty()) {
     m_currentImageIndex = 0;
     const QString firstImage = m_imagePaths.at(0);
@@ -44,6 +45,10 @@ bool ReaderController::openFile(const QString &path) {
     m_currentText = m_document->readAllText();
   }
   m_currentPath = QFileInfo(path).absoluteFilePath();
+  if (!m_coverPath.isEmpty()) {
+    qInfo() << "ReaderController: cover" << m_coverPath
+            << "exists:" << QFileInfo::exists(m_coverPath);
+  }
   m_isOpen = true;
   qInfo() << "ReaderController: opened" << m_currentTitle << m_currentPath;
   emit currentChanged();
@@ -63,6 +68,7 @@ void ReaderController::close() {
   m_currentChapterIndex = -1;
   m_imagePaths.clear();
   m_currentImageIndex = -1;
+  m_coverPath.clear();
   m_isOpen = false;
   qInfo() << "ReaderController: closed";
   emit currentChanged();
@@ -98,6 +104,17 @@ QUrl ReaderController::currentImageUrl() const {
     return QUrl::fromLocalFile(path);
   }
   return QUrl(path);
+}
+QString ReaderController::currentCoverPath() const { return m_coverPath; }
+QUrl ReaderController::currentCoverUrl() const {
+  if (m_coverPath.isEmpty()) {
+    return {};
+  }
+  QFileInfo info(m_coverPath);
+  if (info.isAbsolute()) {
+    return QUrl::fromLocalFile(m_coverPath);
+  }
+  return QUrl(m_coverPath);
 }
 QString ReaderController::lastError() const { return m_lastError; }
 
@@ -161,6 +178,21 @@ bool ReaderController::prevImage() {
     return false;
   }
   m_currentImageIndex--;
+  emit currentChanged();
+  return true;
+}
+
+bool ReaderController::goToImage(int index) {
+  if (m_imagePaths.isEmpty()) {
+    return false;
+  }
+  if (index < 0 || index >= m_imagePaths.size()) {
+    return false;
+  }
+  if (m_currentImageIndex == index) {
+    return true;
+  }
+  m_currentImageIndex = index;
   emit currentChanged();
   return true;
 }

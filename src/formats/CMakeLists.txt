@@ -15,7 +15,7 @@ add_library(formats STATIC
 
 target_include_directories(formats PUBLIC include)
 
-target_link_libraries(formats PUBLIC Qt6::Core Qt6::Xml)
+target_link_libraries(formats PUBLIC Qt6::Core Qt6::Gui Qt6::Xml)
 
 find_package(ZLIB REQUIRED)
 
