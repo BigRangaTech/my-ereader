@@ -46,6 +46,10 @@ ApplicationWindow {
     id: reader
   }
 
+  SettingsManager {
+    id: settings
+  }
+
   SyncManager {
     id: syncManager
   }
@@ -380,17 +384,17 @@ ApplicationWindow {
       contentHeight: textBlock.height
       clip: true
 
-      Text {
-        id: textBlock
-        width: textScroll.width
-        text: reader.currentText
-        color: theme.textPrimary
-        font.pixelSize: 20
-        font.family: root.readingFont
-        wrapMode: Text.WordWrap
-        lineHeight: 1.4
-        lineHeightMode: Text.ProportionalHeight
-      }
+        Text {
+          id: textBlock
+          width: textScroll.width
+          text: reader.currentText
+          color: theme.textPrimary
+          font.pixelSize: settings.readingFontSize
+          font.family: root.readingFont
+          wrapMode: Text.WordWrap
+          lineHeight: settings.readingLineHeight
+          lineHeightMode: Text.ProportionalHeight
+        }
     }
   }
 
@@ -399,8 +403,8 @@ ApplicationWindow {
 
     Item {
       property real zoom: 1.0
-      property real minZoom: 0.5
-      property real maxZoom: 4.0
+      property real minZoom: settings.comicMinZoom
+      property real maxZoom: settings.comicMaxZoom
       property real pinchStartZoom: 1.0
       property string fitMode: "page" // page, width, height
       property real baseScale: 1.0
@@ -670,6 +674,12 @@ ApplicationWindow {
             }
 
             Button {
+              text: "Settings"
+              font.family: root.uiFont
+              onClicked: settingsDialog.open()
+            }
+
+            Button {
               text: "About"
               font.family: root.uiFont
               onClicked: aboutDialog.open()
@@ -852,6 +862,12 @@ ApplicationWindow {
             }
 
             Button {
+              text: "Settings"
+              font.family: root.uiFont
+              onClicked: settingsDialog.open()
+            }
+
+            Button {
               text: "Lock"
               font.family: root.uiFont
               visible: vault.state === VaultController.Unlocked
@@ -982,6 +998,266 @@ ApplicationWindow {
           color: theme.accent
           font.pixelSize: 12
           font.family: root.uiFont
+        }
+      }
+    }
+  }
+
+  Dialog {
+    id: settingsDialog
+    title: "Settings"
+    modal: true
+    standardButtons: Dialog.Close
+    width: Math.min(860, root.width - 80)
+    height: Math.min(720, root.height - 80)
+
+    contentItem: Rectangle {
+      color: theme.panel
+      radius: 16
+
+      ScrollView {
+        anchors.fill: parent
+        anchors.margins: 12
+
+        ColumnLayout {
+          width: parent.width
+          spacing: 18
+
+          Text {
+            text: "Reading"
+            color: theme.textPrimary
+            font.pixelSize: 20
+            font.family: root.uiFont
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Font size"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 12
+              to: 36
+              stepSize: 1
+              value: settings.readingFontSize
+              onMoved: settings.readingFontSize = Math.round(value)
+            }
+
+            SpinBox {
+              from: 12
+              to: 36
+              value: settings.readingFontSize
+              editable: true
+              onValueModified: settings.readingFontSize = value
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Line height"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 1.0
+              to: 2.0
+              stepSize: 0.05
+              value: settings.readingLineHeight
+              onMoved: settings.readingLineHeight = Math.round(value * 100) / 100
+            }
+
+            Text {
+              text: settings.readingLineHeight.toFixed(2)
+              color: theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 48
+            }
+          }
+
+          Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
+
+          Text {
+            text: "PDF"
+            color: theme.textPrimary
+            font.pixelSize: 20
+            font.family: root.uiFont
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Render DPI"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 72
+              to: 240
+              stepSize: 6
+              value: settings.pdfDpi
+              onMoved: settings.pdfDpi = Math.round(value)
+            }
+
+            SpinBox {
+              from: 72
+              to: 240
+              value: settings.pdfDpi
+              editable: true
+              onValueModified: settings.pdfDpi = value
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Cache pages"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 5
+              to: 120
+              stepSize: 1
+              value: settings.pdfCacheLimit
+              onMoved: settings.pdfCacheLimit = Math.round(value)
+            }
+
+            SpinBox {
+              from: 5
+              to: 120
+              value: settings.pdfCacheLimit
+              editable: true
+              onValueModified: settings.pdfCacheLimit = value
+            }
+          }
+
+          Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
+
+          Text {
+            text: "Comics"
+            color: theme.textPrimary
+            font.pixelSize: 20
+            font.family: root.uiFont
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Min zoom"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 0.2
+              to: 6.0
+              stepSize: 0.1
+              value: settings.comicMinZoom
+              onMoved: settings.comicMinZoom = Math.round(value * 10) / 10
+            }
+
+            Text {
+              text: settings.comicMinZoom.toFixed(1)
+              color: theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 48
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Max zoom"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 1.0
+              to: 8.0
+              stepSize: 0.1
+              value: settings.comicMaxZoom
+              onMoved: settings.comicMaxZoom = Math.round(value * 10) / 10
+            }
+
+            Text {
+              text: settings.comicMaxZoom.toFixed(1)
+              color: theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 48
+            }
+          }
+
+          Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Button {
+              text: "Reset defaults"
+              onClicked: settings.resetDefaults()
+              font.family: root.uiFont
+            }
+
+            Button {
+              text: "Reload file"
+              onClicked: settings.reload()
+              font.family: root.uiFont
+            }
+
+            Item { Layout.fillWidth: true }
+
+            Text {
+              text: settings.settingsPath
+              color: theme.textMuted
+              font.pixelSize: 11
+              font.family: root.uiFont
+              elide: Text.ElideRight
+              horizontalAlignment: Text.AlignRight
+              Layout.fillWidth: true
+            }
+          }
         }
       }
     }

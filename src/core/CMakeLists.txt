@@ -6,6 +6,7 @@ add_library(core STATIC
   Logger.cpp
   LicenseManager.cpp
   ReaderController.cpp
+  SettingsManager.cpp
   VaultController.cpp
   include/AsyncUtil.h
   include/DbWorker.h
@@ -14,6 +15,7 @@ add_library(core STATIC
   include/Logger.h
   include/LicenseManager.h
   include/ReaderController.h
+  include/SettingsManager.h
   include/VaultController.h
 )
 

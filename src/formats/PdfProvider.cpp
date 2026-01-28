@@ -9,6 +9,8 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QImage>
+#include <QCoreApplication>
+#include <QSettings>
 #include <QStandardPaths>
 #include <QDebug>
 #include <QList>
@@ -17,10 +19,41 @@
 #include <QSet>
 #include <memory>
 #include <functional>
+#include <algorithm>
 #include <QRunnable>
 #include <QThreadPool>
 
 namespace {
+QString settingsPath() {
+  QDir dir(QCoreApplication::applicationDirPath());
+  for (int i = 0; i < 6; ++i) {
+    if (QFileInfo::exists(dir.filePath("README.md"))) {
+      return dir.filePath("config/settings.ini");
+    }
+    if (!dir.cdUp()) {
+      break;
+    }
+  }
+  return QDir(QCoreApplication::applicationDirPath()).filePath("settings.ini");
+}
+
+int clampInt(int value, int minValue, int maxValue) {
+  return std::max(minValue, std::min(maxValue, value));
+}
+
+struct PdfSettings {
+  int dpi = 120;
+  int cacheLimit = 30;
+};
+
+PdfSettings loadPdfSettings() {
+  QSettings settings(settingsPath(), QSettings::IniFormat);
+  PdfSettings out;
+  out.dpi = clampInt(settings.value("pdf/dpi", 120).toInt(), 72, 240);
+  out.cacheLimit = clampInt(settings.value("pdf/cache_limit", 30).toInt(), 5, 120);
+  return out;
+}
+
 class PdfRunnable final : public QRunnable {
 public:
   explicit PdfRunnable(std::function<void()> task) : m_task(std::move(task)) {}
@@ -216,8 +249,9 @@ std::unique_ptr<FormatDocument> PdfProvider::open(const QString &path, QString *
   const QFileInfo info(path);
   const QString outDir = tempDirForPdf(info);
   QDir().mkpath(outDir);
-  const int cacheLimit = 30;
-  const double renderDpi = 120.0;
+  const PdfSettings pdfSettings = loadPdfSettings();
+  const int cacheLimit = pdfSettings.cacheLimit;
+  const double renderDpi = static_cast<double>(pdfSettings.dpi);
   for (int i = 0; i < pageCount; ++i) {
     std::unique_ptr<Poppler::Page> page(doc->page(i));
     if (!page) {
