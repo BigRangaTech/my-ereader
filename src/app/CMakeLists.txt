@@ -25,7 +25,7 @@ target_link_libraries(ereader PRIVATE
   tts
 )
 
-if (PopplerQt6_FOUND)
+if (POPPLER_QT6_AVAILABLE)
   target_link_libraries(ereader PRIVATE Poppler::Qt6)
 endif()
 

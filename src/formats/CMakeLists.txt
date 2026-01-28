@@ -19,6 +19,6 @@ target_sources(formats PRIVATE
 )
 target_include_directories(formats PRIVATE ../../third_party/miniz)
 
-if (PopplerQt6_FOUND)
+if (POPPLER_QT6_AVAILABLE)
   target_link_libraries(formats PUBLIC Poppler::Qt6)
 endif()
