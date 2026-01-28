@@ -13,6 +13,8 @@ POPPLER_REMOTE="https://github.com/BigRangaTech/my-poppler"
 POPPLER_REF="001"
 LIBARCHIVE_REMOTE="https://github.com/libarchive/libarchive"
 LIBARCHIVE_REF="v3.7.2"
+LIBMOBI_REMOTE="https://github.com/BigRangaTech/libmobi"
+LIBMOBI_REF="v001"
 
 update_monocypher() {
   echo "Updating Monocypher to $MONOCYPHER_REF"
@@ -32,6 +34,13 @@ update_libarchive() {
   git clone --depth 1 --branch "$LIBARCHIVE_REF" "$LIBARCHIVE_REMOTE" "$ROOT/third_party/libarchive"
 }
 
+update_libmobi() {
+  echo "Updating libmobi to $LIBMOBI_REF"
+  rm -rf "$ROOT/third_party/libmobi"
+  git clone --depth 1 --branch "$LIBMOBI_REF" "$LIBMOBI_REMOTE" "$ROOT/third_party/libmobi"
+}
+
 update_monocypher
 update_poppler
 update_libarchive
+update_libmobi

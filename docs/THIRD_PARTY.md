@@ -26,3 +26,8 @@
 - License: `third_party/libarchive/COPYING`
 - Source: `third_party/libarchive/`
 - Build: `scripts/build_libarchive.sh`
+
+## libmobi
+- Purpose: MOBI/AZW3 parsing
+- License: `third_party/libmobi/COPYING`
+- Source: `third_party/libmobi/`

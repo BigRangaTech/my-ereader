@@ -7,13 +7,15 @@
 #include "EpubProvider.h"
 #include "Fb2Provider.h"
 #include "CbzProvider.h"
+#include "MobiProvider.h"
 
 std::unique_ptr<FormatRegistry> FormatRegistry::createDefault() {
   auto registry = std::make_unique<FormatRegistry>();
   registry->registerProvider(std::make_unique<TxtProvider>());
   registry->registerProvider(std::make_unique<EpubProvider>());
-  registry->registerProvider(std::make_unique<Fb2Provider>());
   registry->registerProvider(std::make_unique<PdfProvider>());
+  registry->registerProvider(std::make_unique<MobiProvider>());
+  registry->registerProvider(std::make_unique<Fb2Provider>());
   registry->registerProvider(std::make_unique<CbzProvider>());
   return registry;
 }

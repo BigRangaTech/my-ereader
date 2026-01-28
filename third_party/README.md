@@ -36,3 +36,8 @@ that is built and bundled into prebuilt binaries.
   - License: `third_party/libarchive/COPYING`
   - Notes: CBR extraction (bundled)
   - Build: `scripts/build_libarchive.sh`
+- libmobi
+  - Source: `third_party/libmobi/`
+  - Upstream: https://github.com/BigRangaTech/libmobi (tag `v001`)
+  - License: `third_party/libmobi/COPYING`
+  - Notes: MOBI/AZW3 parsing

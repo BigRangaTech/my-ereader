@@ -440,10 +440,11 @@ ApplicationWindow {
         }
 
         Flickable {
+          id: imageFlick
           Layout.fillWidth: true
           Layout.fillHeight: true
-          contentWidth: imageItem.width
-          contentHeight: imageItem.height
+          contentWidth: imageItem.paintedWidth
+          contentHeight: imageItem.paintedHeight
           clip: true
 
           Image {
@@ -452,8 +453,8 @@ ApplicationWindow {
             fillMode: Image.PreserveAspectFit
             asynchronous: true
             cache: false
-            width: parent.width
-            height: parent.height
+            width: imageFlick.width
+            height: imageFlick.height
             onStatusChanged: {
               if (status === Image.Error) {
                 console.warn("Image load failed", source, errorString)
