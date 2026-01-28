@@ -12,5 +12,6 @@
 *.apk
 *.aab
 *.log
+/logs/
 /third_party/build/
 /third_party/install/

@@ -53,8 +53,16 @@ void Logger::init() {
 }
 
 QString Logger::logDirectory() {
-  const QString base = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-  return QDir(base).filePath("logs");
+  QDir dir(QCoreApplication::applicationDirPath());
+  for (int i = 0; i < 5; ++i) {
+    if (QFileInfo::exists(dir.filePath("README.md"))) {
+      return dir.filePath("logs");
+    }
+    if (!dir.cdUp()) {
+      break;
+    }
+  }
+  return QCoreApplication::applicationDirPath();
 }
 
 QString Logger::logFilePath() {

@@ -14,7 +14,10 @@ option(USE_BUNDLED_POPPLER "Use bundled Poppler (third_party/install/poppler)" O
 
 find_package(Qt6 REQUIRED COMPONENTS Core Quick Qml QuickControls2 Network Sql Xml)
 if(ENABLE_TTS)
-  find_package(Qt6 COMPONENTS TextToSpeech)
+  find_package(Qt6TextToSpeech QUIET)
+  if (Qt6TextToSpeech_FOUND)
+    set(HAVE_QT_TTS 1)
+  endif()
 endif()
 
 list(PREPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")

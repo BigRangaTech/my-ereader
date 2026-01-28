@@ -10,6 +10,8 @@ qt_add_qml_module(ereader
     qml/Theme.qml
 )
 
+set_source_files_properties(qml/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+
 target_link_libraries(ereader PRIVATE
   Qt6::Core
   Qt6::Quick
