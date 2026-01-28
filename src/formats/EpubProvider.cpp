@@ -1,6 +1,7 @@
 #include "EpubProvider.h"
 
 #include <QFileInfo>
+#include <QDebug>
 #include <QXmlStreamReader>
 
 #include "miniz.h"
@@ -296,6 +297,7 @@ std::unique_ptr<FormatDocument> EpubProvider::open(const QString &path, QString 
     if (error) {
       *error = "Failed to open EPUB (zip)";
     }
+    qWarning() << "EpubProvider: failed to open zip" << path;
     return nullptr;
   }
 
@@ -304,6 +306,7 @@ std::unique_ptr<FormatDocument> EpubProvider::open(const QString &path, QString 
     if (error) {
       *error = "Missing container.xml";
     }
+    qWarning() << "EpubProvider: missing container.xml";
     return nullptr;
   }
 
@@ -312,6 +315,7 @@ std::unique_ptr<FormatDocument> EpubProvider::open(const QString &path, QString 
     if (error) {
       *error = "Invalid container.xml";
     }
+    qWarning() << "EpubProvider: invalid container.xml";
     return nullptr;
   }
 
@@ -320,6 +324,7 @@ std::unique_ptr<FormatDocument> EpubProvider::open(const QString &path, QString 
     if (error) {
       *error = "Missing OPF";
     }
+    qWarning() << "EpubProvider: missing OPF" << rootfile;
     return nullptr;
   }
 
@@ -375,6 +380,7 @@ std::unique_ptr<FormatDocument> EpubProvider::open(const QString &path, QString 
     if (error) {
       *error = "No readable text in EPUB";
     }
+    qWarning() << "EpubProvider: no readable text";
     return nullptr;
   }
 

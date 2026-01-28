@@ -1,6 +1,7 @@
 #include "include/LibraryModel.h"
 
 #include <QCryptographicHash>
+#include <QDebug>
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
@@ -63,27 +64,32 @@ bool LibraryModel::openDefault() {
   const QString baseDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
   if (baseDir.isEmpty()) {
     setLastError("No writable AppDataLocation available");
+    qWarning() << "LibraryModel: no AppDataLocation";
     return false;
   }
 
   QDir dir(baseDir);
   if (!dir.exists() && !dir.mkpath(".")) {
     setLastError("Failed to create app data directory");
+    qWarning() << "LibraryModel: failed to create app data directory" << baseDir;
     return false;
   }
 
   const QString dbPath = dir.filePath("library.db");
+  qInfo() << "LibraryModel: using db" << dbPath;
   return openDatabase(dbPath);
 }
 
 bool LibraryModel::addBook(const QString &filePath) {
   if (!m_ready) {
     setLastError("Library database not ready");
+    qWarning() << "LibraryModel: addBook called before ready";
     return false;
   }
 
   if (!QFileInfo::exists(filePath)) {
     setLastError("File does not exist");
+    qWarning() << "LibraryModel: file not found" << filePath;
     return false;
   }
 
@@ -102,11 +108,13 @@ bool LibraryModel::addBook(const QString &filePath) {
 
   if (!query.exec()) {
     setLastError(query.lastError().text());
+    qWarning() << "LibraryModel: insert failed" << query.lastError().text();
     return false;
   }
 
   reload();
   setLastError("");
+  qInfo() << "LibraryModel: added book" << item.title;
   return true;
 }
 

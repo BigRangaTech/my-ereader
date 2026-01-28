@@ -5,6 +5,7 @@
 #endif
 
 #include <QFileInfo>
+#include <QDebug>
 
 namespace {
 class PdfDocument final : public FormatDocument {
@@ -31,6 +32,7 @@ std::unique_ptr<FormatDocument> PdfProvider::open(const QString &path, QString *
   if (error) {
     *error = "Poppler Qt6 backend not available";
   }
+  qWarning() << "PdfProvider: Poppler Qt6 not available";
   Q_UNUSED(path)
   return nullptr;
 #else
@@ -39,6 +41,7 @@ std::unique_ptr<FormatDocument> PdfProvider::open(const QString &path, QString *
     if (error) {
       *error = "Failed to open PDF";
     }
+    qWarning() << "PdfProvider: failed to open" << path;
     return nullptr;
   }
 

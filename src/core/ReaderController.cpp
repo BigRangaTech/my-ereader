@@ -1,6 +1,7 @@
 #include "include/ReaderController.h"
 
 #include <QFileInfo>
+#include <QDebug>
 
 ReaderController::ReaderController(QObject *parent) : QObject(parent) {
   m_registry = FormatRegistry::createDefault();
@@ -9,6 +10,7 @@ ReaderController::ReaderController(QObject *parent) : QObject(parent) {
 bool ReaderController::openFile(const QString &path) {
   if (!m_registry) {
     setLastError("Format registry not available");
+    qWarning() << "ReaderController: registry missing";
     return false;
   }
 
@@ -16,6 +18,7 @@ bool ReaderController::openFile(const QString &path) {
   m_document = m_registry->open(path, &error);
   if (!m_document) {
     setLastError(error.isEmpty() ? "Failed to open document" : error);
+    qWarning() << "ReaderController: failed to open" << path << m_lastError;
     return false;
   }
 
@@ -24,6 +27,7 @@ bool ReaderController::openFile(const QString &path) {
   m_currentText = m_document->readAllText();
   m_currentPath = QFileInfo(path).absoluteFilePath();
   m_isOpen = true;
+  qInfo() << "ReaderController: opened" << m_currentTitle << m_currentPath;
   emit currentChanged();
   return true;
 }
@@ -37,6 +41,7 @@ void ReaderController::close() {
   m_currentText.clear();
   m_currentPath.clear();
   m_isOpen = false;
+  qInfo() << "ReaderController: closed";
   emit currentChanged();
 }
 

@@ -5,6 +5,7 @@
 
 #include "AppInfo.h"
 #include "LibraryModel.h"
+#include "Logger.h"
 #include "LicenseManager.h"
 #include "ReaderController.h"
 #include "SyncManager.h"
@@ -13,6 +14,7 @@
 int main(int argc, char *argv[]) {
   QGuiApplication app(argc, argv);
   QQuickStyle::setStyle("Basic");
+  Logger::init();
 
   QCoreApplication::setOrganizationName("MyEreader");
   QCoreApplication::setApplicationName(AppInfo::kName);
