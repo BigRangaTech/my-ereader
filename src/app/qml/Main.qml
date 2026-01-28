@@ -16,6 +16,24 @@ ApplicationWindow {
   readonly property string uiFont: "Space Grotesk"
   readonly property string readingFont: "Literata"
 
+  onClosing: {
+    if (vault.state === VaultController.Unlocked && sessionPassphrase.length > 0) {
+      vault.lock(sessionPassphrase)
+    }
+  }
+
+  QtObject {
+    id: theme
+    property color bgTop: "#111318"
+    property color bgBottom: "#1b1f29"
+    property color accent: "#ffb347"
+    property color accentAlt: "#7bdff2"
+    property color textPrimary: "#f1f1f1"
+    property color textMuted: "#a9b0bd"
+    property color panel: "#202633"
+    property color panelHighlight: "#2a3242"
+  }
+
   LibraryModel {
     id: libraryModel
   }
@@ -36,8 +54,32 @@ ApplicationWindow {
     id: licenseManager
   }
 
+  VaultController {
+    id: vault
+  }
+
+  property string sessionPassphrase: ""
+
   Component.onCompleted: {
-    libraryModel.openDefault()
+    vault.initialize()
+  }
+
+  Connections {
+    target: vault
+    onStateChanged: {
+      if (vault.state === VaultController.Unlocked) {
+        libraryModel.openAt(vault.dbPath)
+      } else if (vault.state === VaultController.Locked) {
+        libraryModel.close()
+        if (!unlockDialog.visible) {
+          unlockDialog.open()
+        }
+      } else if (vault.state === VaultController.NeedsSetup) {
+        if (!setupDialog.visible) {
+          setupDialog.open()
+        }
+      }
+    }
   }
 
   FileDialog {
@@ -52,10 +94,196 @@ ApplicationWindow {
     }
   }
 
+  Dialog {
+    id: setupDialog
+    title: "Set Passphrase"
+    modal: true
+    standardButtons: Dialog.Ok
+    closePolicy: Popup.NoAutoClose
+
+    property string errorText: ""
+
+    onOpened: {
+      errorText = ""
+      passField.text = ""
+      confirmField.text = ""
+    }
+
+    onAccepted: {
+      if (passField.text.length < 6) {
+        errorText = "Passphrase too short"
+        return
+      }
+      if (passField.text !== confirmField.text) {
+        errorText = "Passphrases do not match"
+        return
+      }
+      if (vault.setupNew(passField.text)) {
+        sessionPassphrase = passField.text
+        setupDialog.close()
+      } else {
+        errorText = vault.lastError
+      }
+    }
+
+    contentItem: Rectangle {
+      color: theme.panel
+      radius: 12
+      width: 420
+      height: 220
+
+      ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 16
+        spacing: 10
+
+        Text {
+          text: "Create a passphrase for your encrypted library."
+          color: theme.textPrimary
+          font.pixelSize: 14
+          font.family: root.uiFont
+        }
+
+        TextField {
+          id: passField
+          echoMode: TextInput.Password
+          placeholderText: "Passphrase"
+        }
+
+        TextField {
+          id: confirmField
+          echoMode: TextInput.Password
+          placeholderText: "Confirm passphrase"
+        }
+
+        Text {
+          text: setupDialog.errorText
+          color: theme.accent
+          font.pixelSize: 12
+          font.family: root.uiFont
+        }
+      }
+    }
+  }
+
+  Dialog {
+    id: unlockDialog
+    title: "Unlock Library"
+    modal: true
+    standardButtons: Dialog.Ok
+    closePolicy: Popup.NoAutoClose
+
+    property string errorText: ""
+
+    onOpened: {
+      errorText = ""
+      unlockField.text = ""
+    }
+
+    onAccepted: {
+      if (vault.unlock(unlockField.text)) {
+        sessionPassphrase = unlockField.text
+        unlockDialog.close()
+      } else {
+        errorText = vault.lastError
+      }
+    }
+
+    contentItem: Rectangle {
+      color: theme.panel
+      radius: 12
+      width: 420
+      height: 180
+
+      ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 16
+        spacing: 10
+
+        Text {
+          text: "Enter your passphrase."
+          color: theme.textPrimary
+          font.pixelSize: 14
+          font.family: root.uiFont
+        }
+
+        TextField {
+          id: unlockField
+          echoMode: TextInput.Password
+          placeholderText: "Passphrase"
+        }
+
+        Text {
+          text: unlockDialog.errorText
+          color: theme.accent
+          font.pixelSize: 12
+          font.family: root.uiFont
+        }
+      }
+    }
+  }
+
+  Dialog {
+    id: lockDialog
+    title: "Lock Library"
+    modal: true
+    standardButtons: Dialog.Ok
+    closePolicy: Popup.NoAutoClose
+
+    property string errorText: ""
+
+    onOpened: {
+      errorText = ""
+      lockField.text = ""
+    }
+
+    onAccepted: {
+      if (vault.lock(lockField.text)) {
+        sessionPassphrase = ""
+        lockDialog.close()
+      } else {
+        errorText = vault.lastError
+      }
+    }
+
+    contentItem: Rectangle {
+      color: theme.panel
+      radius: 12
+      width: 420
+      height: 180
+
+      ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 16
+        spacing: 10
+
+        Text {
+          text: "Re-enter passphrase to lock."
+          color: theme.textPrimary
+          font.pixelSize: 14
+          font.family: root.uiFont
+        }
+
+        TextField {
+          id: lockField
+          echoMode: TextInput.Password
+          placeholderText: "Passphrase"
+        }
+
+        Text {
+          text: lockDialog.errorText
+          color: theme.accent
+          font.pixelSize: 12
+          font.family: root.uiFont
+        }
+      }
+    }
+  }
+
   background: Rectangle {
     gradient: Gradient {
-      GradientStop { position: 0.0; color: Theme.bgTop }
-      GradientStop { position: 1.0; color: Theme.bgBottom }
+      GradientStop { position: 0.0; color: theme.bgTop }
+      GradientStop { position: 1.0; color: theme.bgBottom }
     }
   }
 
@@ -75,7 +303,8 @@ ApplicationWindow {
     id: libraryPage
 
     Item {
-      anchors.fill: parent
+      width: parent.width
+      height: parent.height
 
       Column {
         anchors.fill: parent
@@ -86,7 +315,7 @@ ApplicationWindow {
           id: header
           height: 72
           radius: 16
-          color: Theme.panel
+          color: theme.panel
           width: parent.width
 
           RowLayout {
@@ -96,7 +325,7 @@ ApplicationWindow {
 
             Text {
               text: "Library"
-              color: Theme.textPrimary
+              color: theme.textPrimary
               font.pixelSize: 28
               font.family: root.uiFont
             }
@@ -104,12 +333,12 @@ ApplicationWindow {
             Rectangle {
               width: 1
               height: parent.height - 16
-              color: Theme.panelHighlight
+              color: theme.panelHighlight
             }
 
             Text {
               text: qsTr("%1 books").arg(libraryModel.count)
-              color: Theme.textMuted
+              color: theme.textMuted
               font.pixelSize: 16
               font.family: root.uiFont
               verticalAlignment: Text.AlignVCenter
@@ -128,13 +357,27 @@ ApplicationWindow {
               font.family: root.uiFont
               onClicked: aboutDialog.open()
             }
+
+            Button {
+              text: "Lock"
+              font.family: root.uiFont
+              visible: vault.state === VaultController.Unlocked
+              onClicked: {
+                if (sessionPassphrase.length > 0) {
+                  vault.lock(sessionPassphrase)
+                  sessionPassphrase = ""
+                } else {
+                  lockDialog.open()
+                }
+              }
+            }
           }
         }
 
         Rectangle {
           id: libraryPanel
           radius: 18
-          color: Theme.panel
+          color: theme.panel
           anchors.horizontalCenter: parent.horizontalCenter
           width: parent.width
           height: parent.height - header.height - 96
@@ -151,7 +394,7 @@ ApplicationWindow {
               radius: 12
               height: 84
               width: listView.width
-              color: index % 2 === 0 ? Theme.panelHighlight : Theme.panel
+              color: index % 2 === 0 ? theme.panelHighlight : theme.panel
 
               MouseArea {
                 anchors.fill: parent
@@ -171,7 +414,7 @@ ApplicationWindow {
                   width: 52
                   height: 56
                   radius: 8
-                  color: Theme.accentAlt
+                  color: theme.accentAlt
 
                   Text {
                     anchors.centerIn: parent
@@ -188,7 +431,7 @@ ApplicationWindow {
 
                   Text {
                     text: model.title
-                    color: Theme.textPrimary
+                    color: theme.textPrimary
                     font.pixelSize: 18
                     font.family: root.uiFont
                     elide: Text.ElideRight
@@ -197,7 +440,7 @@ ApplicationWindow {
 
                   Text {
                     text: model.path
-                    color: Theme.textMuted
+                    color: theme.textMuted
                     font.pixelSize: 12
                     font.family: root.uiFont
                     elide: Text.ElideRight
@@ -211,7 +454,7 @@ ApplicationWindow {
 
         Text {
           text: libraryModel.lastError
-          color: Theme.accent
+          color: theme.accent
           font.pixelSize: 12
           font.family: root.uiFont
         }
@@ -223,7 +466,8 @@ ApplicationWindow {
     id: readerPage
 
     Item {
-      anchors.fill: parent
+      width: parent.width
+      height: parent.height
 
       Column {
         anchors.fill: parent
@@ -233,7 +477,7 @@ ApplicationWindow {
         Rectangle {
           height: 72
           radius: 16
-          color: Theme.panel
+          color: theme.panel
           width: parent.width
 
           RowLayout {
@@ -252,7 +496,7 @@ ApplicationWindow {
 
             Text {
               text: reader.currentTitle
-              color: Theme.textPrimary
+              color: theme.textPrimary
               font.pixelSize: 20
               font.family: root.uiFont
               elide: Text.ElideRight
@@ -273,12 +517,28 @@ ApplicationWindow {
                 }
               }
             }
+
+            Button {
+              text: "Lock"
+              font.family: root.uiFont
+              visible: vault.state === VaultController.Unlocked
+              onClicked: {
+                if (sessionPassphrase.length > 0) {
+                  vault.lock(sessionPassphrase)
+                  sessionPassphrase = ""
+                  reader.close()
+                  stack.pop()
+                } else {
+                  lockDialog.open()
+                }
+              }
+            }
           }
         }
 
         Rectangle {
           radius: 18
-          color: Theme.panel
+          color: theme.panel
           width: parent.width
           height: parent.height - 120
 
@@ -294,7 +554,7 @@ ApplicationWindow {
               id: textBlock
               width: textScroll.width
               text: reader.currentText
-              color: Theme.textPrimary
+              color: theme.textPrimary
               font.pixelSize: 20
               font.family: root.readingFont
               wrapMode: Text.WordWrap
@@ -306,7 +566,7 @@ ApplicationWindow {
 
         Text {
           text: reader.lastError
-          color: Theme.accent
+          color: theme.accent
           font.pixelSize: 12
           font.family: root.uiFont
         }
@@ -333,7 +593,7 @@ ApplicationWindow {
     }
 
     contentItem: Rectangle {
-      color: Theme.panel
+      color: theme.panel
       radius: 16
 
       ColumnLayout {
@@ -350,14 +610,14 @@ ApplicationWindow {
 
             Text {
               text: "My Ereader"
-              color: Theme.textPrimary
+              color: theme.textPrimary
               font.pixelSize: 22
               font.family: root.uiFont
             }
 
             Text {
               text: "Bundled third-party licenses"
-              color: Theme.textMuted
+              color: theme.textMuted
               font.pixelSize: 14
               font.family: root.uiFont
             }
@@ -368,7 +628,7 @@ ApplicationWindow {
 
             Text {
               text: "Version 0.1.0"
-              color: Theme.textMuted
+              color: theme.textMuted
               font.pixelSize: 13
               font.family: root.uiFont
               horizontalAlignment: Text.AlignRight
@@ -376,7 +636,7 @@ ApplicationWindow {
 
             QQ.Text {
               text: "https://github.com/BigRangaTech/my-ereader"
-              color: Theme.accentAlt
+              color: theme.accentAlt
               font.pixelSize: 12
               font.family: root.uiFont
               horizontalAlignment: Text.AlignRight
@@ -400,7 +660,7 @@ ApplicationWindow {
             Layout.preferredWidth: 260
             Layout.fillHeight: true
             radius: 12
-            color: Theme.panelHighlight
+            color: theme.panelHighlight
 
             ListView {
               anchors.fill: parent
@@ -412,7 +672,7 @@ ApplicationWindow {
                 height: 44
                 radius: 8
                 color: aboutDialog.selectedPath === modelData.path
-                       ? (typeof Theme !== "undefined" ? Theme.accentAlt : "#7bdff2")
+                       ? (typeof Theme !== "undefined" ? theme.accentAlt : "#7bdff2")
                        : "transparent"
 
                 MouseArea {
@@ -427,7 +687,7 @@ ApplicationWindow {
                   anchors.left: parent.left
                   anchors.leftMargin: 10
                   text: modelData.name
-                  color: aboutDialog.selectedPath === modelData.path ? "#0f141a" : Theme.textPrimary
+                  color: aboutDialog.selectedPath === modelData.path ? "#0f141a" : theme.textPrimary
                   font.pixelSize: 13
                   font.family: root.uiFont
                   elide: Text.ElideRight
@@ -441,7 +701,7 @@ ApplicationWindow {
             Layout.fillWidth: true
             Layout.fillHeight: true
             radius: 12
-            color: Theme.panelHighlight
+            color: theme.panelHighlight
 
             TextArea {
               anchors.fill: parent
@@ -451,7 +711,7 @@ ApplicationWindow {
               text: aboutDialog.selectedPath.length > 0
                     ? licenseManager.readFile(aboutDialog.selectedPath)
                     : "Select a license"
-              color: Theme.textPrimary
+              color: theme.textPrimary
               font.pixelSize: 13
               font.family: root.uiFont
             }

@@ -30,8 +30,15 @@ if (POPPLER_QT6_AVAILABLE)
 endif()
 
 if (UNIX AND NOT APPLE)
+  set(_rpath "$ORIGIN")
+  if (USE_BUNDLED_POPPLER)
+    set(_poppler_lib_dir "${CMAKE_SOURCE_DIR}/third_party/install/poppler/lib")
+    if (EXISTS "${_poppler_lib_dir}")
+      list(APPEND _rpath "${_poppler_lib_dir}")
+    endif()
+  endif()
   set_target_properties(ereader PROPERTIES
-    BUILD_RPATH "$ORIGIN"
+    BUILD_RPATH "${_rpath}"
     INSTALL_RPATH "$ORIGIN"
   )
 endif()

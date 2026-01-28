@@ -30,7 +30,9 @@ public:
   QHash<int, QByteArray> roleNames() const override;
 
   Q_INVOKABLE bool openDefault();
+  Q_INVOKABLE bool openAt(const QString &dbPath);
   Q_INVOKABLE bool addBook(const QString &filePath);
+  Q_INVOKABLE void close();
 
   bool ready() const;
   int count() const;

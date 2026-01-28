@@ -80,6 +80,15 @@ bool LibraryModel::openDefault() {
   return openDatabase(dbPath);
 }
 
+bool LibraryModel::openAt(const QString &dbPath) {
+  if (dbPath.isEmpty()) {
+    setLastError("Database path is empty");
+    qWarning() << "LibraryModel: db path empty";
+    return false;
+  }
+  return openDatabase(dbPath);
+}
+
 bool LibraryModel::addBook(const QString &filePath) {
   if (!m_ready) {
     setLastError("Library database not ready");
@@ -183,6 +192,24 @@ void LibraryModel::reload() {
   }
 
   endResetModel();
+  emit countChanged();
+}
+
+void LibraryModel::close() {
+  if (!m_db.isOpen()) {
+    return;
+  }
+  m_db.close();
+  if (!m_connectionName.isEmpty()) {
+    m_db = QSqlDatabase();
+    QSqlDatabase::removeDatabase(m_connectionName);
+    m_connectionName.clear();
+  }
+  beginResetModel();
+  m_items.clear();
+  endResetModel();
+  m_ready = false;
+  emit readyChanged();
   emit countChanged();
 }
 

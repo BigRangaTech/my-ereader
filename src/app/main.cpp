@@ -10,6 +10,7 @@
 #include "ReaderController.h"
 #include "SyncManager.h"
 #include "TtsController.h"
+#include "VaultController.h"
 
 int main(int argc, char *argv[]) {
   QGuiApplication app(argc, argv);
@@ -25,6 +26,7 @@ int main(int argc, char *argv[]) {
   qmlRegisterType<ReaderController>("Ereader", 1, 0, "ReaderController");
   qmlRegisterType<SyncManager>("Ereader", 1, 0, "SyncManager");
   qmlRegisterType<TtsController>("Ereader", 1, 0, "TtsController");
+  qmlRegisterType<VaultController>("Ereader", 1, 0, "VaultController");
 
   QQmlApplicationEngine engine;
   QObject::connect(
