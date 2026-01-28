@@ -1,6 +1,6 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
-import QtQuick.Dialogs 1.3
+import QtQuick.Dialogs 6.2
 import QtQuick.Layouts 1.15
 import QtQuick 2.15 as QQ
 
@@ -45,7 +45,7 @@ ApplicationWindow {
     title: "Add book"
     nameFilters: ["Books (*.epub *.pdf *.mobi *.azw *.azw3 *.fb2 *.txt)"]
     onAccepted: {
-      const path = selectedFile.toLocalFile()
+      const path = selectedFile.toString().replace("file://", "")
       if (path.length > 0) {
         libraryModel.addBook(path)
       }
@@ -411,7 +411,9 @@ ApplicationWindow {
                 width: parent.width
                 height: 44
                 radius: 8
-                color: aboutDialog.selectedPath === modelData.path ? Theme.accentAlt : "transparent"
+                color: aboutDialog.selectedPath === modelData.path
+                       ? (typeof Theme !== "undefined" ? Theme.accentAlt : "#7bdff2")
+                       : "transparent"
 
                 MouseArea {
                   anchors.fill: parent

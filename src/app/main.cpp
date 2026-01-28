@@ -1,5 +1,6 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
+#include <QQuickStyle>
 #include <QQmlContext>
 
 #include "AppInfo.h"
@@ -11,6 +12,7 @@
 
 int main(int argc, char *argv[]) {
   QGuiApplication app(argc, argv);
+  QQuickStyle::setStyle("Basic");
 
   QCoreApplication::setOrganizationName("MyEreader");
   QCoreApplication::setApplicationName(AppInfo::kName);
@@ -23,16 +25,16 @@ int main(int argc, char *argv[]) {
   qmlRegisterType<TtsController>("Ereader", 1, 0, "TtsController");
 
   QQmlApplicationEngine engine;
-  const QUrl url(QStringLiteral("qrc:/Ereader/Main.qml"));
   QObject::connect(
       &engine, &QQmlApplicationEngine::objectCreated, &app,
-      [url](QObject *obj, const QUrl &objUrl) {
-        if (!obj && url == objUrl) {
+      [](QObject *obj, const QUrl &) {
+        if (!obj) {
           QCoreApplication::exit(-1);
         }
       },
       Qt::QueuedConnection);
-  engine.load(url);
+
+  engine.loadFromModule("Ereader", "Main");
 
   return app.exec();
 }
