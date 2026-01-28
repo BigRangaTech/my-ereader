@@ -61,6 +61,7 @@ void ReaderController::close() {
   m_currentText.clear();
   m_currentPlainText.clear();
   m_currentPath.clear();
+  m_currentFormat.clear();
   m_chapterTitles.clear();
   m_chapterTexts.clear();
   m_chapterPlainTexts.clear();
@@ -80,6 +81,7 @@ QString ReaderController::currentText() const { return m_currentText; }
 QString ReaderController::currentPlainText() const { return m_currentPlainText; }
 bool ReaderController::currentTextIsRich() const { return m_textIsRich; }
 QString ReaderController::currentPath() const { return m_currentPath; }
+QString ReaderController::currentFormat() const { return m_currentFormat; }
 bool ReaderController::isOpen() const { return m_isOpen; }
 int ReaderController::currentChapterIndex() const { return m_currentChapterIndex; }
 QString ReaderController::currentChapterTitle() const {
@@ -88,6 +90,7 @@ QString ReaderController::currentChapterTitle() const {
   }
   return {};
 }
+int ReaderController::chapterCount() const { return m_chapterTexts.size(); }
 bool ReaderController::hasImages() const { return !m_imagePaths.isEmpty(); }
 int ReaderController::currentImageIndex() const { return m_currentImageIndex; }
 int ReaderController::imageCount() const { return m_imagePaths.size(); }
@@ -191,7 +194,9 @@ bool ReaderController::applyDocument(std::unique_ptr<FormatDocument> document,
     m_currentText = m_document->readAllText();
     m_currentPlainText = m_document->readAllPlainText();
   }
-  m_currentPath = QFileInfo(path).absoluteFilePath();
+  const QFileInfo fileInfo(path);
+  m_currentPath = fileInfo.absoluteFilePath();
+  m_currentFormat = fileInfo.suffix().toLower();
   if (!m_coverPath.isEmpty()) {
     qInfo() << "ReaderController: cover" << m_coverPath
             << "exists:" << QFileInfo::exists(m_coverPath);
@@ -250,6 +255,45 @@ bool ReaderController::jumpToLocator(const QString &locator) {
   }
   setLastError("Locator not found");
   return false;
+}
+
+bool ReaderController::nextChapter() {
+  if (m_chapterTexts.isEmpty()) {
+    return false;
+  }
+  if (m_currentChapterIndex + 1 >= m_chapterTexts.size()) {
+    return false;
+  }
+  return goToChapter(m_currentChapterIndex + 1);
+}
+
+bool ReaderController::prevChapter() {
+  if (m_chapterTexts.isEmpty()) {
+    return false;
+  }
+  if (m_currentChapterIndex - 1 < 0) {
+    return false;
+  }
+  return goToChapter(m_currentChapterIndex - 1);
+}
+
+bool ReaderController::goToChapter(int index) {
+  if (m_chapterTexts.isEmpty()) {
+    return false;
+  }
+  if (index < 0 || index >= m_chapterTexts.size()) {
+    setLastError("Chapter index out of range");
+    return false;
+  }
+  m_currentChapterIndex = index;
+  m_currentText = m_chapterTexts.at(index);
+  if (index < m_chapterPlainTexts.size()) {
+    m_currentPlainText = m_chapterPlainTexts.at(index);
+  } else {
+    m_currentPlainText = m_document ? m_document->readAllPlainText() : m_currentText;
+  }
+  emit currentChanged();
+  return true;
 }
 
 bool ReaderController::nextImage() {

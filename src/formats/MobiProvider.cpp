@@ -27,6 +27,7 @@ public:
                QStringList chapterTitles,
                QStringList chapterDisplayTexts,
                QStringList chapterPlainTexts,
+               QStringList imagePaths,
                QString coverPath,
                QString authors,
                QString series,
@@ -37,6 +38,7 @@ public:
         m_chapterTitles(std::move(chapterTitles)),
         m_chapterDisplayTexts(std::move(chapterDisplayTexts)),
         m_chapterPlainTexts(std::move(chapterPlainTexts)),
+        m_imagePaths(std::move(imagePaths)),
         m_coverPath(std::move(coverPath)),
         m_authors(std::move(authors)),
         m_series(std::move(series)),
@@ -76,6 +78,7 @@ public:
   }
   QStringList chaptersText() const override { return m_chapterDisplayTexts; }
   QStringList chaptersPlainText() const override { return m_chapterPlainTexts; }
+  QStringList imagePaths() const override { return m_imagePaths; }
   QString coverPath() const override { return m_coverPath; }
   QString authors() const override { return m_authors; }
   QString series() const override { return m_series; }
@@ -88,6 +91,7 @@ private:
   QStringList m_chapterTitles;
   QStringList m_chapterDisplayTexts;
   QStringList m_chapterPlainTexts;
+  QStringList m_imagePaths;
   mutable QString m_allDisplayText;
   mutable QString m_allPlainText;
   QString m_coverPath;
@@ -333,18 +337,11 @@ QString replaceImageSources(const QString &html,
       continue;
     }
     const QString fileUrl = QUrl::fromLocalFile(asset.path).toString();
-    tag.replace(srcMatch.capturedStart(2),
-                srcMatch.capturedLength(2),
-                fileUrl);
-    if (!sizeRe.match(tag).hasMatch()) {
-      const int targetWidth =
-          asset.width > 0 ? std::min(asset.width, 900) : 900;
-      const int insertPos = tag.lastIndexOf('>');
-      if (insertPos > 0) {
-        tag.insert(insertPos, QString(" width=\"%1\"").arg(targetWidth));
-      }
-    }
-    out.append(tag);
+    const int targetWidth =
+        asset.width > 0 ? std::min(asset.width, 720) : 720;
+    const QString rebuilt =
+        QString("<img src=\"%1\" width=\"%2\" />").arg(fileUrl).arg(targetWidth);
+    out.append(rebuilt);
     last = match.capturedEnd();
   }
   out.append(html.mid(last));
@@ -526,7 +523,8 @@ struct ChapterPayload {
 };
 
 ChapterPayload extractMarkupContent(const MOBIRawml *rawml,
-                                    const QHash<size_t, ImageAsset> &assets) {
+                                    const QHash<size_t, ImageAsset> &assets,
+                                    bool richText) {
   ChapterPayload payload;
   if (!rawml || !rawml->markup) {
     return payload;
@@ -538,11 +536,16 @@ ChapterPayload extractMarkupContent(const MOBIRawml *rawml,
                                  static_cast<int>(part->size));
       const QString heading = extractHeading(htmlBytes);
       const QString plain = stripXhtml(htmlBytes);
-      QString display = QString::fromUtf8(htmlBytes);
-      display = normalizeHtmlFragment(display);
-      display = replaceImageSources(display, rawml, assets);
-      if (!display.contains("<html", Qt::CaseInsensitive)) {
-        display = QString("<div>%1</div>").arg(display);
+      QString display;
+      if (richText) {
+        display = QString::fromUtf8(htmlBytes);
+        display = normalizeHtmlFragment(display);
+        display = replaceImageSources(display, rawml, assets);
+        if (!display.contains("<html", Qt::CaseInsensitive)) {
+          display = QString("<div>%1</div>").arg(display);
+        }
+      } else {
+        display = plain;
       }
       QString displayTrimmed = display.trimmed();
       QString plainTrimmed = plain.trimmed();
@@ -867,7 +870,7 @@ std::unique_ptr<FormatDocument> MobiProvider::open(const QString &path, QString 
   const auto assets = exportImageResources(rawml, info);
   QString coverPath = extractCover(data, rawml, info, assets);
 
-  ChapterPayload payload = extractMarkupContent(rawml, assets);
+  ChapterPayload payload = extractMarkupContent(rawml, assets, false);
   QStringList chapterDisplay = payload.display;
   QStringList chapterPlain = payload.plain;
   QStringList chapterTitles;
@@ -921,11 +924,14 @@ std::unique_ptr<FormatDocument> MobiProvider::open(const QString &path, QString 
     }
   }
 
-  const bool richText = !payload.display.isEmpty();
+  QStringList imagePaths;
+
+  const bool richText = false;
   return std::make_unique<MobiDocument>(title,
                                         chapterTitles,
                                         chapterDisplay,
                                         chapterPlain,
+                                        imagePaths,
                                         coverPath,
                                         authors,
                                         series,

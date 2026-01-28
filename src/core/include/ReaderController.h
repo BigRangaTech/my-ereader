@@ -14,9 +14,11 @@ class ReaderController : public QObject {
   Q_PROPERTY(QString currentPlainText READ currentPlainText NOTIFY currentChanged)
   Q_PROPERTY(bool currentTextIsRich READ currentTextIsRich NOTIFY currentChanged)
   Q_PROPERTY(QString currentPath READ currentPath NOTIFY currentChanged)
+  Q_PROPERTY(QString currentFormat READ currentFormat NOTIFY currentChanged)
   Q_PROPERTY(bool isOpen READ isOpen NOTIFY currentChanged)
   Q_PROPERTY(int currentChapterIndex READ currentChapterIndex NOTIFY currentChanged)
   Q_PROPERTY(QString currentChapterTitle READ currentChapterTitle NOTIFY currentChanged)
+  Q_PROPERTY(int chapterCount READ chapterCount NOTIFY currentChanged)
   Q_PROPERTY(bool hasImages READ hasImages NOTIFY currentChanged)
   Q_PROPERTY(int currentImageIndex READ currentImageIndex NOTIFY currentChanged)
   Q_PROPERTY(int imageCount READ imageCount NOTIFY currentChanged)
@@ -35,6 +37,9 @@ public:
   Q_INVOKABLE void openFileAsync(const QString &path);
   Q_INVOKABLE void close();
   Q_INVOKABLE bool jumpToLocator(const QString &locator);
+  Q_INVOKABLE bool nextChapter();
+  Q_INVOKABLE bool prevChapter();
+  Q_INVOKABLE bool goToChapter(int index);
   Q_INVOKABLE bool nextImage();
   Q_INVOKABLE bool prevImage();
   Q_INVOKABLE bool goToImage(int index);
@@ -44,9 +49,11 @@ public:
   QString currentPlainText() const;
   bool currentTextIsRich() const;
   QString currentPath() const;
+  QString currentFormat() const;
   bool isOpen() const;
   int currentChapterIndex() const;
   QString currentChapterTitle() const;
+  int chapterCount() const;
   bool hasImages() const;
   int currentImageIndex() const;
   int imageCount() const;
@@ -75,6 +82,7 @@ private:
   QString m_currentText;
   QString m_currentPlainText;
   QString m_currentPath;
+  QString m_currentFormat;
   QStringList m_chapterTitles;
   QStringList m_chapterTexts;
   QStringList m_chapterPlainTexts;

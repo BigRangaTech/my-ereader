@@ -376,26 +376,102 @@ ApplicationWindow {
   Component {
     id: textReader
 
-    Flickable {
-      id: textScroll
+    Item {
       anchors.fill: parent
-      anchors.margins: 8
-      contentWidth: textBlock.width
-      contentHeight: textBlock.height
       clip: true
+      ColumnLayout {
+        anchors.fill: parent
+        spacing: 8
 
-        Text {
-          id: textBlock
-          width: textScroll.width
-          text: reader.currentText
-          color: theme.textPrimary
-          font.pixelSize: settings.readingFontSize
-              font.family: root.readingFont
-              wrapMode: Text.WordWrap
-              lineHeight: settings.readingLineHeight
-              lineHeightMode: Text.ProportionalHeight
-              textFormat: reader.currentTextIsRich ? Text.RichText : Text.PlainText
+        Rectangle {
+          height: 72
+          radius: 12
+          color: theme.panelHighlight
+          Layout.fillWidth: true
+
+          RowLayout {
+            anchors.fill: parent
+            anchors.margins: 12
+            spacing: 12
+
+            Button {
+              text: "Prev"
+              enabled: reader.chapterCount > 0 && reader.currentChapterIndex > 0
+              onClicked: reader.prevChapter()
             }
+
+            Button {
+              text: "Next"
+              enabled: reader.chapterCount > 0 && reader.currentChapterIndex + 1 < reader.chapterCount
+              onClicked: reader.nextChapter()
+            }
+
+            Text {
+              text: reader.currentChapterTitle.length > 0 ? reader.currentChapterTitle : "Chapter"
+              color: theme.textMuted
+              font.pixelSize: 12
+              font.family: root.uiFont
+              elide: Text.ElideRight
+              Layout.fillWidth: true
+            }
+
+            TextField {
+              Layout.preferredWidth: 60
+              text: reader.chapterCount > 0 ? String(reader.currentChapterIndex + 1) : "1"
+              placeholderText: "Page"
+              inputMethodHints: Qt.ImhDigitsOnly
+              validator: IntValidator { bottom: 1; top: Math.max(1, reader.chapterCount) }
+              onAccepted: {
+                const page = parseInt(text)
+                if (!isNaN(page)) {
+                  reader.goToChapter(page - 1)
+                }
+              }
+            }
+
+            Slider {
+              Layout.preferredWidth: 180
+              from: 1
+              to: Math.max(1, reader.chapterCount)
+              stepSize: 1
+              value: reader.chapterCount > 0 ? reader.currentChapterIndex + 1 : 1
+              onMoved: reader.goToChapter(Math.max(0, Math.round(value - 1)))
+            }
+
+            Text {
+              text: qsTr("%1 / %2")
+                    .arg(reader.chapterCount > 0 ? reader.currentChapterIndex + 1 : 1)
+                    .arg(Math.max(1, reader.chapterCount))
+              color: theme.textMuted
+              font.pixelSize: 12
+              font.family: root.uiFont
+            }
+          }
+        }
+
+        Flickable {
+          id: textScroll
+          Layout.fillWidth: true
+          Layout.fillHeight: true
+          contentWidth: textBlock.width
+          contentHeight: textBlock.height
+          clip: true
+
+            Text {
+              id: textBlock
+              width: textScroll.width
+            text: reader.currentText
+            color: theme.textPrimary
+            font.pixelSize: settings.readingFontSize
+            font.family: root.readingFont
+            wrapMode: Text.WordWrap
+            lineHeight: settings.readingLineHeight
+            lineHeightMode: Text.ProportionalHeight
+            textFormat: reader.currentTextIsRich ? Text.RichText : Text.PlainText
+            clip: true
+          }
+        }
+      }
     }
   }
 
@@ -403,6 +479,7 @@ ApplicationWindow {
     id: imageReader
 
     Item {
+      clip: true
       property real zoom: 1.0
       property real minZoom: settings.comicMinZoom
       property real maxZoom: settings.comicMaxZoom
@@ -444,14 +521,14 @@ ApplicationWindow {
 
         Rectangle {
           Layout.fillWidth: true
-          Layout.preferredHeight: 36
+          Layout.preferredHeight: 72
           radius: 8
           color: theme.panelHighlight
 
           RowLayout {
             anchors.fill: parent
-            anchors.margins: 6
-            spacing: 8
+            anchors.margins: 12
+            spacing: 12
 
             Button {
               text: "Prev"
@@ -824,6 +901,7 @@ ApplicationWindow {
           radius: 16
           color: theme.panel
           width: parent.width
+          z: 2
 
           RowLayout {
             anchors.fill: parent
@@ -907,6 +985,8 @@ ApplicationWindow {
           color: theme.panel
           width: parent.width
           height: parent.height - 120
+          clip: true
+          z: 1
 
           RowLayout {
             anchors.fill: parent
@@ -980,6 +1060,7 @@ ApplicationWindow {
               Layout.fillWidth: true
               Layout.fillHeight: true
               active: true
+              clip: true
               sourceComponent: reader.hasImages ? imageReader : textReader
             }
           }
