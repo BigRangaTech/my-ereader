@@ -12,82 +12,164 @@
 #include <QStandardPaths>
 #include <QDebug>
 #include <QList>
+#include <QMutex>
+#include <QMutexLocker>
 #include <QSet>
+#include <memory>
+#include <functional>
+#include <QRunnable>
+#include <QThreadPool>
 
 namespace {
+class PdfRunnable final : public QRunnable {
+public:
+  explicit PdfRunnable(std::function<void()> task) : m_task(std::move(task)) {}
+  void run() override {
+    if (m_task) {
+      m_task();
+    }
+  }
+
+private:
+  std::function<void()> m_task;
+};
+
+void runPdfTask(std::function<void()> task) {
+  auto *runnable = new PdfRunnable(std::move(task));
+  runnable->setAutoDelete(true);
+  QThreadPool::globalInstance()->start(runnable);
+}
+
+struct PdfRenderState {
+  std::unique_ptr<Poppler::Document> doc;
+  QStringList images;
+  QString tempDir;
+  int cacheLimit = 30;
+  double renderDpi = 120.0;
+  QSet<int> cached;
+  QList<int> cacheOrder;
+  QSet<int> inFlight;
+  std::function<void(int)> onImageReady;
+  QMutex mutex;
+  bool alive = true;
+};
+
 class PdfDocument final : public FormatDocument {
 public:
   PdfDocument(QString title,
               QString text,
-              QStringList images,
-              std::unique_ptr<Poppler::Document> doc,
-              QString tempDir,
-              int cacheLimit,
-              double renderDpi)
+              std::shared_ptr<PdfRenderState> state)
       : m_title(std::move(title)),
         m_text(std::move(text)),
-        m_images(std::move(images)),
-        m_doc(std::move(doc)),
-        m_tempDir(std::move(tempDir)),
-        m_cacheLimit(cacheLimit),
-        m_renderDpi(renderDpi) {}
+        m_state(std::move(state)) {}
+
+  ~PdfDocument() override {
+    if (m_state) {
+      QMutexLocker locker(&m_state->mutex);
+      m_state->alive = false;
+      m_state->onImageReady = nullptr;
+    }
+  }
 
   QString title() const override { return m_title; }
   QStringList chapterTitles() const override { return {}; }
   QString readAllText() const override { return m_text; }
-  QStringList imagePaths() const override { return m_images; }
+  QStringList imagePaths() const override { return m_state ? m_state->images : QStringList{}; }
   bool ensureImage(int index) override {
-    if (!m_doc) {
+    if (!m_state) {
       return false;
     }
-    if (index < 0 || index >= m_images.size()) {
+    if (index < 0 || index >= m_state->images.size()) {
       return false;
     }
-    const QString path = m_images.at(index);
-    if (m_cached.contains(index) && QFileInfo::exists(path)) {
-      return true;
+    {
+      QMutexLocker locker(&m_state->mutex);
+      if (!m_state->alive) {
+        return false;
+      }
+      const QString path = m_state->images.at(index);
+      if (m_state->cached.contains(index) && QFileInfo::exists(path)) {
+        return true;
+      }
+      if (m_state->inFlight.contains(index)) {
+        return false;
+      }
+      m_state->inFlight.insert(index);
     }
-    std::unique_ptr<Poppler::Page> page(m_doc->page(index));
-    if (!page) {
-      return false;
+    runPdfTask([this, index]() {
+      std::shared_ptr<PdfRenderState> state = m_state;
+      if (!state) {
+        return;
+      }
+      std::unique_ptr<Poppler::Page> page;
+      {
+        QMutexLocker locker(&state->mutex);
+        if (!state->alive || !state->doc) {
+          state->inFlight.remove(index);
+          return;
+        }
+        page = std::unique_ptr<Poppler::Page>(state->doc->page(index));
+      }
+      if (!page) {
+        QMutexLocker locker(&state->mutex);
+        state->inFlight.remove(index);
+        return;
+      }
+      const QImage image = page->renderToImage(state->renderDpi, state->renderDpi);
+      if (image.isNull()) {
+        QMutexLocker locker(&state->mutex);
+        state->inFlight.remove(index);
+        return;
+      }
+      const QString path = state->images.at(index);
+      QDir().mkpath(state->tempDir);
+      const bool saved = image.save(path, "PNG");
+      std::function<void(int)> callback;
+      {
+        QMutexLocker locker(&state->mutex);
+        if (!state->alive) {
+          state->inFlight.remove(index);
+          return;
+        }
+        if (saved) {
+          addToCache(state, index);
+        }
+        state->inFlight.remove(index);
+        callback = state->onImageReady;
+      }
+      if (callback) {
+        callback(index);
+      }
+    });
+    return false;
+  }
+  void setImageReadyCallback(std::function<void(int)> callback) override {
+    if (!m_state) {
+      return;
     }
-    const QImage image = page->renderToImage(m_renderDpi, m_renderDpi);
-    if (image.isNull()) {
-      return false;
-    }
-    QDir().mkpath(m_tempDir);
-    if (!image.save(path, "PNG")) {
-      return false;
-    }
-    addToCache(index);
-    return true;
+    QMutexLocker locker(&m_state->mutex);
+    m_state->onImageReady = std::move(callback);
   }
 
 private:
-  void addToCache(int index) {
-    if (m_cached.contains(index)) {
+  static void addToCache(const std::shared_ptr<PdfRenderState> &state, int index) {
+    if (!state || state->cached.contains(index)) {
       return;
     }
-    m_cached.insert(index);
-    m_cacheOrder.append(index);
-    while (m_cacheOrder.size() > m_cacheLimit) {
-      const int evict = m_cacheOrder.takeFirst();
-      m_cached.remove(evict);
-      if (evict >= 0 && evict < m_images.size()) {
-        QFile::remove(m_images.at(evict));
+    state->cached.insert(index);
+    state->cacheOrder.append(index);
+    while (state->cacheOrder.size() > state->cacheLimit) {
+      const int evict = state->cacheOrder.takeFirst();
+      state->cached.remove(evict);
+      if (evict >= 0 && evict < state->images.size()) {
+        QFile::remove(state->images.at(evict));
       }
     }
   }
 
   QString m_title;
   QString m_text;
-  QStringList m_images;
-  std::unique_ptr<Poppler::Document> m_doc;
-  QString m_tempDir;
-  int m_cacheLimit = 30;
-  double m_renderDpi = 120.0;
-  QSet<int> m_cached;
-  QList<int> m_cacheOrder;
+  std::shared_ptr<PdfRenderState> m_state;
 };
 
 QString tempDirForPdf(const QFileInfo &info) {
@@ -149,8 +231,14 @@ std::unique_ptr<FormatDocument> PdfProvider::open(const QString &path, QString *
 
   const QString title = !doc->info("Title").isEmpty() ? doc->info("Title")
                                                      : QFileInfo(path).completeBaseName();
-  auto pdfDoc = std::make_unique<PdfDocument>(title, pages.join("\n\n"), images, std::move(doc),
-                                              outDir, cacheLimit, renderDpi);
+  auto state = std::make_shared<PdfRenderState>();
+  state->doc = std::move(doc);
+  state->images = images;
+  state->tempDir = outDir;
+  state->cacheLimit = cacheLimit;
+  state->renderDpi = renderDpi;
+
+  auto pdfDoc = std::make_unique<PdfDocument>(title, pages.join("\n\n"), state);
   pdfDoc->ensureImage(0);
   pdfDoc->ensureImage(1);
   return pdfDoc;

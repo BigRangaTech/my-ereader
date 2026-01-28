@@ -89,7 +89,7 @@ ApplicationWindow {
     target: libraryModel
     function onReadyChanged() {
       if (libraryModel.ready) {
-        annotationModel.attachConnection(libraryModel.connectionName())
+        annotationModel.attachConnection("")
       }
     }
   }
@@ -575,7 +575,9 @@ ApplicationWindow {
 
           Image {
             id: imageItem
-            source: reader.currentImageUrl
+            source: reader.currentImageUrl.toString().length > 0
+                    ? (reader.currentImageUrl.toString() + "?t=" + reader.imageReloadToken)
+                    : ""
             fillMode: Image.PreserveAspectFit
             asynchronous: true
             cache: false
@@ -586,7 +588,7 @@ ApplicationWindow {
             onSourceChanged: recomputeBase()
             onStatusChanged: {
               if (status === Image.Error) {
-                console.warn("Image load failed", source, errorString)
+                console.warn("Image load failed", source, imageItem.errorString)
               } else if (status === Image.Ready) {
                 console.info("Image loaded", source, sourceSize.width, sourceSize.height)
                 recomputeBase()
@@ -714,10 +716,10 @@ ApplicationWindow {
               MouseArea {
                 anchors.fill: parent
                 onClicked: {
-                if (reader.openFile(model.path)) {
+                  reader.close()
+                  reader.openFileAsync(model.path)
                   annotationModel.libraryItemId = model.id
                   stack.push(readerPage)
-                }
                 }
               }
 
@@ -946,6 +948,31 @@ ApplicationWindow {
               Layout.fillHeight: true
               active: true
               sourceComponent: reader.hasImages ? imageReader : textReader
+            }
+          }
+
+          Rectangle {
+            anchors.fill: parent
+            color: "#aa0d1015"
+            radius: 18
+            visible: reader.busy
+
+            Column {
+              anchors.centerIn: parent
+              spacing: 10
+
+              BusyIndicator {
+                running: reader.busy
+                width: 48
+                height: 48
+              }
+
+              Text {
+                text: "Loading..."
+                color: theme.textPrimary
+                font.pixelSize: 16
+                font.family: root.uiFont
+              }
             }
           }
         }

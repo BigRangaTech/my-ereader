@@ -1,7 +1,6 @@
 #pragma once
 
 #include <QAbstractListModel>
-#include <QSqlDatabase>
 #include <QVector>
 
 #include "LibraryItem.h"
@@ -47,20 +46,10 @@ signals:
   void lastErrorChanged();
 
 private:
-  bool openDatabase(const QString &dbPath);
-  bool ensureSchema();
   void reload();
-  LibraryItem makeItemFromFile(const QString &filePath);
-  QString computeFileHash(const QString &filePath);
   void setLastError(const QString &error);
-  bool openInMemory();
-  bool deserializeToMemory(const QByteArray &dbBytes);
-  QByteArray serializeFromMemory();
-  void *sqliteHandle() const;
 
   bool m_ready = false;
   QString m_lastError;
-  QSqlDatabase m_db;
-  QString m_connectionName;
   QVector<LibraryItem> m_items;
 };

@@ -20,14 +20,17 @@ class ReaderController : public QObject {
   Q_PROPERTY(int imageCount READ imageCount NOTIFY currentChanged)
   Q_PROPERTY(QString currentImagePath READ currentImagePath NOTIFY currentChanged)
   Q_PROPERTY(QUrl currentImageUrl READ currentImageUrl NOTIFY currentChanged)
+  Q_PROPERTY(int imageReloadToken READ imageReloadToken NOTIFY imageReloadTokenChanged)
   Q_PROPERTY(QString currentCoverPath READ currentCoverPath NOTIFY currentChanged)
   Q_PROPERTY(QUrl currentCoverUrl READ currentCoverUrl NOTIFY currentChanged)
+  Q_PROPERTY(bool busy READ busy NOTIFY busyChanged)
   Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
 
 public:
   explicit ReaderController(QObject *parent = nullptr);
 
   Q_INVOKABLE bool openFile(const QString &path);
+  Q_INVOKABLE void openFileAsync(const QString &path);
   Q_INVOKABLE void close();
   Q_INVOKABLE bool jumpToLocator(const QString &locator);
   Q_INVOKABLE bool nextImage();
@@ -45,16 +48,22 @@ public:
   int imageCount() const;
   QString currentImagePath() const;
   QUrl currentImageUrl() const;
+  int imageReloadToken() const;
   QString currentCoverPath() const;
   QUrl currentCoverUrl() const;
+  bool busy() const;
   QString lastError() const;
 
 signals:
   void currentChanged();
+  void imageReloadTokenChanged();
+  void busyChanged();
   void lastErrorChanged();
 
 private:
   void setLastError(const QString &error);
+  bool applyDocument(std::unique_ptr<FormatDocument> document, const QString &path, QString *error);
+  void setBusy(bool busy);
 
   std::unique_ptr<FormatRegistry> m_registry;
   std::unique_ptr<FormatDocument> m_document;
@@ -66,7 +75,10 @@ private:
   int m_currentChapterIndex = -1;
   QStringList m_imagePaths;
   int m_currentImageIndex = -1;
+  int m_imageReloadToken = 0;
   QString m_coverPath;
   QString m_lastError;
   bool m_isOpen = false;
+  bool m_busy = false;
+  int m_openRequestId = 0;
 };

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <QAbstractListModel>
-#include <QSqlDatabase>
+#include <QMetaType>
 #include <QString>
 #include <QVector>
 
@@ -14,6 +14,9 @@ struct AnnotationItem {
   QString color;
   QString createdAt;
 };
+
+Q_DECLARE_METATYPE(AnnotationItem)
+Q_DECLARE_METATYPE(QVector<AnnotationItem>)
 
 class AnnotationModel : public QAbstractListModel {
   Q_OBJECT
@@ -55,13 +58,10 @@ signals:
   void lastErrorChanged();
 
 private:
-  bool openDatabase();
   void reload();
   void setLastError(const QString &error);
 
   int m_libraryItemId = 0;
   QString m_lastError;
-  QSqlDatabase m_db;
-  QString m_connectionName;
   QVector<AnnotationItem> m_items;
 };

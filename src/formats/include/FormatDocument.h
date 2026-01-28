@@ -2,6 +2,7 @@
 
 #include <QString>
 #include <QStringList>
+#include <functional>
 
 class FormatDocument {
 public:
@@ -14,4 +15,5 @@ public:
   virtual QStringList imagePaths() const { return {}; }
   virtual QString coverPath() const { return {}; }
   virtual bool ensureImage(int index) { Q_UNUSED(index) return true; }
+  virtual void setImageReadyCallback(std::function<void(int)> callback) { Q_UNUSED(callback) }
 };

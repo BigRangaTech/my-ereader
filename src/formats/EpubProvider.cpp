@@ -409,6 +409,29 @@ QString tempDirForEpub(const QFileInfo &info) {
       .filePath(QString("ereader_epub_%1").arg(QString::fromUtf8(hash)));
 }
 
+QString extractFirstImageHref(const QByteArray &xhtml) {
+  QXmlStreamReader xml(xhtml);
+  while (!xml.atEnd()) {
+    xml.readNext();
+    if (xml.isStartElement() && xml.name() == QLatin1String("img")) {
+      const QString src = xml.attributes().value(QLatin1String("src")).toString();
+      if (!src.isEmpty()) {
+        return src;
+      }
+    }
+  }
+  return {};
+}
+
+bool isImageMediaType(const QString &mediaType, const QString &href) {
+  if (mediaType.startsWith("image/")) {
+    return true;
+  }
+  const QString lower = href.toLower();
+  return lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png") ||
+         lower.endsWith(".webp") || lower.endsWith(".bmp") || lower.endsWith(".gif");
+}
+
 QString writeCoverToTemp(const QFileInfo &info, const QString &href, const QByteArray &data) {
   if (href.isEmpty() || data.isEmpty()) {
     return {};
@@ -488,8 +511,10 @@ std::unique_ptr<FormatDocument> EpubProvider::open(const QString &path, QString 
   }
 
   QString coverHref = opf.coverHref;
+  QString coverMediaType;
   if (coverHref.isEmpty() && !opf.coverId.isEmpty()) {
     coverHref = opf.manifest.value(opf.coverId);
+    coverMediaType = opf.manifestTypes.value(opf.coverId);
   }
   if (coverHref.isEmpty()) {
     const auto keys = opf.manifest.keys();
@@ -500,15 +525,36 @@ std::unique_ptr<FormatDocument> EpubProvider::open(const QString &path, QString 
       if ((id.contains("cover", Qt::CaseInsensitive) || lowerHref.contains("cover")) &&
           mediaType.startsWith("image/")) {
         coverHref = href;
+        coverMediaType = mediaType;
         break;
       }
     }
   }
   QString coverPath;
   if (!coverHref.isEmpty()) {
-    const QString coverItemPath = joinPath(baseDir, coverHref);
-    const QByteArray coverData = zip.readFile(coverItemPath);
-    if (!coverData.isEmpty()) {
+    if (coverMediaType.isEmpty()) {
+      for (auto it = opf.manifest.constBegin(); it != opf.manifest.constEnd(); ++it) {
+        if (it.value() == coverHref) {
+          coverMediaType = opf.manifestTypes.value(it.key());
+          break;
+        }
+      }
+    }
+    QString coverItemPath = joinPath(baseDir, coverHref);
+    QByteArray coverData = zip.readFile(coverItemPath);
+    if (!isImageMediaType(coverMediaType, coverHref)) {
+      const QString imgHref = extractFirstImageHref(coverData);
+      if (!imgHref.isEmpty()) {
+        const QString resolved = resolveHref(coverItemPath, imgHref);
+        if (!resolved.isEmpty()) {
+          coverHref = resolved;
+          coverItemPath = coverHref;
+          coverData = zip.readFile(coverItemPath);
+          coverMediaType.clear();
+        }
+      }
+    }
+    if (isImageMediaType(coverMediaType, coverHref) && !coverData.isEmpty()) {
       coverPath = writeCoverToTemp(info, coverHref, coverData);
     }
   }

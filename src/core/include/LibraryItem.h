@@ -1,6 +1,8 @@
 #pragma once
 
 #include <QString>
+#include <QMetaType>
+#include <QVector>
 
 struct LibraryItem {
   int id = 0;
@@ -11,3 +13,6 @@ struct LibraryItem {
   QString fileHash;
   QString addedAt;
 };
+
+Q_DECLARE_METATYPE(LibraryItem)
+Q_DECLARE_METATYPE(QVector<LibraryItem>)

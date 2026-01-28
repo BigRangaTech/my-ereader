@@ -1,13 +1,36 @@
 #include "include/AnnotationModel.h"
 
-#include <QDateTime>
-#include <QSqlError>
-#include <QSqlQuery>
-#include <QStandardPaths>
-#include <QDir>
+#include <QMetaObject>
+
+#include "DbWorker.h"
 
 AnnotationModel::AnnotationModel(QObject *parent) : QAbstractListModel(parent) {
-  openDatabase();
+  auto *worker = dbWorker();
+  connect(worker, &DbWorker::annotationsLoaded, this,
+          [this](int libraryItemId, const QVector<AnnotationItem> &items) {
+            if (libraryItemId != m_libraryItemId) {
+              return;
+            }
+            beginResetModel();
+            m_items = items;
+            endResetModel();
+          });
+  connect(worker, &DbWorker::addAnnotationFinished, this,
+          [this](bool ok, const QString &error) {
+            if (!ok) {
+              setLastError(error);
+            } else {
+              setLastError("");
+            }
+          });
+  connect(worker, &DbWorker::deleteAnnotationFinished, this,
+          [this](bool ok, const QString &error) {
+            if (!ok) {
+              setLastError(error);
+            } else {
+              setLastError("");
+            }
+          });
 }
 
 int AnnotationModel::rowCount(const QModelIndex &parent) const {
@@ -68,126 +91,52 @@ bool AnnotationModel::addAnnotation(const QString &locator,
                                     const QString &type,
                                     const QString &text,
                                     const QString &color) {
-  if (!m_db.isOpen()) {
-    setLastError("Database not open");
-    return false;
-  }
   if (m_libraryItemId <= 0) {
     setLastError("No book selected");
     return false;
   }
-
-  QSqlQuery query(m_db);
-  query.prepare("INSERT INTO annotations (library_item_id, locator, type, text, color, created_at) "
-                "VALUES (?, ?, ?, ?, ?, ?)");
-  query.addBindValue(m_libraryItemId);
-  query.addBindValue(locator);
-  query.addBindValue(type);
-  query.addBindValue(text);
-  query.addBindValue(color);
-  query.addBindValue(QDateTime::currentDateTimeUtc().toString(Qt::ISODate));
-
-  if (!query.exec()) {
-    setLastError(query.lastError().text());
-    return false;
-  }
-
-  reload();
-  setLastError("");
+  QMetaObject::invokeMethod(dbWorker(), "addAnnotation", Qt::QueuedConnection,
+                            Q_ARG(int, m_libraryItemId),
+                            Q_ARG(QString, locator),
+                            Q_ARG(QString, type),
+                            Q_ARG(QString, text),
+                            Q_ARG(QString, color));
   return true;
 }
 
 bool AnnotationModel::deleteAnnotation(int id) {
-  if (!m_db.isOpen()) {
-    setLastError("Database not open");
+  if (m_libraryItemId <= 0) {
+    setLastError("No book selected");
     return false;
   }
-
-  QSqlQuery query(m_db);
-  query.prepare("DELETE FROM annotations WHERE id = ?");
-  query.addBindValue(id);
-  if (!query.exec()) {
-    setLastError(query.lastError().text());
-    return false;
-  }
-  reload();
-  setLastError("");
-  return true;
-}
-
-bool AnnotationModel::openDatabase() {
-  m_connectionName = QString("annotations_%1").arg(reinterpret_cast<quintptr>(this));
-  m_db = QSqlDatabase::addDatabase("QSQLITE", m_connectionName);
+  QMetaObject::invokeMethod(dbWorker(), "deleteAnnotation", Qt::QueuedConnection,
+                            Q_ARG(int, id),
+                            Q_ARG(int, m_libraryItemId));
   return true;
 }
 
 bool AnnotationModel::attachDatabase(const QString &dbPath) {
-  if (!openDatabase()) {
-    setLastError("Failed to init database connection");
-    return false;
-  }
-  if (dbPath.isEmpty()) {
-    setLastError("Database path empty");
-    return false;
-  }
-  m_db.setDatabaseName(dbPath);
-  if (!m_db.open()) {
-    setLastError(m_db.lastError().text());
-    return false;
-  }
-  reload();
+  Q_UNUSED(dbPath)
+  // No-op: database access handled by worker thread.
+  setLastError("");
   return true;
 }
 
 bool AnnotationModel::attachConnection(const QString &connectionName) {
-  if (connectionName.isEmpty()) {
-    setLastError("Connection name empty");
-    return false;
-  }
-  if (!QSqlDatabase::contains(connectionName)) {
-    setLastError("Connection not found");
-    return false;
-  }
-  m_db = QSqlDatabase::database(connectionName);
-  if (!m_db.isOpen()) {
-    if (!m_db.open()) {
-      setLastError(m_db.lastError().text());
-      return false;
-    }
-  }
-  reload();
+  Q_UNUSED(connectionName)
+  // No-op: database access handled by worker thread.
+  setLastError("");
   return true;
 }
 
 void AnnotationModel::reload() {
   beginResetModel();
   m_items.clear();
-
-  if (!m_db.isOpen() || m_libraryItemId <= 0) {
-    endResetModel();
-    return;
-  }
-
-  QSqlQuery query(m_db);
-  query.prepare("SELECT id, library_item_id, locator, type, text, color, created_at "
-                "FROM annotations WHERE library_item_id = ? ORDER BY created_at");
-  query.addBindValue(m_libraryItemId);
-
-  if (query.exec()) {
-    while (query.next()) {
-      AnnotationItem item;
-      item.id = query.value(0).toInt();
-      item.libraryItemId = query.value(1).toInt();
-      item.locator = query.value(2).toString();
-      item.type = query.value(3).toString();
-      item.text = query.value(4).toString();
-      item.color = query.value(5).toString();
-      item.createdAt = query.value(6).toString();
-      m_items.push_back(std::move(item));
-    }
-  }
-
   endResetModel();
+  if (m_libraryItemId > 0) {
+    QMetaObject::invokeMethod(dbWorker(), "loadAnnotations", Qt::QueuedConnection,
+                              Q_ARG(int, m_libraryItemId));
+  }
 }
 
 void AnnotationModel::setLastError(const QString &error) {

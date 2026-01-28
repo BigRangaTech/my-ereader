@@ -2,6 +2,10 @@
 
 #include <QFileInfo>
 #include <QDebug>
+#include <QMetaObject>
+#include <QPointer>
+
+#include "AsyncUtil.h"
 
 ReaderController::ReaderController(QObject *parent) : QObject(parent) {
   m_registry = FormatRegistry::createDefault();
@@ -14,47 +18,38 @@ bool ReaderController::openFile(const QString &path) {
     return false;
   }
 
-  QString error;
-  m_document = m_registry->open(path, &error);
-  if (!m_document) {
-    setLastError(error.isEmpty() ? "Failed to open document" : error);
-    qWarning() << "ReaderController: failed to open" << path << m_lastError;
+  if (!m_registry) {
+    setLastError("Format registry not available");
+    qWarning() << "ReaderController: registry missing";
     return false;
   }
 
-  setLastError("");
-  m_currentTitle = m_document->title();
-  m_chapterTitles = m_document->chapterTitles();
-  m_chapterTexts = m_document->chaptersText();
-  m_imagePaths = m_document->imagePaths();
-  m_coverPath = m_document->coverPath();
-  if (!m_imagePaths.isEmpty()) {
-    m_currentImageIndex = 0;
-    const QString firstImage = m_imagePaths.at(0);
-    qInfo() << "ReaderController: loaded" << m_imagePaths.size()
-            << "image(s), first:" << firstImage
-            << "exists:" << QFileInfo::exists(firstImage);
-    m_document->ensureImage(0);
-    m_document->ensureImage(1);
-  } else {
-    m_currentImageIndex = -1;
+  QString error;
+  auto document = m_registry->open(path, &error);
+  return applyDocument(std::move(document), path, &error);
+}
+
+void ReaderController::openFileAsync(const QString &path) {
+  if (path.isEmpty()) {
+    setLastError("Path is empty");
+    return;
   }
-  if (!m_chapterTexts.isEmpty()) {
-    m_currentChapterIndex = 0;
-    m_currentText = m_chapterTexts.at(0);
-  } else {
-    m_currentChapterIndex = -1;
-    m_currentText = m_document->readAllText();
-  }
-  m_currentPath = QFileInfo(path).absoluteFilePath();
-  if (!m_coverPath.isEmpty()) {
-    qInfo() << "ReaderController: cover" << m_coverPath
-            << "exists:" << QFileInfo::exists(m_coverPath);
-  }
-  m_isOpen = true;
-  qInfo() << "ReaderController: opened" << m_currentTitle << m_currentPath;
-  emit currentChanged();
-  return true;
+  setBusy(true);
+  const int requestId = ++m_openRequestId;
+  const QString absPath = QFileInfo(path).absoluteFilePath();
+  runInBackground([this, requestId, absPath]() {
+    QString error;
+    auto registry = FormatRegistry::createDefault();
+    auto document = registry->open(absPath, &error);
+    QMetaObject::invokeMethod(this, [this, requestId, absPath, error, doc = std::move(document)]() mutable {
+      if (requestId != m_openRequestId) {
+        return;
+      }
+      QString localError = error;
+      applyDocument(std::move(doc), absPath, &localError);
+      setBusy(false);
+    }, Qt::QueuedConnection);
+  });
 }
 
 void ReaderController::close() {
@@ -70,6 +65,7 @@ void ReaderController::close() {
   m_currentChapterIndex = -1;
   m_imagePaths.clear();
   m_currentImageIndex = -1;
+  m_imageReloadToken = 0;
   m_coverPath.clear();
   m_isOpen = false;
   qInfo() << "ReaderController: closed";
@@ -107,6 +103,7 @@ QUrl ReaderController::currentImageUrl() const {
   }
   return QUrl(path);
 }
+int ReaderController::imageReloadToken() const { return m_imageReloadToken; }
 QString ReaderController::currentCoverPath() const { return m_coverPath; }
 QUrl ReaderController::currentCoverUrl() const {
   if (m_coverPath.isEmpty()) {
@@ -118,6 +115,7 @@ QUrl ReaderController::currentCoverUrl() const {
   }
   return QUrl(m_coverPath);
 }
+bool ReaderController::busy() const { return m_busy; }
 QString ReaderController::lastError() const { return m_lastError; }
 
 void ReaderController::setLastError(const QString &error) {
@@ -126,6 +124,77 @@ void ReaderController::setLastError(const QString &error) {
   }
   m_lastError = error;
   emit lastErrorChanged();
+}
+
+bool ReaderController::applyDocument(std::unique_ptr<FormatDocument> document,
+                                     const QString &path,
+                                     QString *error) {
+  if (!document) {
+    setLastError(error && !error->isEmpty() ? *error : "Failed to open document");
+    qWarning() << "ReaderController: failed to open" << path << m_lastError;
+    return false;
+  }
+
+  m_document = std::move(document);
+  QPointer<ReaderController> self(this);
+  m_document->setImageReadyCallback([self](int index) {
+    if (!self) {
+      return;
+    }
+    QMetaObject::invokeMethod(self, [self, index]() {
+      if (!self) {
+        return;
+      }
+      if (index == self->m_currentImageIndex) {
+        self->m_imageReloadToken++;
+        emit self->imageReloadTokenChanged();
+        emit self->currentChanged();
+      }
+    }, Qt::QueuedConnection);
+  });
+  setLastError("");
+  m_currentTitle = m_document->title();
+  m_chapterTitles = m_document->chapterTitles();
+  m_chapterTexts = m_document->chaptersText();
+  m_imagePaths = m_document->imagePaths();
+  m_coverPath = m_document->coverPath();
+  if (!m_imagePaths.isEmpty()) {
+    m_currentImageIndex = 0;
+    m_imageReloadToken = 0;
+    const QString firstImage = m_imagePaths.at(0);
+    qInfo() << "ReaderController: loaded" << m_imagePaths.size()
+            << "image(s), first:" << firstImage
+            << "exists:" << QFileInfo::exists(firstImage);
+    m_document->ensureImage(0);
+    m_document->ensureImage(1);
+  } else {
+    m_currentImageIndex = -1;
+    m_imageReloadToken = 0;
+  }
+  if (!m_chapterTexts.isEmpty()) {
+    m_currentChapterIndex = 0;
+    m_currentText = m_chapterTexts.at(0);
+  } else {
+    m_currentChapterIndex = -1;
+    m_currentText = m_document->readAllText();
+  }
+  m_currentPath = QFileInfo(path).absoluteFilePath();
+  if (!m_coverPath.isEmpty()) {
+    qInfo() << "ReaderController: cover" << m_coverPath
+            << "exists:" << QFileInfo::exists(m_coverPath);
+  }
+  m_isOpen = true;
+  qInfo() << "ReaderController: opened" << m_currentTitle << m_currentPath;
+  emit currentChanged();
+  return true;
+}
+
+void ReaderController::setBusy(bool busy) {
+  if (m_busy == busy) {
+    return;
+  }
+  m_busy = busy;
+  emit busyChanged();
 }
 
 bool ReaderController::jumpToLocator(const QString &locator) {

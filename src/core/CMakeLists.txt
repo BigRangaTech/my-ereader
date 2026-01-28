@@ -1,10 +1,14 @@
 add_library(core STATIC
+  AsyncUtil.cpp
+  DbWorker.cpp
   AnnotationModel.cpp
   LibraryModel.cpp
   Logger.cpp
   LicenseManager.cpp
   ReaderController.cpp
   VaultController.cpp
+  include/AsyncUtil.h
+  include/DbWorker.h
   include/AnnotationModel.h
   include/LibraryModel.h
   include/Logger.h
