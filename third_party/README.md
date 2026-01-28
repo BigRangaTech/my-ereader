@@ -30,3 +30,9 @@ that is built and bundled into prebuilt binaries.
   - Upstream: https://github.com/richgel999/miniz
   - License: `third_party/miniz/LICENSE.txt`
   - Notes: ZIP reader used for EPUB parsing
+- libarchive
+  - Source: `third_party/libarchive/`
+  - Upstream: https://github.com/libarchive/libarchive (v3.7.2)
+  - License: `third_party/libarchive/COPYING`
+  - Notes: CBR extraction (bundled)
+  - Build: `scripts/build_libarchive.sh`

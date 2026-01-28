@@ -5,3 +5,4 @@ monocypher | https://github.com/BigRangaTech/Monocypher | v001 | third_party/mon
 poppler | https://github.com/BigRangaTech/my-poppler | 001 | poppler | poppler/README.md
 monocypher-snapshot | https://github.com/LoupVaillant/Monocypher | 4.0.2 | monocypher-4.0.2 | monocypher-4.0.2/README.md
 miniz | https://github.com/richgel999/miniz | unknown | third_party/miniz | third_party/miniz/LICENSE.txt
+libarchive | https://github.com/libarchive/libarchive | v3.7.2 | third_party/libarchive | third_party/libarchive/COPYING

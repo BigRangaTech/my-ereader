@@ -7,6 +7,7 @@
 #include <QCollator>
 #include <QProcess>
 #include <QDebug>
+#include <QDirIterator>
 
 #ifdef HAVE_LIBARCHIVE
 #include <archive.h>
@@ -92,6 +93,18 @@ bool extractCbrWithTool(const QString &archivePath, const QString &outDir) {
   return false;
 }
 
+QStringList collectImagesRecursive(const QString &root) {
+  QStringList images;
+  QDirIterator it(root, QDir::Files, QDirIterator::Subdirectories);
+  while (it.hasNext()) {
+    const QString path = it.next();
+    if (isImageFile(path)) {
+      images.append(path);
+    }
+  }
+  return images;
+}
+
 #ifdef HAVE_LIBARCHIVE
 bool extractWithLibarchive(const QString &archivePath, const QString &outDir) {
   struct archive *ar = archive_read_new();
@@ -140,9 +153,15 @@ std::unique_ptr<FormatDocument> CbzProvider::open(const QString &path, QString *
     bool extracted = false;
 #ifdef HAVE_LIBARCHIVE
     extracted = extractWithLibarchive(path, outDir);
+    if (extracted) {
+      qInfo() << "CbzProvider: extracted CBR via libarchive";
+    }
 #endif
     if (!extracted) {
       extracted = extractCbrWithTool(path, outDir);
+      if (extracted) {
+        qInfo() << "CbzProvider: extracted CBR via external tool";
+      }
     }
     if (!extracted) {
       if (error) {
@@ -151,14 +170,7 @@ std::unique_ptr<FormatDocument> CbzProvider::open(const QString &path, QString *
       qWarning() << "CbzProvider: CBR extraction failed";
       return nullptr;
     }
-    QStringList images;
-    const QDir dir(outDir);
-    const auto files = dir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Name);
-    for (const auto &name : files) {
-      if (isImageFile(name)) {
-        images.append(dir.filePath(name));
-      }
-    }
+    QStringList images = collectImagesRecursive(outDir);
     naturalSort(images);
     if (images.isEmpty()) {
       if (error) {

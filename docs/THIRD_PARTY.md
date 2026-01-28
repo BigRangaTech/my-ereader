@@ -20,3 +20,9 @@
 - Purpose: ZIP reader for EPUB parsing
 - License: `third_party/miniz/LICENSE.txt`
 - Source: `third_party/miniz/`
+
+## libarchive
+- Purpose: CBR extraction (RAR archives)
+- License: `third_party/libarchive/COPYING`
+- Source: `third_party/libarchive/`
+- Build: `scripts/build_libarchive.sh`

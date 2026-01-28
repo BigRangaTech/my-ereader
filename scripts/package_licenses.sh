@@ -21,3 +21,4 @@ copy_if_exists "$ROOT/third_party/monocypher/LICENCE.md" "$OUT_DIR/Monocypher.tx
 copy_if_exists "$ROOT/poppler/COPYING" "$OUT_DIR/Poppler_COPYING.txt"
 copy_if_exists "$ROOT/poppler/COPYING3" "$OUT_DIR/Poppler_COPYING3.txt"
 copy_if_exists "$ROOT/third_party/miniz/LICENSE.txt" "$OUT_DIR/miniz.txt"
+copy_if_exists "$ROOT/third_party/libarchive/COPYING" "$OUT_DIR/libarchive.txt"

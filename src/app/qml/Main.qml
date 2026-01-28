@@ -97,9 +97,15 @@ ApplicationWindow {
   FileDialog {
     id: fileDialog
     title: "Add book"
-    nameFilters: ["Books (*.epub *.pdf *.mobi *.azw *.azw3 *.fb2 *.txt)"]
+    nameFilters: ["Books (*.epub *.pdf *.mobi *.azw *.azw3 *.fb2 *.cbz *.cbr *.txt)"]
     onAccepted: {
-      const path = selectedFile.toString().replace("file://", "")
+      var path = ""
+      if (selectedFile && selectedFile.toLocalFile) {
+        path = selectedFile.toLocalFile()
+      } else if (selectedFile) {
+        path = selectedFile.toString().replace("file://", "")
+        path = decodeURIComponent(path)
+      }
       if (path.length > 0) {
         libraryModel.addBook(path)
       }
@@ -442,12 +448,19 @@ ApplicationWindow {
 
           Image {
             id: imageItem
-            source: reader.currentImagePath
+            source: reader.currentImageUrl
             fillMode: Image.PreserveAspectFit
             asynchronous: true
             cache: false
             width: parent.width
             height: parent.height
+            onStatusChanged: {
+              if (status === Image.Error) {
+                console.warn("Image load failed", source, errorString)
+              } else if (status === Image.Ready) {
+                console.info("Image loaded", source, sourceSize.width, sourceSize.height)
+              }
+            }
           }
         }
       }
@@ -635,8 +648,8 @@ ApplicationWindow {
     id: readerPage
 
     Item {
-      width: parent.width
-      height: parent.height
+      width: parent ? parent.width : 0
+      height: parent ? parent.height : 0
 
       Column {
         anchors.fill: parent

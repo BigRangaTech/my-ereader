@@ -8,6 +8,7 @@ APP_NAME="ereader"
 
 BIN_PATH="$BUILD_DIR/src/app/$APP_NAME"
 POPPLER_LIB_DIR="$ROOT/third_party/install/poppler/lib"
+LIBARCHIVE_LIB_DIR="$ROOT/third_party/install/libarchive/lib"
 
 mkdir -p "$OUT_DIR"
 
@@ -31,6 +32,14 @@ if [[ -d "$POPPLER_LIB_DIR" ]]; then
   cp -a "$POPPLER_LIB_DIR"/libpoppler-qt6*.so* "$OUT_DIR/lib/" 2>/dev/null || true
 else
   echo "Poppler install dir not found: $POPPLER_LIB_DIR" >&2
+fi
+
+# Bundle libarchive shared libs
+if [[ -d "$LIBARCHIVE_LIB_DIR" ]]; then
+  mkdir -p "$OUT_DIR/lib"
+  cp -a "$LIBARCHIVE_LIB_DIR"/libarchive*.so* "$OUT_DIR/lib/" 2>/dev/null || true
+else
+  echo "libarchive install dir not found: $LIBARCHIVE_LIB_DIR" >&2
 fi
 
 cat <<MSG

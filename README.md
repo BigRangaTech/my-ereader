@@ -53,6 +53,7 @@ cmake --build build
 - docs/POPPLER.md
 - docs/RELEASE.md
 - scripts/package_linux.sh
+- scripts/build_libarchive.sh
 
 ## License
 GPL-2.0-or-later

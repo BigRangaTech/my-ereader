@@ -29,6 +29,10 @@ bool ReaderController::openFile(const QString &path) {
   m_imagePaths = m_document->imagePaths();
   if (!m_imagePaths.isEmpty()) {
     m_currentImageIndex = 0;
+    const QString firstImage = m_imagePaths.at(0);
+    qInfo() << "ReaderController: loaded" << m_imagePaths.size()
+            << "image(s), first:" << firstImage
+            << "exists:" << QFileInfo::exists(firstImage);
   } else {
     m_currentImageIndex = -1;
   }
@@ -83,6 +87,17 @@ QString ReaderController::currentImagePath() const {
     return m_imagePaths.at(m_currentImageIndex);
   }
   return {};
+}
+QUrl ReaderController::currentImageUrl() const {
+  const QString path = currentImagePath();
+  if (path.isEmpty()) {
+    return {};
+  }
+  QFileInfo info(path);
+  if (info.isAbsolute()) {
+    return QUrl::fromLocalFile(path);
+  }
+  return QUrl(path);
 }
 QString ReaderController::lastError() const { return m_lastError; }
 

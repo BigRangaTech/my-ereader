@@ -11,6 +11,8 @@ MONOCYPHER_REMOTE="https://github.com/BigRangaTech/Monocypher"
 MONOCYPHER_REF="v001"
 POPPLER_REMOTE="https://github.com/BigRangaTech/my-poppler"
 POPPLER_REF="001"
+LIBARCHIVE_REMOTE="https://github.com/libarchive/libarchive"
+LIBARCHIVE_REF="v3.7.2"
 
 update_monocypher() {
   echo "Updating Monocypher to $MONOCYPHER_REF"
@@ -24,5 +26,12 @@ update_poppler() {
   git clone --depth 1 --branch "$POPPLER_REF" "$POPPLER_REMOTE" "$ROOT/poppler"
 }
 
+update_libarchive() {
+  echo "Updating libarchive to $LIBARCHIVE_REF"
+  rm -rf "$ROOT/third_party/libarchive"
+  git clone --depth 1 --branch "$LIBARCHIVE_REF" "$LIBARCHIVE_REMOTE" "$ROOT/third_party/libarchive"
+}
+
 update_monocypher
 update_poppler
+update_libarchive

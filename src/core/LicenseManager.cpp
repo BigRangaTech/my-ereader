@@ -24,6 +24,7 @@ QVariantList LicenseManager::licenses() const {
   addEntry("Poppler COPYING", QDir(m_basePath).filePath("licenses/Poppler_COPYING.txt"));
   addEntry("Poppler COPYING3", QDir(m_basePath).filePath("licenses/Poppler_COPYING3.txt"));
   addEntry("miniz (Unlicense)", QDir(m_basePath).filePath("licenses/miniz.txt"));
+  addEntry("libarchive", QDir(m_basePath).filePath("licenses/libarchive.txt"));
 
   return list;
 }

@@ -14,6 +14,13 @@ Ensure `licenses/` is included alongside the app binary in the release.
 
 Copy required Poppler shared libraries next to the app binary.
 
+## libarchive
+```bash
+./scripts/build_libarchive.sh
+```
+
+Copy required libarchive shared libraries next to the app binary.
+
 ## Notes
 - Update `deps.lock` with final tags/commits
 - Verify license bundle in About dialog

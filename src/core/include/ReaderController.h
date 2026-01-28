@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QUrl>
 #include <memory>
 
 #include "FormatRegistry.h"
@@ -18,6 +19,7 @@ class ReaderController : public QObject {
   Q_PROPERTY(int currentImageIndex READ currentImageIndex NOTIFY currentChanged)
   Q_PROPERTY(int imageCount READ imageCount NOTIFY currentChanged)
   Q_PROPERTY(QString currentImagePath READ currentImagePath NOTIFY currentChanged)
+  Q_PROPERTY(QUrl currentImageUrl READ currentImageUrl NOTIFY currentChanged)
   Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
 
 public:
@@ -39,6 +41,7 @@ public:
   int currentImageIndex() const;
   int imageCount() const;
   QString currentImagePath() const;
+  QUrl currentImageUrl() const;
   QString lastError() const;
 
 signals:
