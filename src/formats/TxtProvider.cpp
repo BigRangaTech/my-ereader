@@ -38,7 +38,6 @@ std::unique_ptr<FormatDocument> TxtProvider::open(const QString &path, QString *
   }
 
   QTextStream stream(&file);
-  stream.setCodec("UTF-8");
   const QString text = stream.readAll();
   const QString title = QFileInfo(path).completeBaseName();
 

@@ -2,6 +2,9 @@ add_library(core STATIC
   LibraryModel.cpp
   LicenseManager.cpp
   ReaderController.cpp
+  include/LibraryModel.h
+  include/LicenseManager.h
+  include/ReaderController.h
 )
 
 target_include_directories(core PUBLIC include)

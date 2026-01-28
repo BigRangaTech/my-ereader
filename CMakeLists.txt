@@ -12,7 +12,7 @@ set(CMAKE_AUTOUIC ON)
 option(ENABLE_TTS "Enable TextToSpeech" ON)
 option(USE_BUNDLED_POPPLER "Use bundled Poppler (third_party/install/poppler)" ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Quick Qml Network Sql)
+find_package(Qt6 REQUIRED COMPONENTS Core Quick Qml Network Sql Xml)
 if(ENABLE_TTS)
   find_package(Qt6 COMPONENTS TextToSpeech)
 endif()

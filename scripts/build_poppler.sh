@@ -14,10 +14,13 @@ cmake -S "$ROOT/poppler" -B "$BUILD_DIR" \
   -DENABLE_CPP=OFF \
   -DENABLE_GLIB=OFF \
   -DENABLE_GTK_DOC=OFF \
+  -DENABLE_GPGME=OFF \
+  -DENABLE_BOOST=OFF \
+  -DENABLE_LIBCURL=OFF \
   -DENABLE_QT5=OFF \
   -DENABLE_QT6=ON \
+  -DENABLE_NSS3=OFF \
   -DBUILD_SHARED_LIBS=ON
 
 cmake --build "$BUILD_DIR" --parallel
 cmake --install "$BUILD_DIR"
-

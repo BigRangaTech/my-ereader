@@ -42,6 +42,8 @@ cmake --build build
 - docs/THIRD_PARTY.md
 - third_party/README.md
 - docs/POPPLER.md
+- docs/RELEASE.md
+- scripts/package_linux.sh
 
 ## License
 GPL-2.0-or-later

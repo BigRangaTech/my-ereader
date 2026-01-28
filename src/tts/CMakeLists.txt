@@ -1,5 +1,6 @@
 add_library(tts STATIC
   TtsController.cpp
+  include/TtsController.h
 )
 
 target_include_directories(tts PUBLIC include)

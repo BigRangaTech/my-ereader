@@ -3,10 +3,14 @@
 #include <QFileInfo>
 
 #include "TxtProvider.h"
+#include "PdfProvider.h"
+#include "EpubProvider.h"
 
 std::unique_ptr<FormatRegistry> FormatRegistry::createDefault() {
   auto registry = std::make_unique<FormatRegistry>();
   registry->registerProvider(std::make_unique<TxtProvider>());
+  registry->registerProvider(std::make_unique<EpubProvider>());
+  registry->registerProvider(std::make_unique<PdfProvider>());
   return registry;
 }
 

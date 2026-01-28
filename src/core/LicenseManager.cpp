@@ -23,6 +23,7 @@ QVariantList LicenseManager::licenses() const {
   addEntry("Monocypher", QDir(m_basePath).filePath("licenses/Monocypher.txt"));
   addEntry("Poppler COPYING", QDir(m_basePath).filePath("licenses/Poppler_COPYING.txt"));
   addEntry("Poppler COPYING3", QDir(m_basePath).filePath("licenses/Poppler_COPYING3.txt"));
+  addEntry("miniz (Unlicense)", QDir(m_basePath).filePath("licenses/miniz.txt"));
 
   return list;
 }
@@ -37,7 +38,6 @@ QString LicenseManager::readFile(const QString &path) const {
   }
 
   QTextStream stream(&file);
-  stream.setCodec("UTF-8");
   return stream.readAll();
 }
 

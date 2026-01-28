@@ -15,3 +15,8 @@
 - License: see `poppler/` tree
 - Source: `poppler/`
 - Build: `scripts/build_poppler.sh`
+
+## miniz
+- Purpose: ZIP reader for EPUB parsing
+- License: `third_party/miniz/LICENSE.txt`
+- Source: `third_party/miniz/`

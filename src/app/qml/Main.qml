@@ -2,6 +2,7 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Dialogs 1.3
 import QtQuick.Layouts 1.15
+import QtQuick 2.15 as QQ
 
 import Ereader 1.0
 
@@ -340,18 +341,54 @@ ApplicationWindow {
         anchors.margins: 16
         spacing: 12
 
-        Text {
-          text: "My Ereader"
-          color: Theme.textPrimary
-          font.pixelSize: 22
-          font.family: root.uiFont
-        }
+        RowLayout {
+          Layout.fillWidth: true
+          spacing: 12
 
-        Text {
-          text: "Bundled third-party licenses"
-          color: Theme.textMuted
-          font.pixelSize: 14
-          font.family: root.uiFont
+          ColumnLayout {
+            Layout.fillWidth: true
+
+            Text {
+              text: "My Ereader"
+              color: Theme.textPrimary
+              font.pixelSize: 22
+              font.family: root.uiFont
+            }
+
+            Text {
+              text: "Bundled third-party licenses"
+              color: Theme.textMuted
+              font.pixelSize: 14
+              font.family: root.uiFont
+            }
+          }
+
+          ColumnLayout {
+            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+
+            Text {
+              text: "Version 0.1.0"
+              color: Theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              horizontalAlignment: Text.AlignRight
+            }
+
+            QQ.Text {
+              text: "https://github.com/BigRangaTech/my-ereader"
+              color: Theme.accentAlt
+              font.pixelSize: 12
+              font.family: root.uiFont
+              horizontalAlignment: Text.AlignRight
+              wrapMode: Text.Wrap
+              width: 220
+              MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: Qt.openUrlExternally(parent.text)
+              }
+            }
+          }
         }
 
         RowLayout {

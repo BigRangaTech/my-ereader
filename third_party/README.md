@@ -25,3 +25,8 @@ that is built and bundled into prebuilt binaries.
 - Monocypher snapshot (legacy)
   - Source: `monocypher-4.0.2/`
   - Notes: older snapshot kept during migration; remove when consolidated
+- miniz
+  - Source: `third_party/miniz/`
+  - Upstream: https://github.com/richgel999/miniz
+  - License: `third_party/miniz/LICENSE.txt`
+  - Notes: ZIP reader used for EPUB parsing
