@@ -1,17 +1,20 @@
 #include "Fb2Provider.h"
 
 #include <QByteArray>
+#include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QHash>
 #include <QRegularExpression>
+#include <QSettings>
 #include <QStandardPaths>
 #include <QStringList>
 #include <QUrl>
 #include <QXmlStreamReader>
 #include <QVector>
+#include <algorithm>
 #include <utility>
 
 namespace {
@@ -147,6 +150,56 @@ QString tempDirFor(const QFileInfo &info) {
       .filePath(QString("ereader_fb2_%1").arg(QString::fromUtf8(hash)));
 }
 
+QString formatSettingsPath() {
+  QDir dir(QCoreApplication::applicationDirPath());
+  for (int i = 0; i < 6; ++i) {
+    if (QFileInfo::exists(dir.filePath("README.md"))) {
+      return dir.filePath("config/fb2.ini");
+    }
+    if (!dir.cdUp()) {
+      break;
+    }
+  }
+  return QDir(QCoreApplication::applicationDirPath()).filePath("fb2.ini");
+}
+
+int clampInt(int value, int minValue, int maxValue) {
+  return std::max(minValue, std::min(maxValue, value));
+}
+
+double clampDouble(double value, double minValue, double maxValue) {
+  return std::max(minValue, std::min(maxValue, value));
+}
+
+struct Fb2RenderSettings {
+  bool showImages = true;
+  QString textAlign = "left";
+  double paragraphSpacingEm = 0.6;
+  double paragraphIndentEm = 0.0;
+  int imageMaxWidthPercent = 100;
+  double imageSpacingEm = 0.6;
+};
+
+Fb2RenderSettings loadFb2Settings() {
+  QSettings settings(formatSettingsPath(), QSettings::IniFormat);
+  Fb2RenderSettings out;
+  out.showImages = settings.value("render/show_images", true).toBool();
+  out.textAlign = settings.value("render/text_align", "left").toString().toLower();
+  if (out.textAlign != "left" && out.textAlign != "right" &&
+      out.textAlign != "center" && out.textAlign != "justify") {
+    out.textAlign = "left";
+  }
+  out.paragraphSpacingEm =
+      clampDouble(settings.value("render/paragraph_spacing_em", 0.6).toDouble(), 0.0, 3.0);
+  out.paragraphIndentEm =
+      clampDouble(settings.value("render/paragraph_indent_em", 0.0).toDouble(), 0.0, 3.0);
+  out.imageMaxWidthPercent =
+      clampInt(settings.value("render/image_max_width_percent", 100).toInt(), 10, 100);
+  out.imageSpacingEm =
+      clampDouble(settings.value("render/image_spacing_em", 0.6).toDouble(), 0.0, 4.0);
+  return out;
+}
+
 QString contentTypeToExtension(const QString &contentType) {
   const QString type = contentType.trimmed().toLower();
   if (type.contains("jpeg") || type.contains("jpg")) {
@@ -173,6 +226,24 @@ QString sanitizeId(const QString &id) {
     return "image";
   }
   out.replace(QRegularExpression("[^A-Za-z0-9_-]"), "_");
+  return out;
+}
+
+QString applyStyles(const QString &html, const Fb2RenderSettings &settings) {
+  if (html.trimmed().isEmpty()) {
+    return html;
+  }
+  QString out = html;
+  const QString pStyle = QString("margin:0 0 %1em 0; text-indent:%2em; text-align:%3;")
+                              .arg(settings.paragraphSpacingEm, 0, 'f', 2)
+                              .arg(settings.paragraphIndentEm, 0, 'f', 2)
+                              .arg(settings.textAlign);
+  const QString hStyle = QString("margin:0 0 %1em 0; text-align:%2;")
+                              .arg(settings.paragraphSpacingEm, 0, 'f', 2)
+                              .arg(settings.textAlign);
+  out.replace("<p>", QString("<p style=\"%1\">").arg(pStyle));
+  out.replace("<h2>", QString("<h2 style=\"%1\">").arg(hStyle));
+  out = QString("<div style=\"text-align:%1;\">%2</div>").arg(settings.textAlign, out);
   return out;
 }
 
@@ -343,6 +414,7 @@ std::unique_ptr<FormatDocument> Fb2Provider::open(const QString &path, QString *
   const QString outDir = tempDirFor(info);
   QDir().mkpath(outDir);
 
+  const Fb2RenderSettings renderSettings = loadFb2Settings();
   QHash<QString, BinaryAsset> assets = extractBinaryAssets(data);
   const QString fallbackImageId = assets.isEmpty() ? QString() : assets.firstKey();
 
@@ -413,7 +485,13 @@ std::unique_ptr<FormatDocument> Fb2Provider::open(const QString &path, QString *
     currentParagraphHtml.clear();
   };
 
+  const QString imageStyle = QString("display:block; max-width:%1%%; height:auto; margin:0 0 %2em 0;")
+                                  .arg(renderSettings.imageMaxWidthPercent)
+                                  .arg(renderSettings.imageSpacingEm, 0, 'f', 2);
   auto appendImage = [&](const QString &id) {
+    if (!renderSettings.showImages) {
+      return;
+    }
     if (stack.isEmpty()) {
       return;
     }
@@ -421,8 +499,8 @@ std::unique_ptr<FormatDocument> Fb2Provider::open(const QString &path, QString *
     if (imgPath.isEmpty()) {
       return;
     }
-    const QString imgTag = QString("<img src=\"%1\"/>")
-                                .arg(QUrl::fromLocalFile(imgPath).toString());
+    const QString imgTag = QString("<img src=\"%1\" style=\"%2\"/>")
+                                .arg(QUrl::fromLocalFile(imgPath).toString(), imageStyle);
     if (inParagraph) {
       currentParagraphHtml.append(imgTag);
     } else {
@@ -639,6 +717,10 @@ std::unique_ptr<FormatDocument> Fb2Provider::open(const QString &path, QString *
     for (const QString &plain : chapterPlain) {
       chapterHtml.append(escapeHtml(plain));
     }
+  }
+
+  for (int i = 0; i < chapterHtml.size(); ++i) {
+    chapterHtml[i] = applyStyles(chapterHtml.at(i), renderSettings);
   }
 
   QString fullHtml;

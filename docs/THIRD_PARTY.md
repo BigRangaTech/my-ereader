@@ -31,3 +31,9 @@
 - Purpose: MOBI/AZW3 parsing
 - License: `third_party/libmobi/COPYING`
 - Source: `third_party/libmobi/`
+
+## DjVuLibre (tools)
+- Purpose: DJVU rendering via `ddjvu`, `djvused`, `djvutxt`
+- License: see the DjVuLibre source tree you vendor
+- Source: `third_party/djvulibre/`
+- Build: `scripts/build_djvulibre.sh`

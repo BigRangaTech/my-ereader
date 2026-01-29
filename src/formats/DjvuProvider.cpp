@@ -35,6 +35,19 @@ QString formatSettingsPath() {
   return QDir(QCoreApplication::applicationDirPath()).filePath("djvu.ini");
 }
 
+QString repoRoot() {
+  QDir dir(QCoreApplication::applicationDirPath());
+  for (int i = 0; i < 6; ++i) {
+    if (QFileInfo::exists(dir.filePath("README.md"))) {
+      return dir.absolutePath();
+    }
+    if (!dir.cdUp()) {
+      break;
+    }
+  }
+  return QCoreApplication::applicationDirPath();
+}
+
 int clampInt(int value, int minValue, int maxValue) {
   return std::max(minValue, std::min(maxValue, value));
 }
@@ -90,6 +103,22 @@ QString formatExtension(const QString &format) {
 }
 
 QString findTool(const QString &name) {
+  const QString root = repoRoot();
+  const QString appDir = QCoreApplication::applicationDirPath();
+  const QStringList searchDirs = {
+      QDir(root).filePath("third_party/install/djvulibre/bin"),
+      QDir(root).filePath("third_party/djvulibre/bin"),
+      QDir(root).filePath("third_party/djvulibre-bin/bin"),
+      QDir(appDir).filePath("tools/djvulibre/bin"),
+      QDir(appDir).filePath("djvulibre/bin"),
+  };
+
+  for (const QString &dir : searchDirs) {
+    const QString candidate = QDir(dir).filePath(name);
+    if (QFileInfo::exists(candidate)) {
+      return candidate;
+    }
+  }
   return QStandardPaths::findExecutable(name);
 }
 

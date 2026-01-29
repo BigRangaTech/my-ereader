@@ -42,6 +42,14 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ```
 
+### DjVuLibre (optional vendor)
+DJVU rendering uses DjVuLibre CLI tools (`ddjvu`, `djvused`, `djvutxt`). You can install them
+system-wide or vendor them under `third_party/install/djvulibre/bin` using:
+
+```bash
+scripts/build_djvulibre.sh
+```
+
 ## Settings
 Settings are stored under `config/` at the repo root.
 

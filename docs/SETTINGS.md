@@ -17,6 +17,12 @@ Settings live under `config/` at the repo root.
 ## FB2 (`config/fb2.ini`)
 - `reading/font_size` (default: 20)
 - `reading/line_height` (default: 1.4)
+- `render/show_images` (default: true)
+- `render/text_align` (default: `left`) — `left|right|center|justify`
+- `render/paragraph_spacing_em` (default: 0.6)
+- `render/paragraph_indent_em` (default: 0.0)
+- `render/image_max_width_percent` (default: 100)
+- `render/image_spacing_em` (default: 0.6)
 
 ## TXT (`config/txt.ini`)
 - `reading/font_size` (default: 20)
