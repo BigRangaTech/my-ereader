@@ -35,13 +35,6 @@ bool ReaderController::openFile(const QString &path) {
     return false;
   }
 
-  if (isMobiFormat(QFileInfo(path).suffix())) {
-    clearImageState();
-    setLastError("MOBI/AZW is experimental and temporarily disabled.");
-    qWarning() << "ReaderController: MOBI disabled for now";
-    return false;
-  }
-
   QString error;
   auto document = m_registry->open(path, &error);
   return applyDocument(std::move(document), path, &error);
@@ -50,13 +43,6 @@ bool ReaderController::openFile(const QString &path) {
 void ReaderController::openFileAsync(const QString &path) {
   if (path.isEmpty()) {
     setLastError("Path is empty");
-    return;
-  }
-  if (isMobiFormat(QFileInfo(path).suffix())) {
-    clearImageState();
-    setLastError("MOBI/AZW is experimental and temporarily disabled.");
-    qWarning() << "ReaderController: MOBI disabled for now";
-    setBusy(false);
     return;
   }
   setBusy(true);
@@ -257,13 +243,6 @@ bool ReaderController::applyDocument(std::unique_ptr<FormatDocument> document,
   } else {
     qInfo() << "ReaderController: TOC entries" << m_tocTitles.size()
             << "first" << m_tocTitles.value(0);
-  }
-  if (isMobiFormat(m_currentFormat)) {
-    m_textIsRich = false;
-    if (!m_currentPlainText.isEmpty()) {
-      m_currentText = m_currentPlainText;
-    }
-    qInfo() << "ReaderController: MOBI plain text enforced";
   }
   if (!m_coverPath.isEmpty()) {
     qInfo() << "ReaderController: cover" << m_coverPath

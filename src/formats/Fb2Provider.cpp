@@ -416,7 +416,7 @@ std::unique_ptr<FormatDocument> Fb2Provider::open(const QString &path, QString *
 
   const Fb2RenderSettings renderSettings = loadFb2Settings();
   QHash<QString, BinaryAsset> assets = extractBinaryAssets(data);
-  const QString fallbackImageId = assets.isEmpty() ? QString() : assets.firstKey();
+  const QString fallbackImageId = assets.isEmpty() ? QString() : assets.constBegin().key();
 
   QXmlStreamReader xml(data);
   QString title;

@@ -138,12 +138,10 @@ ApplicationWindow {
         const ext = path.split(".").pop().toLowerCase()
         if (ext === "mobi" || ext === "azw" || ext === "azw3" || ext === "azw4" || ext === "prc") {
           formatWarningDialog.messageText =
-              "MOBI/AZW support is experimental and temporarily disabled.\n" +
-              "Update libmobi to re-enable this format."
+              "MOBI/AZW support is experimental and may render incorrectly."
           formatWarningDialog.open()
-        } else {
-          libraryModel.addBook(path)
         }
+        libraryModel.addBook(path)
       }
     }
   }
@@ -535,13 +533,7 @@ ApplicationWindow {
             wrapMode: Text.WordWrap
             lineHeight: root.textLineHeightFor(reader.currentFormat)
             lineHeightMode: Text.ProportionalHeight
-            textFormat: (reader.currentFormat === "mobi"
-                         || reader.currentFormat === "azw"
-                         || reader.currentFormat === "azw3"
-                         || reader.currentFormat === "azw4"
-                         || reader.currentFormat === "prc")
-                        ? Text.PlainText
-                        : (reader.currentTextIsRich ? Text.RichText : Text.PlainText)
+            textFormat: reader.currentTextIsRich ? Text.RichText : Text.PlainText
             clip: true
           }
         }
@@ -882,14 +874,12 @@ ApplicationWindow {
                   const ext = model.path.split(".").pop().toLowerCase()
                   if (ext === "mobi" || ext === "azw" || ext === "azw3" || ext === "azw4" || ext === "prc") {
                     formatWarningDialog.messageText =
-                        "MOBI/AZW support is experimental and temporarily disabled.\n" +
-                        "Update libmobi to re-enable this format."
+                        "MOBI/AZW support is experimental and may render incorrectly."
                     formatWarningDialog.open()
-                  } else {
-                    reader.openFileAsync(model.path)
-                    annotationModel.libraryItemId = model.id
-                    stack.push(readerPage)
                   }
+                  reader.openFileAsync(model.path)
+                  annotationModel.libraryItemId = model.id
+                  stack.push(readerPage)
                 }
               }
 

@@ -873,7 +873,7 @@ std::unique_ptr<FormatDocument> MobiProvider::open(const QString &path, QString 
   const auto assets = exportImageResources(rawml, info);
   QString coverPath = extractCover(data, rawml, info, assets);
 
-  ChapterPayload payload = extractMarkupContent(rawml, assets, false);
+  ChapterPayload payload = extractMarkupContent(rawml, assets, true);
   QStringList chapterDisplay = payload.display;
   QStringList chapterPlain = payload.plain;
   QStringList chapterTitles;
@@ -929,7 +929,7 @@ std::unique_ptr<FormatDocument> MobiProvider::open(const QString &path, QString 
 
   QStringList imagePaths;
 
-  const bool richText = false;
+  const bool richText = true;
   return std::make_unique<MobiDocument>(title,
                                         chapterTitles,
                                         chapterDisplay,
