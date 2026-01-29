@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QString>
 #include <QUrl>
+#include <QVector>
 #include <memory>
 
 #include "FormatRegistry.h"
@@ -19,6 +20,7 @@ class ReaderController : public QObject {
   Q_PROPERTY(int currentChapterIndex READ currentChapterIndex NOTIFY currentChanged)
   Q_PROPERTY(QString currentChapterTitle READ currentChapterTitle NOTIFY currentChanged)
   Q_PROPERTY(int chapterCount READ chapterCount NOTIFY currentChanged)
+  Q_PROPERTY(int tocCount READ tocCount NOTIFY currentChanged)
   Q_PROPERTY(bool hasImages READ hasImages NOTIFY currentChanged)
   Q_PROPERTY(int currentImageIndex READ currentImageIndex NOTIFY currentChanged)
   Q_PROPERTY(int imageCount READ imageCount NOTIFY currentChanged)
@@ -40,6 +42,9 @@ public:
   Q_INVOKABLE bool nextChapter();
   Q_INVOKABLE bool prevChapter();
   Q_INVOKABLE bool goToChapter(int index);
+  Q_INVOKABLE QString chapterTitle(int index) const;
+  Q_INVOKABLE QString tocTitle(int index) const;
+  Q_INVOKABLE int tocChapterIndex(int index) const;
   Q_INVOKABLE bool nextImage();
   Q_INVOKABLE bool prevImage();
   Q_INVOKABLE bool goToImage(int index);
@@ -54,6 +59,7 @@ public:
   int currentChapterIndex() const;
   QString currentChapterTitle() const;
   int chapterCount() const;
+  int tocCount() const;
   bool hasImages() const;
   int currentImageIndex() const;
   int imageCount() const;
@@ -87,6 +93,8 @@ private:
   QStringList m_chapterTitles;
   QStringList m_chapterTexts;
   QStringList m_chapterPlainTexts;
+  QStringList m_tocTitles;
+  QVector<int> m_tocChapterIndices;
   bool m_textIsRich = false;
   int m_currentChapterIndex = -1;
   QStringList m_imagePaths;

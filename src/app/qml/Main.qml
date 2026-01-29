@@ -16,6 +16,24 @@ ApplicationWindow {
   readonly property string uiFont: "Space Grotesk"
   readonly property string readingFont: "Literata"
 
+  function textFontSizeFor(format) {
+    const f = (format || "").toLowerCase()
+    if (f === "epub") return settings.epubFontSize
+    if (f === "fb2") return settings.fb2FontSize
+    if (f === "txt") return settings.txtFontSize
+    if (f === "mobi" || f === "azw" || f === "azw3" || f === "azw4" || f === "prc") return settings.mobiFontSize
+    return settings.readingFontSize
+  }
+
+  function textLineHeightFor(format) {
+    const f = (format || "").toLowerCase()
+    if (f === "epub") return settings.epubLineHeight
+    if (f === "fb2") return settings.fb2LineHeight
+    if (f === "txt") return settings.txtLineHeight
+    if (f === "mobi" || f === "azw" || f === "azw3" || f === "azw4" || f === "prc") return settings.mobiLineHeight
+    return settings.readingLineHeight
+  }
+
   onClosing: {
     if (vault.state === VaultController.Unlocked && sessionPassphrase.length > 0) {
       vault.lock(sessionPassphrase)
@@ -506,10 +524,10 @@ ApplicationWindow {
             width: textScroll.width
             text: reader.currentText
             color: theme.textPrimary
-            font.pixelSize: settings.readingFontSize
+            font.pixelSize: root.textFontSizeFor(reader.currentFormat)
             font.family: root.readingFont
             wrapMode: Text.WordWrap
-            lineHeight: settings.readingLineHeight
+            lineHeight: root.textLineHeightFor(reader.currentFormat)
             lineHeightMode: Text.ProportionalHeight
             textFormat: (reader.currentFormat === "mobi"
                          || reader.currentFormat === "azw"
@@ -946,8 +964,24 @@ ApplicationWindow {
     id: readerPage
 
     Item {
+      property string sidebarMode: "toc"
       width: parent ? parent.width : 0
       height: parent ? parent.height : 0
+
+      onSidebarModeChanged: {
+        if (reader.currentPath && reader.currentPath.length > 0) {
+          settings.setSidebarModeForPath(reader.currentPath, sidebarMode)
+        }
+      }
+
+      Connections {
+        target: reader
+        function onCurrentChanged() {
+          if (reader.currentPath && reader.currentPath.length > 0) {
+            sidebarMode = settings.sidebarModeForPath(reader.currentPath)
+          }
+        }
+      }
 
       Column {
         anchors.fill: parent
@@ -1062,52 +1096,153 @@ ApplicationWindow {
                 anchors.margins: 10
                 spacing: 8
 
-                Text {
-                  text: "Annotations"
-                  color: theme.textPrimary
-                  font.pixelSize: 16
-                  font.family: root.uiFont
+                ButtonGroup {
+                  id: sidebarGroup
+                  exclusive: true
+                  onCheckedButtonChanged: {
+                    if (checkedButton === tocButton) {
+                      sidebarMode = "toc"
+                    } else if (checkedButton === annotationsButton) {
+                      sidebarMode = "annotations"
+                    }
+                  }
                 }
 
-                ListView {
-                  id: annotationList
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 8
+
+                  Button {
+                    id: tocButton
+                    text: "TOC"
+                    checkable: true
+                    ButtonGroup.group: sidebarGroup
+                    checked: sidebarMode === "toc"
+                  }
+
+                  Button {
+                    id: annotationsButton
+                    text: "Annotations"
+                    checkable: true
+                    ButtonGroup.group: sidebarGroup
+                    checked: sidebarMode === "annotations"
+                  }
+                }
+
+                StackLayout {
                   Layout.fillWidth: true
                   Layout.fillHeight: true
-                  clip: true
-                  model: annotationModel
-                  delegate: Rectangle {
-                    width: parent.width
-                    height: 70
-                    radius: 8
-                    color: index % 2 === 0 ? theme.panel : theme.panelHighlight
+                  currentIndex: sidebarMode === "toc" ? 0 : 1
 
-                    Column {
-                      anchors.fill: parent
-                      anchors.margins: 8
-                      spacing: 4
+                  Item {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
 
-                      Text {
-                        text: model.locator + " • " + model.type
-                        color: theme.textMuted
-                        font.pixelSize: 11
-                        font.family: root.uiFont
-                        elide: Text.ElideRight
-                      }
-
-                      Text {
-                        text: model.text
-                        color: theme.textPrimary
-                        font.pixelSize: 13
-                        font.family: root.uiFont
-                        wrapMode: Text.WordWrap
-                        elide: Text.ElideRight
-                      }
+                    Text {
+                      anchors.centerIn: parent
+                      visible: reader.tocCount === 0
+                      text: "No TOC available"
+                      color: theme.textMuted
+                      font.pixelSize: 12
+                      font.family: root.uiFont
                     }
 
-                    MouseArea {
+                    ListView {
+                      visible: reader.tocCount > 0
                       anchors.fill: parent
-                      onClicked: reader.jumpToLocator(model.locator)
-                      onPressAndHold: annotationModel.deleteAnnotation(model.id)
+                      clip: true
+                      model: reader.tocCount
+                      delegate: Rectangle {
+                        width: ListView.view ? ListView.view.width : 0
+                        height: 56
+                        radius: 8
+                        color: reader.tocChapterIndex(index) === reader.currentChapterIndex
+                               ? theme.accentAlt
+                               : (index % 2 === 0 ? theme.panel : theme.panelHighlight)
+
+                        Row {
+                          anchors.fill: parent
+                          anchors.margins: 8
+                          spacing: 8
+
+                          Text {
+                            text: (index + 1) + "."
+                            color: reader.tocChapterIndex(index) === reader.currentChapterIndex
+                                   ? "#0f141a" : theme.textMuted
+                            font.pixelSize: 11
+                            font.family: root.uiFont
+                          }
+
+                          Text {
+                            text: reader.tocTitle(index).length > 0
+                                  ? reader.tocTitle(index)
+                                  : "Chapter " + (index + 1)
+                            color: reader.tocChapterIndex(index) === reader.currentChapterIndex
+                                   ? "#0f141a" : theme.textPrimary
+                            font.pixelSize: 13
+                            font.family: root.uiFont
+                            elide: Text.ElideRight
+                            wrapMode: Text.NoWrap
+                          }
+                        }
+
+                        MouseArea {
+                          anchors.fill: parent
+                          onClicked: {
+                            const chapterIndex = reader.tocChapterIndex(index)
+                            if (chapterIndex >= 0) {
+                              reader.goToChapter(chapterIndex)
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+
+                  Item {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+
+                    ListView {
+                      id: annotationList
+                      anchors.fill: parent
+                      clip: true
+                      model: annotationModel
+                      delegate: Rectangle {
+                        width: parent.width
+                        height: 70
+                        radius: 8
+                        color: index % 2 === 0 ? theme.panel : theme.panelHighlight
+
+                        Column {
+                          anchors.fill: parent
+                          anchors.margins: 8
+                          spacing: 4
+
+                          Text {
+                            text: model.locator + " • " + model.type
+                            color: theme.textMuted
+                            font.pixelSize: 11
+                            font.family: root.uiFont
+                            elide: Text.ElideRight
+                          }
+
+                          Text {
+                            text: model.text
+                            color: theme.textPrimary
+                            font.pixelSize: 13
+                            font.family: root.uiFont
+                            wrapMode: Text.WordWrap
+                            elide: Text.ElideRight
+                          }
+                        }
+
+                        MouseArea {
+                          anchors.fill: parent
+                          onClicked: reader.jumpToLocator(model.locator)
+                          onPressAndHold: annotationModel.deleteAnnotation(model.id)
+                        }
+                      }
                     }
                   }
                 }
@@ -1183,7 +1318,7 @@ ApplicationWindow {
           spacing: 18
 
           Text {
-            text: "Reading"
+            text: "EPUB"
             color: theme.textPrimary
             font.pixelSize: 20
             font.family: root.uiFont
@@ -1206,16 +1341,16 @@ ApplicationWindow {
               from: 12
               to: 36
               stepSize: 1
-              value: settings.readingFontSize
-              onMoved: settings.readingFontSize = Math.round(value)
+              value: settings.epubFontSize
+              onMoved: settings.epubFontSize = Math.round(value)
             }
 
             SpinBox {
               from: 12
               to: 36
-              value: settings.readingFontSize
+              value: settings.epubFontSize
               editable: true
-              onValueModified: settings.readingFontSize = value
+              onValueModified: settings.epubFontSize = value
             }
           }
 
@@ -1236,17 +1371,252 @@ ApplicationWindow {
               from: 1.0
               to: 2.0
               stepSize: 0.05
-              value: settings.readingLineHeight
-              onMoved: settings.readingLineHeight = Math.round(value * 100) / 100
+              value: settings.epubLineHeight
+              onMoved: settings.epubLineHeight = Math.round(value * 100) / 100
             }
 
             Text {
-              text: settings.readingLineHeight.toFixed(2)
+              text: settings.epubLineHeight.toFixed(2)
               color: theme.textPrimary
               font.pixelSize: 13
               font.family: root.uiFont
               Layout.preferredWidth: 48
             }
+          }
+
+          Text {
+            text: settings.formatSettingsPath("epub")
+            color: theme.textMuted
+            font.pixelSize: 11
+            font.family: root.uiFont
+          }
+
+          Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
+
+          Text {
+            text: "FB2"
+            color: theme.textPrimary
+            font.pixelSize: 20
+            font.family: root.uiFont
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Font size"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 12
+              to: 36
+              stepSize: 1
+              value: settings.fb2FontSize
+              onMoved: settings.fb2FontSize = Math.round(value)
+            }
+
+            SpinBox {
+              from: 12
+              to: 36
+              value: settings.fb2FontSize
+              editable: true
+              onValueModified: settings.fb2FontSize = value
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Line height"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 1.0
+              to: 2.0
+              stepSize: 0.05
+              value: settings.fb2LineHeight
+              onMoved: settings.fb2LineHeight = Math.round(value * 100) / 100
+            }
+
+            Text {
+              text: settings.fb2LineHeight.toFixed(2)
+              color: theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 48
+            }
+          }
+
+          Text {
+            text: settings.formatSettingsPath("fb2")
+            color: theme.textMuted
+            font.pixelSize: 11
+            font.family: root.uiFont
+          }
+
+          Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
+
+          Text {
+            text: "TXT"
+            color: theme.textPrimary
+            font.pixelSize: 20
+            font.family: root.uiFont
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Font size"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 12
+              to: 36
+              stepSize: 1
+              value: settings.txtFontSize
+              onMoved: settings.txtFontSize = Math.round(value)
+            }
+
+            SpinBox {
+              from: 12
+              to: 36
+              value: settings.txtFontSize
+              editable: true
+              onValueModified: settings.txtFontSize = value
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Line height"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 1.0
+              to: 2.0
+              stepSize: 0.05
+              value: settings.txtLineHeight
+              onMoved: settings.txtLineHeight = Math.round(value * 100) / 100
+            }
+
+            Text {
+              text: settings.txtLineHeight.toFixed(2)
+              color: theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 48
+            }
+          }
+
+          Text {
+            text: settings.formatSettingsPath("txt")
+            color: theme.textMuted
+            font.pixelSize: 11
+            font.family: root.uiFont
+          }
+
+          Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
+
+          Text {
+            text: "MOBI (experimental)"
+            color: theme.textPrimary
+            font.pixelSize: 20
+            font.family: root.uiFont
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Font size"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 12
+              to: 36
+              stepSize: 1
+              value: settings.mobiFontSize
+              onMoved: settings.mobiFontSize = Math.round(value)
+            }
+
+            SpinBox {
+              from: 12
+              to: 36
+              value: settings.mobiFontSize
+              editable: true
+              onValueModified: settings.mobiFontSize = value
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Line height"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 1.0
+              to: 2.0
+              stepSize: 0.05
+              value: settings.mobiLineHeight
+              onMoved: settings.mobiLineHeight = Math.round(value * 100) / 100
+            }
+
+            Text {
+              text: settings.mobiLineHeight.toFixed(2)
+              color: theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 48
+            }
+          }
+
+          Text {
+            text: settings.formatSettingsPath("mobi")
+            color: theme.textMuted
+            font.pixelSize: 11
+            font.family: root.uiFont
           }
 
           Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
@@ -1318,6 +1688,93 @@ ApplicationWindow {
             }
           }
 
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Prefetch distance"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 0
+              to: 6
+              stepSize: 1
+              value: settings.pdfPrefetchDistance
+              onMoved: settings.pdfPrefetchDistance = Math.round(value)
+            }
+
+            SpinBox {
+              from: 0
+              to: 6
+              value: settings.pdfPrefetchDistance
+              editable: true
+              onValueModified: settings.pdfPrefetchDistance = value
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Progressive render"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            CheckBox {
+              checked: settings.pdfProgressiveRendering
+              text: settings.pdfProgressiveRendering ? "On" : "Off"
+              onToggled: settings.pdfProgressiveRendering = checked
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+            enabled: settings.pdfProgressiveRendering
+
+            Text {
+              text: "Preview DPI"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 48
+              to: settings.pdfDpi
+              stepSize: 6
+              value: settings.pdfProgressiveDpi
+              onMoved: settings.pdfProgressiveDpi = Math.round(value)
+            }
+
+            SpinBox {
+              from: 48
+              to: settings.pdfDpi
+              value: settings.pdfProgressiveDpi
+              editable: true
+              onValueModified: settings.pdfProgressiveDpi = value
+            }
+          }
+
+          Text {
+            text: settings.formatSettingsPath("pdf")
+            color: theme.textMuted
+            font.pixelSize: 11
+            font.family: root.uiFont
+          }
+
           Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
 
           Text {
@@ -1385,6 +1842,96 @@ ApplicationWindow {
               font.family: root.uiFont
               Layout.preferredWidth: 48
             }
+          }
+
+          Text {
+            text: settings.formatSettingsPath("cbz")
+            color: theme.textMuted
+            font.pixelSize: 11
+            font.family: root.uiFont
+          }
+
+          Text {
+            text: settings.formatSettingsPath("cbr")
+            color: theme.textMuted
+            font.pixelSize: 11
+            font.family: root.uiFont
+          }
+
+          Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
+
+          Text {
+            text: "DJVU"
+            color: theme.textPrimary
+            font.pixelSize: 20
+            font.family: root.uiFont
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Render DPI"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 72
+              to: 240
+              stepSize: 6
+              value: settings.pdfDpi
+              onMoved: settings.pdfDpi = Math.round(value)
+            }
+
+            SpinBox {
+              from: 72
+              to: 240
+              value: settings.pdfDpi
+              editable: true
+              onValueModified: settings.pdfDpi = value
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Cache pages"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 5
+              to: 120
+              stepSize: 1
+              value: settings.pdfCacheLimit
+              onMoved: settings.pdfCacheLimit = Math.round(value)
+            }
+
+            SpinBox {
+              from: 5
+              to: 120
+              value: settings.pdfCacheLimit
+              editable: true
+              onValueModified: settings.pdfCacheLimit = value
+            }
+          }
+
+          Text {
+            text: settings.formatSettingsPath("djvu")
+            color: theme.textMuted
+            font.pixelSize: 11
+            font.family: root.uiFont
           }
 
           Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }

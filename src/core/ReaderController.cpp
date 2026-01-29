@@ -90,6 +90,8 @@ void ReaderController::close() {
   m_chapterTitles.clear();
   m_chapterTexts.clear();
   m_chapterPlainTexts.clear();
+  m_tocTitles.clear();
+  m_tocChapterIndices.clear();
   m_currentChapterIndex = -1;
   m_imagePaths.clear();
   m_currentImageIndex = -1;
@@ -116,6 +118,25 @@ QString ReaderController::currentChapterTitle() const {
   return {};
 }
 int ReaderController::chapterCount() const { return m_chapterTexts.size(); }
+int ReaderController::tocCount() const { return m_tocTitles.size(); }
+QString ReaderController::chapterTitle(int index) const {
+  if (index >= 0 && index < m_chapterTitles.size()) {
+    return m_chapterTitles.at(index);
+  }
+  return {};
+}
+QString ReaderController::tocTitle(int index) const {
+  if (index >= 0 && index < m_tocTitles.size()) {
+    return m_tocTitles.at(index);
+  }
+  return {};
+}
+int ReaderController::tocChapterIndex(int index) const {
+  if (index >= 0 && index < m_tocChapterIndices.size()) {
+    return m_tocChapterIndices.at(index);
+  }
+  return -1;
+}
 bool ReaderController::hasImages() const { return !m_imagePaths.isEmpty(); }
 int ReaderController::currentImageIndex() const { return m_currentImageIndex; }
 int ReaderController::imageCount() const { return m_imagePaths.size(); }
@@ -193,6 +214,8 @@ bool ReaderController::applyDocument(std::unique_ptr<FormatDocument> document,
   m_chapterTitles = m_document->chapterTitles();
   m_chapterTexts = m_document->chaptersText();
   m_chapterPlainTexts = m_document->chaptersPlainText();
+  m_tocTitles = m_document->tocTitles();
+  m_tocChapterIndices = m_document->tocChapterIndices();
   m_imagePaths = m_document->imagePaths();
   m_coverPath = m_document->coverPath();
   m_textIsRich = m_document->isRichText();
@@ -224,6 +247,16 @@ bool ReaderController::applyDocument(std::unique_ptr<FormatDocument> document,
     m_currentChapterIndex = -1;
     m_currentText = m_document->readAllText();
     m_currentPlainText = m_document->readAllPlainText();
+  }
+  if (m_tocTitles.isEmpty()) {
+    m_tocTitles = m_chapterTitles;
+    m_tocChapterIndices.clear();
+    for (int i = 0; i < m_chapterTitles.size(); ++i) {
+      m_tocChapterIndices.append(i);
+    }
+  } else {
+    qInfo() << "ReaderController: TOC entries" << m_tocTitles.size()
+            << "first" << m_tocTitles.value(0);
   }
   if (isMobiFormat(m_currentFormat)) {
     m_textIsRich = false;
@@ -343,6 +376,9 @@ bool ReaderController::nextImage() {
     return false;
   }
   m_currentImageIndex++;
+  if (m_currentImageIndex > 0) {
+    m_document->ensureImage(m_currentImageIndex - 1);
+  }
   m_document->ensureImage(m_currentImageIndex);
   m_document->ensureImage(m_currentImageIndex + 1);
   emit currentChanged();
@@ -357,6 +393,9 @@ bool ReaderController::prevImage() {
     return false;
   }
   m_currentImageIndex--;
+  if (m_currentImageIndex > 0) {
+    m_document->ensureImage(m_currentImageIndex - 1);
+  }
   m_document->ensureImage(m_currentImageIndex);
   m_document->ensureImage(m_currentImageIndex + 1);
   emit currentChanged();
@@ -374,6 +413,9 @@ bool ReaderController::goToImage(int index) {
     return true;
   }
   m_currentImageIndex = index;
+  if (m_currentImageIndex > 0) {
+    m_document->ensureImage(m_currentImageIndex - 1);
+  }
   m_document->ensureImage(m_currentImageIndex);
   m_document->ensureImage(m_currentImageIndex + 1);
   emit currentChanged();

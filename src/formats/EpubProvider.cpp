@@ -21,6 +21,8 @@ public:
                QStringList sections,
                QStringList plainSections,
                QString coverPath,
+               QStringList tocTitles,
+               QVector<int> tocChapterIndices,
                QString authors,
                QString series,
                QString publisher,
@@ -33,6 +35,8 @@ public:
         m_sections(std::move(sections)),
         m_plainSections(std::move(plainSections)),
         m_coverPath(std::move(coverPath)),
+        m_tocTitles(std::move(tocTitles)),
+        m_tocChapterIndices(std::move(tocChapterIndices)),
         m_authors(std::move(authors)),
         m_series(std::move(series)),
         m_publisher(std::move(publisher)),
@@ -48,6 +52,8 @@ public:
     return m_plainSections.isEmpty() ? m_sections : m_plainSections;
   }
   QString coverPath() const override { return m_coverPath; }
+  QStringList tocTitles() const override { return m_tocTitles; }
+  QVector<int> tocChapterIndices() const override { return m_tocChapterIndices; }
   QString authors() const override { return m_authors; }
   QString series() const override { return m_series; }
   QString publisher() const override { return m_publisher; }
@@ -62,6 +68,8 @@ private:
   QStringList m_sections;
   QStringList m_plainSections;
   QString m_coverPath;
+  QStringList m_tocTitles;
+  QVector<int> m_tocChapterIndices;
   QString m_authors;
   QString m_series;
   QString m_publisher;
@@ -386,6 +394,8 @@ QString extractXhtmlRichText(const QByteArray &xhtml,
   bool inHeading = false;
   bool inPre = false;
   QString headingBuffer;
+  int pendingImageWidth = 0;
+  int pendingImageHeight = 0;
 
   while (!xml.atEnd()) {
     xml.readNext();
@@ -429,17 +439,39 @@ QString extractXhtmlRichText(const QByteArray &xhtml,
         out.append("<b>");
       } else if (name == QLatin1String("a")) {
         const QString href = xml.attributes().value(QLatin1String("href")).toString();
-        out.append("<a href=\"").append(escapeHtmlAttribute(href)).append("\">");
+        out.append("<a href=\"").append(escapeHtmlAttribute(href))
+            .append("\" style=\"color:#7fb3ff; text-decoration:underline;\">");
       } else if (name == QLatin1String("img")) {
         const QString src = xml.attributes().value(QLatin1String("src")).toString();
+        const QString widthAttr = xml.attributes().value(QLatin1String("width")).toString();
+        const QString heightAttr = xml.attributes().value(QLatin1String("height")).toString();
+        bool okWidth = false;
+        bool okHeight = false;
+        pendingImageWidth = widthAttr.toInt(&okWidth);
+        pendingImageHeight = heightAttr.toInt(&okHeight);
+        if (!okWidth) {
+          pendingImageWidth = 0;
+        }
+        if (!okHeight) {
+          pendingImageHeight = 0;
+        }
         const QString resolved = resolveHref(currentPath, src);
         if (!resolved.isEmpty()) {
           const QByteArray imageData = zip.readFile(resolved);
           const QString outPath = writeAssetToTemp(info, resolved, imageData);
           if (!outPath.isEmpty()) {
+            QString style = "max-width:100%; height:auto; display:block; margin:0.6em auto;";
+            if (pendingImageWidth > 0) {
+              style.prepend(QString("width:%1px; ").arg(pendingImageWidth));
+            }
+            if (pendingImageHeight > 0) {
+              style.prepend(QString("height:%1px; ").arg(pendingImageHeight));
+            }
             out.append("<img src=\"");
             out.append(QUrl::fromLocalFile(outPath).toString());
-            out.append("\" style=\"max-width:100%; height:auto;\"/>");
+            out.append("\" style=\"");
+            out.append(style);
+            out.append("\"/>");
           }
         }
       } else if (name == QLatin1String("table")) {
@@ -559,6 +591,43 @@ QString resolveHref(const QString &currentFile, const QString &href) {
   return QDir::cleanPath(joinPath(dirOf(currentFile), target));
 }
 
+QString normalizeTitle(const QString &title) {
+  QString out = title;
+  out.replace(QChar(0x00A0), QChar(' '));
+  out = out.simplified();
+  return out;
+}
+
+QString normalizeDescription(const QString &text) {
+  QString out = text;
+  out.replace(QChar(0x00A0), QChar(' '));
+  out.remove(QChar(0x00AD));
+  out = out.trimmed();
+  return out;
+}
+
+QString cleanHeading(const QString &text) {
+  QString out = normalizeTitle(text);
+  if (out.startsWith("chapter ", Qt::CaseInsensitive)) {
+    out = out.mid(7).trimmed();
+  }
+  return out;
+}
+
+bool looksLikeBoilerplate(const QString &text) {
+  const QString lower = text.toLower();
+  if (lower.contains("copyright") || lower.contains("all rights reserved")) {
+    return true;
+  }
+  if (lower.contains("table of contents") || lower.contains("toc")) {
+    return true;
+  }
+  if (lower.contains("isbn") || lower.contains("publisher")) {
+    return true;
+  }
+  return false;
+}
+
 QHash<QString, QString> parseNavTitles(const QByteArray &navXhtml, const QString &navPath) {
   QHash<QString, QString> titles;
   QXmlStreamReader xml(navXhtml);
@@ -576,7 +645,7 @@ QHash<QString, QString> parseNavTitles(const QByteArray &navXhtml, const QString
         inLink = true;
       }
     } else if (xml.isCharacters() && inNav && inLink) {
-      const QString label = xml.text().toString().trimmed();
+      const QString label = normalizeTitle(xml.text().toString());
       if (!currentHref.isEmpty() && !label.isEmpty()) {
         const QString resolved = resolveHref(navPath, currentHref);
         if (!resolved.isEmpty()) {
@@ -593,6 +662,47 @@ QHash<QString, QString> parseNavTitles(const QByteArray &navXhtml, const QString
     }
   }
   return titles;
+}
+
+struct TocEntry {
+  QString href;
+  QString title;
+};
+
+QVector<TocEntry> parseNavEntries(const QByteArray &navXhtml, const QString &navPath) {
+  QVector<TocEntry> entries;
+  QXmlStreamReader xml(navXhtml);
+  QString currentHref;
+  bool inNav = false;
+  bool inLink = false;
+  while (!xml.atEnd()) {
+    xml.readNext();
+    if (xml.isStartElement()) {
+      if (xml.name() == QLatin1String("nav")) {
+        const QString type = xml.attributes().value(QLatin1String("epub:type")).toString();
+        inNav = (type == QLatin1String("toc"));
+      } else if (inNav && xml.name() == QLatin1String("a")) {
+        currentHref = xml.attributes().value(QLatin1String("href")).toString();
+        inLink = true;
+      }
+    } else if (xml.isCharacters() && inNav && inLink) {
+      const QString label = normalizeTitle(xml.text().toString());
+      if (!currentHref.isEmpty() && !label.isEmpty()) {
+        const QString resolved = resolveHref(navPath, currentHref);
+        if (!resolved.isEmpty()) {
+          entries.append({resolved, label});
+        }
+      }
+    } else if (xml.isEndElement()) {
+      if (xml.name() == QLatin1String("nav")) {
+        inNav = false;
+      } else if (xml.name() == QLatin1String("a")) {
+        inLink = false;
+        currentHref.clear();
+      }
+    }
+  }
+  return entries;
 }
 
 QHash<QString, QString> parseNcxTitles(const QByteArray &ncxXml, const QString &ncxPath) {
@@ -612,7 +722,7 @@ QHash<QString, QString> parseNcxTitles(const QByteArray &ncxXml, const QString &
         inText = true;
       }
     } else if (xml.isCharacters() && inNavPoint && inText) {
-      const QString label = xml.text().toString().trimmed();
+      const QString label = normalizeTitle(xml.text().toString());
       if (!currentSrc.isEmpty() && !label.isEmpty()) {
         const QString resolved = resolveHref(ncxPath, currentSrc);
         if (!resolved.isEmpty()) {
@@ -632,6 +742,42 @@ QHash<QString, QString> parseNcxTitles(const QByteArray &ncxXml, const QString &
   return titles;
 }
 
+QVector<TocEntry> parseNcxEntries(const QByteArray &ncxXml, const QString &ncxPath) {
+  QVector<TocEntry> entries;
+  QXmlStreamReader xml(ncxXml);
+  QString currentSrc;
+  bool inNavPoint = false;
+  bool inText = false;
+  while (!xml.atEnd()) {
+    xml.readNext();
+    if (xml.isStartElement()) {
+      if (xml.name() == QLatin1String("navPoint")) {
+        inNavPoint = true;
+      } else if (inNavPoint && xml.name() == QLatin1String("content")) {
+        currentSrc = xml.attributes().value(QLatin1String("src")).toString();
+      } else if (inNavPoint && xml.name() == QLatin1String("text")) {
+        inText = true;
+      }
+    } else if (xml.isCharacters() && inNavPoint && inText) {
+      const QString label = normalizeTitle(xml.text().toString());
+      if (!currentSrc.isEmpty() && !label.isEmpty()) {
+        const QString resolved = resolveHref(ncxPath, currentSrc);
+        if (!resolved.isEmpty()) {
+          entries.append({resolved, label});
+        }
+      }
+    } else if (xml.isEndElement()) {
+      if (xml.name() == QLatin1String("navPoint")) {
+        inNavPoint = false;
+        inText = false;
+        currentSrc.clear();
+      } else if (xml.name() == QLatin1String("text")) {
+        inText = false;
+      }
+    }
+  }
+  return entries;
+}
 bool isXhtmlType(const QString &mediaType, const QString &href) {
   if (mediaType == QLatin1String("application/xhtml+xml") ||
       mediaType == QLatin1String("text/html") ||
@@ -738,12 +884,16 @@ std::unique_ptr<FormatDocument> EpubProvider::open(const QString &path, QString 
   const OpfData opf = parseOpf(opfXml);
   const QString baseDir = dirOf(rootfile);
   const QFileInfo info(path);
+  const QString fallbackTitle = normalizeTitle(QFileInfo(path).completeBaseName());
   QHash<QString, QString> navTitles;
+  QVector<TocEntry> navEntries;
   if (!opf.navHref.isEmpty()) {
     const QString navPath = joinPath(baseDir, opf.navHref);
     const QByteArray navXhtml = zip.readFile(navPath);
     if (!navXhtml.isEmpty()) {
       navTitles = parseNavTitles(navXhtml, navPath);
+      navEntries = parseNavEntries(navXhtml, navPath);
+      qInfo() << "EpubProvider: nav" << navPath << "entries" << navEntries.size();
     }
   }
   if (navTitles.isEmpty() && !opf.ncxHref.isEmpty()) {
@@ -751,6 +901,8 @@ std::unique_ptr<FormatDocument> EpubProvider::open(const QString &path, QString 
     const QByteArray ncxXml = zip.readFile(ncxPath);
     if (!ncxXml.isEmpty()) {
       navTitles = parseNcxTitles(ncxXml, ncxPath);
+      navEntries = parseNcxEntries(ncxXml, ncxPath);
+      qInfo() << "EpubProvider: ncx" << ncxPath << "entries" << navEntries.size();
     }
   }
 
@@ -835,6 +987,7 @@ std::unique_ptr<FormatDocument> EpubProvider::open(const QString &path, QString 
   QStringList sections;
   QStringList plainSections;
   QStringList chapterTitles;
+  QHash<QString, int> chapterIndexByPath;
   auto readSpine = [&](bool includeNonLinear) {
     for (const auto &item : opf.spine) {
       if (!includeNonLinear && !item.linear) {
@@ -857,13 +1010,21 @@ std::unique_ptr<FormatDocument> EpubProvider::open(const QString &path, QString 
       const QString richText = extractXhtmlRichText(xhtml, itemPath, zip, info, &heading);
       const QString plainText = extractXhtmlText(xhtml, &heading);
       if (!plainText.isEmpty() || !richText.isEmpty()) {
+        const QString plainNormalized = plainText.simplified();
+        if (plainNormalized.isEmpty()) {
+          continue;
+        }
+        if (looksLikeBoilerplate(plainNormalized)) {
+          continue;
+        }
         QString chapterTitle = navTitles.value(itemPath);
         if (chapterTitle.isEmpty()) {
-          chapterTitle = heading.trimmed();
+          chapterTitle = cleanHeading(heading);
         }
         if (chapterTitle.isEmpty()) {
-          chapterTitle = QFileInfo(href).completeBaseName();
+          chapterTitle = normalizeTitle(QFileInfo(href).completeBaseName());
         }
+        chapterTitle = normalizeTitle(chapterTitle);
         chapterTitles.append(chapterTitle);
         if (!richText.isEmpty()) {
           sections.append(richText);
@@ -871,6 +1032,7 @@ std::unique_ptr<FormatDocument> EpubProvider::open(const QString &path, QString 
           sections.append(plainText);
         }
         plainSections.append(plainText);
+        chapterIndexByPath.insert(itemPath, sections.size() - 1);
       }
     }
   };
@@ -880,7 +1042,7 @@ std::unique_ptr<FormatDocument> EpubProvider::open(const QString &path, QString 
     readSpine(true);
   }
 
-  const QString title = !opf.title.isEmpty() ? opf.title : QFileInfo(path).completeBaseName();
+  const QString title = !opf.title.isEmpty() ? normalizeTitle(opf.title) : fallbackTitle;
   const QString fullText = sections.join("\n\n");
   const QString fullPlainText = plainSections.join("\n\n");
   if (fullText.isEmpty()) {
@@ -891,7 +1053,31 @@ std::unique_ptr<FormatDocument> EpubProvider::open(const QString &path, QString 
     return nullptr;
   }
 
-  const QString authors = opf.authors.join("; ");
+  QStringList authorsList = opf.authors;
+  for (QString &author : authorsList) {
+    author = normalizeTitle(author);
+  }
+  authorsList.removeAll(QString());
+  const QString authors = authorsList.join("; ");
+  QStringList tocTitles;
+  QVector<int> tocIndices;
+  if (!navEntries.isEmpty()) {
+    for (const auto &entry : navEntries) {
+      if (entry.title.isEmpty()) {
+        continue;
+      }
+      const int chapterIndex = chapterIndexByPath.value(entry.href, -1);
+      if (chapterIndex < 0) {
+        continue;
+      }
+      tocTitles.append(entry.title);
+      tocIndices.append(chapterIndex);
+    }
+  }
+  if (!navEntries.isEmpty()) {
+    qInfo() << "EpubProvider: toc mapped" << tocTitles.size()
+            << "chapters" << chapterTitles.size();
+  }
   return std::make_unique<EpubDocument>(title,
                                         fullText,
                                         fullPlainText,
@@ -899,9 +1085,11 @@ std::unique_ptr<FormatDocument> EpubProvider::open(const QString &path, QString 
                                         sections,
                                         plainSections,
                                         coverPath,
+                                        tocTitles,
+                                        tocIndices,
                                         authors,
-                                        opf.series,
+                                        normalizeTitle(opf.series),
                                         opf.publisher,
-                                        opf.description,
+                                        normalizeDescription(opf.description),
                                         true);
 }

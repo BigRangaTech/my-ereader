@@ -2,6 +2,7 @@
 
 #include <QString>
 #include <QStringList>
+#include <QVector>
 #include <functional>
 
 class FormatDocument {
@@ -20,6 +21,8 @@ public:
   virtual QString series() const { return {}; }
   virtual QString publisher() const { return {}; }
   virtual QString description() const { return {}; }
+  virtual QStringList tocTitles() const { return {}; }
+  virtual QVector<int> tocChapterIndices() const { return {}; }
   virtual bool isRichText() const { return false; }
   virtual bool ensureImage(int index) { Q_UNUSED(index) return true; }
   virtual void setImageReadyCallback(std::function<void(int)> callback) { Q_UNUSED(callback) }
