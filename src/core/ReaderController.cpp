@@ -7,8 +7,25 @@
 
 #include "AsyncUtil.h"
 
+namespace {
+bool isMobiFormat(const QString &format) {
+  const QString f = format.trimmed().toLower();
+  return f == "mobi" || f == "azw" || f == "azw3" || f == "azw4" || f == "prc";
+}
+} // namespace
+
 ReaderController::ReaderController(QObject *parent) : QObject(parent) {
   m_registry = FormatRegistry::createDefault();
+}
+
+void ReaderController::clearImageState() {
+  if (!m_imagePaths.isEmpty() || m_currentImageIndex != -1) {
+    m_imagePaths.clear();
+    m_currentImageIndex = -1;
+    m_imageReloadToken++;
+    emit imageReloadTokenChanged();
+    emit currentChanged();
+  }
 }
 
 bool ReaderController::openFile(const QString &path) {
@@ -18,9 +35,10 @@ bool ReaderController::openFile(const QString &path) {
     return false;
   }
 
-  if (!m_registry) {
-    setLastError("Format registry not available");
-    qWarning() << "ReaderController: registry missing";
+  if (isMobiFormat(QFileInfo(path).suffix())) {
+    clearImageState();
+    setLastError("MOBI/AZW is experimental and temporarily disabled.");
+    qWarning() << "ReaderController: MOBI disabled for now";
     return false;
   }
 
@@ -32,6 +50,13 @@ bool ReaderController::openFile(const QString &path) {
 void ReaderController::openFileAsync(const QString &path) {
   if (path.isEmpty()) {
     setLastError("Path is empty");
+    return;
+  }
+  if (isMobiFormat(QFileInfo(path).suffix())) {
+    clearImageState();
+    setLastError("MOBI/AZW is experimental and temporarily disabled.");
+    qWarning() << "ReaderController: MOBI disabled for now";
+    setBusy(false);
     return;
   }
   setBusy(true);
@@ -161,6 +186,9 @@ bool ReaderController::applyDocument(std::unique_ptr<FormatDocument> document,
     }, Qt::QueuedConnection);
   });
   setLastError("");
+  const QFileInfo fileInfo(path);
+  m_currentPath = fileInfo.absoluteFilePath();
+  m_currentFormat = fileInfo.suffix().trimmed().toLower();
   m_currentTitle = m_document->title();
   m_chapterTitles = m_document->chapterTitles();
   m_chapterTexts = m_document->chaptersText();
@@ -168,6 +196,9 @@ bool ReaderController::applyDocument(std::unique_ptr<FormatDocument> document,
   m_imagePaths = m_document->imagePaths();
   m_coverPath = m_document->coverPath();
   m_textIsRich = m_document->isRichText();
+  if (isMobiFormat(m_currentFormat)) {
+    m_imagePaths.clear();
+  }
   if (!m_imagePaths.isEmpty()) {
     m_currentImageIndex = 0;
     m_imageReloadToken = 0;
@@ -194,13 +225,21 @@ bool ReaderController::applyDocument(std::unique_ptr<FormatDocument> document,
     m_currentText = m_document->readAllText();
     m_currentPlainText = m_document->readAllPlainText();
   }
-  const QFileInfo fileInfo(path);
-  m_currentPath = fileInfo.absoluteFilePath();
-  m_currentFormat = fileInfo.suffix().toLower();
+  if (isMobiFormat(m_currentFormat)) {
+    m_textIsRich = false;
+    if (!m_currentPlainText.isEmpty()) {
+      m_currentText = m_currentPlainText;
+    }
+    qInfo() << "ReaderController: MOBI plain text enforced";
+  }
   if (!m_coverPath.isEmpty()) {
     qInfo() << "ReaderController: cover" << m_coverPath
             << "exists:" << QFileInfo::exists(m_coverPath);
   }
+  qInfo() << "ReaderController: format" << m_currentFormat
+          << "hasImages" << !m_imagePaths.isEmpty()
+          << "textRich" << m_textIsRich
+          << "chapters" << m_chapterTexts.size();
   m_isOpen = true;
   qInfo() << "ReaderController: opened" << m_currentTitle << m_currentPath;
   emit currentChanged();

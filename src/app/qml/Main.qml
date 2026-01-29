@@ -111,7 +111,15 @@ ApplicationWindow {
         path = decodeURIComponent(path)
       }
       if (path.length > 0) {
-        libraryModel.addBook(path)
+        const ext = path.split(".").pop().toLowerCase()
+        if (ext === "mobi" || ext === "azw" || ext === "azw3" || ext === "azw4" || ext === "prc") {
+          formatWarningDialog.messageText =
+              "MOBI/AZW support is experimental and temporarily disabled.\n" +
+              "Update libmobi to re-enable this format."
+          formatWarningDialog.open()
+        } else {
+          libraryModel.addBook(path)
+        }
       }
     }
   }
@@ -175,6 +183,42 @@ ApplicationWindow {
           color: theme.accent
           font.pixelSize: 12
           font.family: root.uiFont
+        }
+      }
+    }
+  }
+
+  Dialog {
+    id: formatWarningDialog
+    title: "Format unavailable"
+    modal: true
+    standardButtons: Dialog.Ok
+    width: 460
+    height: 200
+
+    property string messageText: ""
+
+    onOpened: {
+      if (messageText.length === 0) {
+        messageText = "This format is experimental and temporarily disabled."
+      }
+    }
+
+    contentItem: Rectangle {
+      color: theme.panel
+      radius: 12
+
+      ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 16
+        spacing: 12
+
+        Text {
+          text: formatWarningDialog.messageText
+          color: theme.textPrimary
+          font.pixelSize: 14
+          font.family: root.uiFont
+          wrapMode: Text.WordWrap
         }
       }
     }
@@ -457,9 +501,9 @@ ApplicationWindow {
           contentHeight: textBlock.height
           clip: true
 
-            Text {
-              id: textBlock
-              width: textScroll.width
+          Text {
+            id: textBlock
+            width: textScroll.width
             text: reader.currentText
             color: theme.textPrimary
             font.pixelSize: settings.readingFontSize
@@ -467,7 +511,13 @@ ApplicationWindow {
             wrapMode: Text.WordWrap
             lineHeight: settings.readingLineHeight
             lineHeightMode: Text.ProportionalHeight
-            textFormat: reader.currentTextIsRich ? Text.RichText : Text.PlainText
+            textFormat: (reader.currentFormat === "mobi"
+                         || reader.currentFormat === "azw"
+                         || reader.currentFormat === "azw3"
+                         || reader.currentFormat === "azw4"
+                         || reader.currentFormat === "prc")
+                        ? Text.PlainText
+                        : (reader.currentTextIsRich ? Text.RichText : Text.PlainText)
             clip: true
           }
         }
@@ -805,9 +855,17 @@ ApplicationWindow {
                 anchors.fill: parent
                 onClicked: {
                   reader.close()
-                  reader.openFileAsync(model.path)
-                  annotationModel.libraryItemId = model.id
-                  stack.push(readerPage)
+                  const ext = model.path.split(".").pop().toLowerCase()
+                  if (ext === "mobi" || ext === "azw" || ext === "azw3" || ext === "azw4" || ext === "prc") {
+                    formatWarningDialog.messageText =
+                        "MOBI/AZW support is experimental and temporarily disabled.\n" +
+                        "Update libmobi to re-enable this format."
+                    formatWarningDialog.open()
+                  } else {
+                    reader.openFileAsync(model.path)
+                    annotationModel.libraryItemId = model.id
+                    stack.push(readerPage)
+                  }
                 }
               }
 
@@ -1057,6 +1115,7 @@ ApplicationWindow {
             }
 
             Loader {
+              id: readerContent
               Layout.fillWidth: true
               Layout.fillHeight: true
               active: true
@@ -1098,6 +1157,8 @@ ApplicationWindow {
           font.family: root.uiFont
         }
       }
+
+      
     }
   }
 

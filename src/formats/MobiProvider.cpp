@@ -108,6 +108,7 @@ QString stripXhtml(const QByteArray &xhtml) {
   cleaned.replace("&#160;", " ");
   cleaned.replace("&shy;", "");
   cleaned.replace("&#173;", "");
+  cleaned.replace("data:image", "data:image-blocked");
   QXmlStreamReader xml(cleaned);
   QString out;
   bool lastWasSpace = true;
@@ -142,7 +143,8 @@ QString stripXhtml(const QByteArray &xhtml) {
       const QString name = xml.name().toString().toLower();
       if (name == QLatin1String("style") || name == QLatin1String("script") ||
           name == QLatin1String("head") || name == QLatin1String("metadata") ||
-          name == QLatin1String("title")) {
+          name == QLatin1String("title") || name == QLatin1String("img") ||
+          name == QLatin1String("image") || name == QLatin1String("svg")) {
         ignoreDepth++;
       }
       if (ignoreDepth > 0) {
@@ -176,7 +178,8 @@ QString stripXhtml(const QByteArray &xhtml) {
       if (ignoreDepth > 0 &&
           (name == QLatin1String("style") || name == QLatin1String("script") ||
            name == QLatin1String("head") || name == QLatin1String("metadata") ||
-           name == QLatin1String("title"))) {
+           name == QLatin1String("title") || name == QLatin1String("img") ||
+           name == QLatin1String("image") || name == QLatin1String("svg"))) {
         ignoreDepth--;
         continue;
       }

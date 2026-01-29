@@ -75,6 +75,7 @@ private:
   void setLastError(const QString &error);
   bool applyDocument(std::unique_ptr<FormatDocument> document, const QString &path, QString *error);
   void setBusy(bool busy);
+  void clearImageState();
 
   std::unique_ptr<FormatRegistry> m_registry;
   std::unique_ptr<FormatDocument> m_document;

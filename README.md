@@ -25,7 +25,7 @@ A fast, secure, offline-first ebook reader for Linux and Android built with Qt 6
 - FB2: implemented (basic text)
 - CBZ: implemented (image extraction)
 - CBR: implemented if bsdtar/unrar/unar is available
-- MOBI/AZW3: planned
+- MOBI/AZW3: experimental (known rendering issues; pending libmobi updates)
 - DJVU: planned (not implemented yet)
 
 ## Updates

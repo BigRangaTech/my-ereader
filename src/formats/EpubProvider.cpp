@@ -5,6 +5,7 @@
 #include <QDir>
 #include <QStandardPaths>
 #include <QVector>
+#include <QUrl>
 #include <QXmlStreamReader>
 #include <QCryptographicHash>
 
@@ -13,25 +14,59 @@
 namespace {
 class EpubDocument final : public FormatDocument {
 public:
-  EpubDocument(QString title, QString text, QStringList chapters, QStringList sections, QString coverPath)
+  EpubDocument(QString title,
+               QString text,
+               QString plainText,
+               QStringList chapters,
+               QStringList sections,
+               QStringList plainSections,
+               QString coverPath,
+               QString authors,
+               QString series,
+               QString publisher,
+               QString description,
+               bool richText)
       : m_title(std::move(title)),
         m_text(std::move(text)),
+        m_plainText(std::move(plainText)),
         m_chapters(std::move(chapters)),
         m_sections(std::move(sections)),
-        m_coverPath(std::move(coverPath)) {}
+        m_plainSections(std::move(plainSections)),
+        m_coverPath(std::move(coverPath)),
+        m_authors(std::move(authors)),
+        m_series(std::move(series)),
+        m_publisher(std::move(publisher)),
+        m_description(std::move(description)),
+        m_isRichText(richText) {}
 
   QString title() const override { return m_title; }
   QStringList chapterTitles() const override { return m_chapters; }
   QString readAllText() const override { return m_text; }
+  QString readAllPlainText() const override { return m_plainText.isEmpty() ? m_text : m_plainText; }
   QStringList chaptersText() const override { return m_sections; }
+  QStringList chaptersPlainText() const override {
+    return m_plainSections.isEmpty() ? m_sections : m_plainSections;
+  }
   QString coverPath() const override { return m_coverPath; }
+  QString authors() const override { return m_authors; }
+  QString series() const override { return m_series; }
+  QString publisher() const override { return m_publisher; }
+  QString description() const override { return m_description; }
+  bool isRichText() const override { return m_isRichText; }
 
 private:
   QString m_title;
   QString m_text;
+  QString m_plainText;
   QStringList m_chapters;
   QStringList m_sections;
+  QStringList m_plainSections;
   QString m_coverPath;
+  QString m_authors;
+  QString m_series;
+  QString m_publisher;
+  QString m_description;
+  bool m_isRichText = false;
 };
 
 struct ZipReader {
@@ -89,6 +124,10 @@ QString extractRootfile(const QByteArray &containerXml) {
 
 struct OpfData {
   QString title;
+  QStringList authors;
+  QString publisher;
+  QString description;
+  QString series;
   QHash<QString, QString> manifest; // id -> href
   QHash<QString, QString> manifestProps; // id -> properties
   QHash<QString, QString> manifestTypes; // id -> media-type
@@ -113,11 +152,26 @@ OpfData parseOpf(const QByteArray &opfXml) {
       currentElement = xml.name().toString();
       if (xml.name() == QLatin1String("title") || xml.name() == QLatin1String("dc:title")) {
         data.title = xml.readElementText().trimmed();
+      } else if (xml.name() == QLatin1String("creator") || xml.name() == QLatin1String("dc:creator")) {
+        const QString author = xml.readElementText().trimmed();
+        if (!author.isEmpty()) {
+          data.authors.append(author);
+        }
+      } else if (xml.name() == QLatin1String("publisher") || xml.name() == QLatin1String("dc:publisher")) {
+        data.publisher = xml.readElementText().trimmed();
+      } else if (xml.name() == QLatin1String("description") || xml.name() == QLatin1String("dc:description")) {
+        data.description = xml.readElementText().trimmed();
       } else if (xml.name() == QLatin1String("meta")) {
         const auto attrs = xml.attributes();
         const QString name = attrs.value(QLatin1String("name")).toString();
+        const QString property = attrs.value(QLatin1String("property")).toString();
         if (name.compare(QLatin1String("cover"), Qt::CaseInsensitive) == 0) {
           data.coverId = attrs.value(QLatin1String("content")).toString();
+        } else if (name.compare(QLatin1String("calibre:series"), Qt::CaseInsensitive) == 0 ||
+                   name.compare(QLatin1String("series"), Qt::CaseInsensitive) == 0) {
+          data.series = attrs.value(QLatin1String("content")).toString();
+        } else if (property.compare(QLatin1String("belongs-to-collection"), Qt::CaseInsensitive) == 0) {
+          data.series = xml.readElementText().trimmed();
         }
       } else if (xml.name() == QLatin1String("item")) {
         const auto attrs = xml.attributes();
@@ -179,6 +233,7 @@ QString extractXhtmlText(const QByteArray &xhtml, QString *headingOut) {
   auto appendText = [&out, &lastWasSpace](const QString &text) {
     QString t = text;
     t.replace(QChar(0x00A0), QChar(' '));
+    t.remove(QChar(0x00AD));
     if (t.isEmpty()) {
       return;
     }
@@ -276,6 +331,195 @@ QString extractXhtmlText(const QByteArray &xhtml, QString *headingOut) {
           name == QLatin1String("h3") || name == QLatin1String("h4") || name == QLatin1String("h5") ||
           name == QLatin1String("h6")) {
         appendBreak();
+      }
+    }
+  }
+  return out.trimmed();
+}
+
+QString tempDirForEpub(const QFileInfo &info);
+QString resolveHref(const QString &currentFile, const QString &href);
+
+QString escapeHtmlText(const QString &text) {
+  QString out = text;
+  out.replace('&', "&amp;");
+  out.replace('<', "&lt;");
+  out.replace('>', "&gt;");
+  return out;
+}
+
+QString escapeHtmlAttribute(const QString &text) {
+  QString out = escapeHtmlText(text);
+  out.replace('"', "&quot;");
+  return out;
+}
+
+QString writeAssetToTemp(const QFileInfo &info, const QString &href, const QByteArray &data) {
+  if (href.isEmpty() || data.isEmpty()) {
+    return {};
+  }
+  QString safePath = QDir::cleanPath(href);
+  safePath.replace("..", "");
+  if (safePath.startsWith('/')) {
+    safePath = safePath.mid(1);
+  }
+  const QString outDir = tempDirForEpub(info);
+  const QString outPath = QDir(outDir).filePath(safePath);
+  QDir().mkpath(QFileInfo(outPath).path());
+  QFile outFile(outPath);
+  if (!outFile.open(QIODevice::WriteOnly)) {
+    return {};
+  }
+  outFile.write(data);
+  outFile.close();
+  return outPath;
+}
+
+QString extractXhtmlRichText(const QByteArray &xhtml,
+                             const QString &currentPath,
+                             ZipReader &zip,
+                             const QFileInfo &info,
+                             QString *headingOut) {
+  QXmlStreamReader xml(xhtml);
+  QString out;
+  int ignoreDepth = 0;
+  bool inHeading = false;
+  bool inPre = false;
+  QString headingBuffer;
+
+  while (!xml.atEnd()) {
+    xml.readNext();
+    if (xml.isStartElement()) {
+      const QString name = xml.name().toString().toLower();
+      if (name == QLatin1String("style") || name == QLatin1String("script") ||
+          name == QLatin1String("head") || name == QLatin1String("metadata") ||
+          name == QLatin1String("title")) {
+        ignoreDepth++;
+      }
+      if (ignoreDepth > 0) {
+        continue;
+      }
+      if (name == QLatin1String("h1") || name == QLatin1String("h2") || name == QLatin1String("h3") ||
+          name == QLatin1String("h4") || name == QLatin1String("h5") || name == QLatin1String("h6")) {
+        inHeading = true;
+        headingBuffer.clear();
+        out.append("<p><b>");
+      } else if (name == QLatin1String("p") || name == QLatin1String("div")) {
+        out.append("<p>");
+      } else if (name == QLatin1String("ul") || name == QLatin1String("ol")) {
+        out.append("<").append(name).append(">");
+      } else if (name == QLatin1String("li")) {
+        out.append("<li>");
+      } else if (name == QLatin1String("blockquote")) {
+        out.append("<blockquote>");
+      } else if (name == QLatin1String("hr")) {
+        out.append("<hr/>");
+      } else if (name == QLatin1String("br")) {
+        out.append("<br/>");
+      } else if (name == QLatin1String("pre")) {
+        inPre = true;
+        out.append("<pre>");
+      } else if (name == QLatin1String("code")) {
+        out.append("<code>");
+      } else if (name == QLatin1String("sup") || name == QLatin1String("sub")) {
+        out.append("<").append(name).append(">");
+      } else if (name == QLatin1String("em") || name == QLatin1String("i")) {
+        out.append("<i>");
+      } else if (name == QLatin1String("strong") || name == QLatin1String("b")) {
+        out.append("<b>");
+      } else if (name == QLatin1String("a")) {
+        const QString href = xml.attributes().value(QLatin1String("href")).toString();
+        out.append("<a href=\"").append(escapeHtmlAttribute(href)).append("\">");
+      } else if (name == QLatin1String("img")) {
+        const QString src = xml.attributes().value(QLatin1String("src")).toString();
+        const QString resolved = resolveHref(currentPath, src);
+        if (!resolved.isEmpty()) {
+          const QByteArray imageData = zip.readFile(resolved);
+          const QString outPath = writeAssetToTemp(info, resolved, imageData);
+          if (!outPath.isEmpty()) {
+            out.append("<img src=\"");
+            out.append(QUrl::fromLocalFile(outPath).toString());
+            out.append("\" style=\"max-width:100%; height:auto;\"/>");
+          }
+        }
+      } else if (name == QLatin1String("table")) {
+        out.append("<table>");
+      } else if (name == QLatin1String("thead") || name == QLatin1String("tbody")) {
+        out.append("<").append(name).append(">");
+      } else if (name == QLatin1String("tr")) {
+        out.append("<tr>");
+      } else if (name == QLatin1String("td") || name == QLatin1String("th")) {
+        out.append("<").append(name).append(">");
+      }
+    }
+    if (xml.isCharacters() && !xml.isWhitespace()) {
+      if (ignoreDepth > 0) {
+        continue;
+      }
+      QString text = xml.text().toString();
+      text.replace(QChar(0x00A0), QChar(' '));
+      text.remove(QChar(0x00AD));
+      if (!inPre) {
+        text = text.trimmed();
+      }
+      if (!text.isEmpty()) {
+        out.append(escapeHtmlText(text));
+        if (inHeading) {
+          if (!headingBuffer.isEmpty()) {
+            headingBuffer.append(' ');
+          }
+          headingBuffer.append(text);
+        }
+      }
+    }
+    if (xml.isEndElement()) {
+      const QString name = xml.name().toString().toLower();
+      if (ignoreDepth > 0 &&
+          (name == QLatin1String("style") || name == QLatin1String("script") ||
+           name == QLatin1String("head") || name == QLatin1String("metadata") ||
+           name == QLatin1String("title"))) {
+        ignoreDepth--;
+        continue;
+      }
+      if (ignoreDepth > 0) {
+        continue;
+      }
+      if (name == QLatin1String("h1") || name == QLatin1String("h2") || name == QLatin1String("h3") ||
+          name == QLatin1String("h4") || name == QLatin1String("h5") || name == QLatin1String("h6")) {
+        if (headingOut && headingOut->isEmpty()) {
+          *headingOut = headingBuffer.trimmed();
+        }
+        inHeading = false;
+        out.append("</b></p>");
+      } else if (name == QLatin1String("p") || name == QLatin1String("div")) {
+        out.append("</p>");
+      } else if (name == QLatin1String("ul") || name == QLatin1String("ol")) {
+        out.append("</").append(name).append(">");
+      } else if (name == QLatin1String("li")) {
+        out.append("</li>");
+      } else if (name == QLatin1String("blockquote")) {
+        out.append("</blockquote>");
+      } else if (name == QLatin1String("pre")) {
+        out.append("</pre>");
+        inPre = false;
+      } else if (name == QLatin1String("code")) {
+        out.append("</code>");
+      } else if (name == QLatin1String("sup") || name == QLatin1String("sub")) {
+        out.append("</").append(name).append(">");
+      } else if (name == QLatin1String("em") || name == QLatin1String("i")) {
+        out.append("</i>");
+      } else if (name == QLatin1String("strong") || name == QLatin1String("b")) {
+        out.append("</b>");
+      } else if (name == QLatin1String("a")) {
+        out.append("</a>");
+      } else if (name == QLatin1String("table")) {
+        out.append("</table>");
+      } else if (name == QLatin1String("thead") || name == QLatin1String("tbody")) {
+        out.append("</").append(name).append(">");
+      } else if (name == QLatin1String("tr")) {
+        out.append("</tr>");
+      } else if (name == QLatin1String("td") || name == QLatin1String("th")) {
+        out.append("</").append(name).append(">");
       }
     }
   }
@@ -558,8 +802,38 @@ std::unique_ptr<FormatDocument> EpubProvider::open(const QString &path, QString 
       coverPath = writeCoverToTemp(info, coverHref, coverData);
     }
   }
+  if (coverPath.isEmpty()) {
+    for (const auto &item : opf.spine) {
+      const QString href = opf.manifest.value(item.idref);
+      if (href.isEmpty()) {
+        continue;
+      }
+      const QString itemPath = QDir::cleanPath(joinPath(baseDir, href));
+      const QByteArray xhtml = zip.readFile(itemPath);
+      if (xhtml.isEmpty()) {
+        continue;
+      }
+      const QString imgHref = extractFirstImageHref(xhtml);
+      if (imgHref.isEmpty()) {
+        continue;
+      }
+      const QString resolved = resolveHref(itemPath, imgHref);
+      if (resolved.isEmpty()) {
+        continue;
+      }
+      const QByteArray imageData = zip.readFile(resolved);
+      if (imageData.isEmpty()) {
+        continue;
+      }
+      coverPath = writeCoverToTemp(info, resolved, imageData);
+      if (!coverPath.isEmpty()) {
+        break;
+      }
+    }
+  }
 
   QStringList sections;
+  QStringList plainSections;
   QStringList chapterTitles;
   auto readSpine = [&](bool includeNonLinear) {
     for (const auto &item : opf.spine) {
@@ -580,8 +854,9 @@ std::unique_ptr<FormatDocument> EpubProvider::open(const QString &path, QString 
         continue;
       }
       QString heading;
-      const QString text = extractXhtmlText(xhtml, &heading);
-      if (!text.isEmpty()) {
+      const QString richText = extractXhtmlRichText(xhtml, itemPath, zip, info, &heading);
+      const QString plainText = extractXhtmlText(xhtml, &heading);
+      if (!plainText.isEmpty() || !richText.isEmpty()) {
         QString chapterTitle = navTitles.value(itemPath);
         if (chapterTitle.isEmpty()) {
           chapterTitle = heading.trimmed();
@@ -590,7 +865,12 @@ std::unique_ptr<FormatDocument> EpubProvider::open(const QString &path, QString 
           chapterTitle = QFileInfo(href).completeBaseName();
         }
         chapterTitles.append(chapterTitle);
-        sections.append(text);
+        if (!richText.isEmpty()) {
+          sections.append(richText);
+        } else {
+          sections.append(plainText);
+        }
+        plainSections.append(plainText);
       }
     }
   };
@@ -602,6 +882,7 @@ std::unique_ptr<FormatDocument> EpubProvider::open(const QString &path, QString 
 
   const QString title = !opf.title.isEmpty() ? opf.title : QFileInfo(path).completeBaseName();
   const QString fullText = sections.join("\n\n");
+  const QString fullPlainText = plainSections.join("\n\n");
   if (fullText.isEmpty()) {
     if (error) {
       *error = "No readable text in EPUB";
@@ -610,5 +891,17 @@ std::unique_ptr<FormatDocument> EpubProvider::open(const QString &path, QString 
     return nullptr;
   }
 
-  return std::make_unique<EpubDocument>(title, fullText, chapterTitles, sections, coverPath);
+  const QString authors = opf.authors.join("; ");
+  return std::make_unique<EpubDocument>(title,
+                                        fullText,
+                                        fullPlainText,
+                                        chapterTitles,
+                                        sections,
+                                        plainSections,
+                                        coverPath,
+                                        authors,
+                                        opf.series,
+                                        opf.publisher,
+                                        opf.description,
+                                        true);
 }
