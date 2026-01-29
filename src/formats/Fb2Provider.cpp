@@ -5,7 +5,11 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QHash>
+#include <QRegularExpression>
 #include <QStandardPaths>
+#include <QStringList>
+#include <QUrl>
 #include <QXmlStreamReader>
 #include <QVector>
 #include <utility>
@@ -14,18 +18,26 @@ namespace {
 class Fb2Document final : public FormatDocument {
 public:
   Fb2Document(QString title,
-              QString text,
+              QString htmlText,
+              QString plainText,
               QStringList chapters,
-              QStringList chapterTexts,
+              QStringList chapterHtml,
+              QStringList chapterPlain,
+              QStringList tocTitles,
+              QVector<int> tocChapterIndices,
               QString authors,
               QString series,
               QString publisher,
               QString description,
               QString coverPath)
       : m_title(std::move(title)),
-        m_text(std::move(text)),
+        m_htmlText(std::move(htmlText)),
+        m_plainText(std::move(plainText)),
         m_chapters(std::move(chapters)),
-        m_chapterTexts(std::move(chapterTexts)),
+        m_chapterHtml(std::move(chapterHtml)),
+        m_chapterPlain(std::move(chapterPlain)),
+        m_tocTitles(std::move(tocTitles)),
+        m_tocChapterIndices(std::move(tocChapterIndices)),
         m_authors(std::move(authors)),
         m_series(std::move(series)),
         m_publisher(std::move(publisher)),
@@ -34,19 +46,28 @@ public:
 
   QString title() const override { return m_title; }
   QStringList chapterTitles() const override { return m_chapters; }
-  QString readAllText() const override { return m_text; }
-  QStringList chaptersText() const override { return m_chapterTexts; }
+  QString readAllText() const override { return m_htmlText; }
+  QString readAllPlainText() const override { return m_plainText; }
+  QStringList chaptersText() const override { return m_chapterHtml; }
+  QStringList chaptersPlainText() const override { return m_chapterPlain; }
+  QStringList tocTitles() const override { return m_tocTitles; }
+  QVector<int> tocChapterIndices() const override { return m_tocChapterIndices; }
   QString authors() const override { return m_authors; }
   QString series() const override { return m_series; }
   QString publisher() const override { return m_publisher; }
   QString description() const override { return m_description; }
   QString coverPath() const override { return m_coverPath; }
+  bool isRichText() const override { return true; }
 
 private:
   QString m_title;
-  QString m_text;
+  QString m_htmlText;
+  QString m_plainText;
   QStringList m_chapters;
-  QStringList m_chapterTexts;
+  QStringList m_chapterHtml;
+  QStringList m_chapterPlain;
+  QStringList m_tocTitles;
+  QVector<int> m_tocChapterIndices;
   QString m_authors;
   QString m_series;
   QString m_publisher;
@@ -54,17 +75,61 @@ private:
   QString m_coverPath;
 };
 
-QString stripText(const QString &text) {
-  QString t = text;
-  t.replace(QChar(0x00A0), QChar(' '));
-  return t.trimmed();
+struct BinaryAsset {
+  QByteArray bytes;
+  QString contentType;
+  QString path;
+  bool saved = false;
+};
+
+QString escapeHtml(const QString &input) {
+  QString out = input;
+  out.replace('&', "&amp;");
+  out.replace('<', "&lt;");
+  out.replace('>', "&gt;");
+  out.replace('"', "&quot;");
+  out.replace('\'', "&#39;");
+  return out;
+}
+
+QString normalizeWhitespace(const QString &text) {
+  QString out = text;
+  out.replace(QChar(0x00A0), QChar(' '));
+  return out;
+}
+
+void appendText(QString &plain, QString &html, const QString &text) {
+  const QString cleaned = normalizeWhitespace(text);
+  if (cleaned.trimmed().isEmpty()) {
+    return;
+  }
+  const QString trimmed = cleaned.trimmed();
+  if (!plain.isEmpty() && !plain.endsWith(' ')) {
+    plain.append(' ');
+  }
+  plain.append(trimmed);
+  if (!html.isEmpty() && !html.endsWith(' ')) {
+    html.append(' ');
+  }
+  html.append(escapeHtml(trimmed));
+}
+
+void appendPlain(QString &target, const QString &text) {
+  const QString cleaned = normalizeWhitespace(text).trimmed();
+  if (cleaned.isEmpty()) {
+    return;
+  }
+  if (!target.isEmpty()) {
+    target.append(' ');
+  }
+  target.append(cleaned);
 }
 
 QString joinParts(const QStringList &parts) {
   QStringList filtered;
   filtered.reserve(parts.size());
   for (const QString &part : parts) {
-    const QString trimmed = stripText(part);
+    const QString trimmed = normalizeWhitespace(part).trimmed();
     if (!trimmed.isEmpty()) {
       filtered.append(trimmed);
     }
@@ -102,6 +167,42 @@ QString contentTypeToExtension(const QString &contentType) {
   return "img";
 }
 
+QString sanitizeId(const QString &id) {
+  QString out = id.trimmed();
+  if (out.isEmpty()) {
+    return "image";
+  }
+  out.replace(QRegularExpression("[^A-Za-z0-9_-]"), "_");
+  return out;
+}
+
+QString ensureImageFile(const QString &id, QHash<QString, BinaryAsset> &assets, const QString &outDir) {
+  if (id.isEmpty()) {
+    return {};
+  }
+  auto it = assets.find(id);
+  if (it == assets.end()) {
+    return {};
+  }
+  BinaryAsset &asset = it.value();
+  if (asset.saved && !asset.path.isEmpty() && QFileInfo::exists(asset.path)) {
+    return asset.path;
+  }
+  const QString ext = contentTypeToExtension(asset.contentType);
+  const QString fileName = QString("%1.%2").arg(sanitizeId(id), ext);
+  const QString outPath = QDir(outDir).filePath(fileName);
+  QDir().mkpath(QFileInfo(outPath).absolutePath());
+  QFile out(outPath);
+  if (out.open(QIODevice::WriteOnly)) {
+    out.write(asset.bytes);
+    out.close();
+    asset.path = outPath;
+    asset.saved = true;
+    return outPath;
+  }
+  return {};
+}
+
 QString findHrefAttribute(const QXmlStreamAttributes &attrs) {
   for (const QXmlStreamAttribute &attr : attrs) {
     const QString name = attr.name().toString().toLower();
@@ -112,12 +213,8 @@ QString findHrefAttribute(const QXmlStreamAttributes &attrs) {
   return attrs.value("href").toString();
 }
 
-QString extractCoverImage(const QByteArray &data, const QString &coverId, const QFileInfo &info) {
-  const QString wantedId = coverId;
-  if (wantedId.isEmpty()) {
-    return {};
-  }
-
+QHash<QString, BinaryAsset> extractBinaryAssets(const QByteArray &data) {
+  QHash<QString, BinaryAsset> assets;
   QXmlStreamReader xml(data);
   QString currentId;
   QString currentType;
@@ -142,87 +239,82 @@ QString extractCoverImage(const QByteArray &data, const QString &coverId, const 
       const QString name = xml.name().toString().toLower();
       if (name == QLatin1String("binary")) {
         inBinary = false;
-        if (!wantedId.isEmpty() && currentId == wantedId) {
+        if (!currentId.isEmpty() && currentType.toLower().startsWith("image/")) {
           QByteArray bytes = QByteArray::fromBase64(base64);
           if (!bytes.isEmpty()) {
-            const QString outDir = tempDirFor(info);
-            QDir().mkpath(outDir);
-            const QString ext = contentTypeToExtension(currentType);
-            const QString outPath = QDir(outDir).filePath(QString("cover.%1").arg(ext));
-            QFile out(outPath);
-            if (out.open(QIODevice::WriteOnly)) {
-              out.write(bytes);
-              out.close();
-              return outPath;
-            }
+            BinaryAsset asset;
+            asset.bytes = std::move(bytes);
+            asset.contentType = currentType;
+            assets.insert(currentId, std::move(asset));
           }
-          return {};
         }
       }
     }
   }
-
-  return {};
-}
-
-QString extractFallbackImage(const QByteArray &data, const QFileInfo &info) {
-  QXmlStreamReader xml(data);
-  QString currentId;
-  QString currentType;
-  QByteArray base64;
-  bool inBinary = false;
-
-  while (!xml.atEnd()) {
-    xml.readNext();
-    if (xml.isStartElement()) {
-      const QString name = xml.name().toString().toLower();
-      if (name == QLatin1String("binary")) {
-        currentId = xml.attributes().value("id").toString();
-        currentType = xml.attributes().value("content-type").toString();
-        base64.clear();
-        inBinary = true;
-      }
-    } else if (xml.isCharacters()) {
-      if (inBinary) {
-        base64.append(xml.text().toUtf8());
-      }
-    } else if (xml.isEndElement()) {
-      const QString name = xml.name().toString().toLower();
-      if (name == QLatin1String("binary")) {
-        inBinary = false;
-        if (currentType.toLower().startsWith("image/")) {
-          QByteArray bytes = QByteArray::fromBase64(base64);
-          if (!bytes.isEmpty()) {
-            const QString outDir = tempDirFor(info);
-            QDir().mkpath(outDir);
-            const QString ext = contentTypeToExtension(currentType);
-            const QString outPath = QDir(outDir).filePath(QString("cover.%1").arg(ext));
-            QFile out(outPath);
-            if (out.open(QIODevice::WriteOnly)) {
-              out.write(bytes);
-              out.close();
-              return outPath;
-            }
-          }
-          return {};
-        }
-      }
-    }
-  }
-
-  return {};
+  return assets;
 }
 
 struct SectionContext {
   QString title;
-  QStringList paragraphs;
+  QStringList htmlBlocks;
+  QStringList plainBlocks;
   int depth = 0;
+  int topIndex = -1;
 };
 
 bool isParagraphElement(const QString &name) {
   return name == QLatin1String("p") || name == QLatin1String("subtitle") ||
          name == QLatin1String("v") || name == QLatin1String("text-author") ||
          name == QLatin1String("cite") || name == QLatin1String("annotation");
+}
+
+bool isInlineTag(const QString &name) {
+  return name == QLatin1String("strong") || name == QLatin1String("b") ||
+         name == QLatin1String("em") || name == QLatin1String("i") ||
+         name == QLatin1String("sub") || name == QLatin1String("sup") ||
+         name == QLatin1String("a");
+}
+
+QString openInlineTag(const QString &name, const QXmlStreamAttributes &attrs) {
+  if (name == QLatin1String("strong") || name == QLatin1String("b")) {
+    return "<b>";
+  }
+  if (name == QLatin1String("em") || name == QLatin1String("i")) {
+    return "<i>";
+  }
+  if (name == QLatin1String("sub")) {
+    return "<sub>";
+  }
+  if (name == QLatin1String("sup")) {
+    return "<sup>";
+  }
+  if (name == QLatin1String("a")) {
+    const QString href = attrs.value("href").toString();
+    if (!href.isEmpty()) {
+      return QString("<a href=\"%1\">").arg(escapeHtml(href));
+    }
+    return "<a>";
+  }
+  return {};
+}
+
+QString closeInlineTag(const QString &name) {
+  if (name == QLatin1String("strong") || name == QLatin1String("b")) {
+    return "</b>";
+  }
+  if (name == QLatin1String("em") || name == QLatin1String("i")) {
+    return "</i>";
+  }
+  if (name == QLatin1String("sub")) {
+    return "</sub>";
+  }
+  if (name == QLatin1String("sup")) {
+    return "</sup>";
+  }
+  if (name == QLatin1String("a")) {
+    return "</a>";
+  }
+  return {};
 }
 } // namespace
 
@@ -248,6 +340,12 @@ std::unique_ptr<FormatDocument> Fb2Provider::open(const QString &path, QString *
   }
 
   const QFileInfo info(path);
+  const QString outDir = tempDirFor(info);
+  QDir().mkpath(outDir);
+
+  QHash<QString, BinaryAsset> assets = extractBinaryAssets(data);
+  const QString fallbackImageId = assets.isEmpty() ? QString() : assets.firstKey();
+
   QXmlStreamReader xml(data);
   QString title;
   QStringList authors;
@@ -256,21 +354,22 @@ std::unique_ptr<FormatDocument> Fb2Provider::open(const QString &path, QString *
   QString description;
   QString coverId;
 
-  QStringList chapters;
-  QStringList chapterTexts;
-  QStringList sections;
+  QStringList chapterTitles;
+  QStringList chapterHtml;
+  QStringList chapterPlain;
+  QStringList tocTitles;
+  QVector<int> tocIndices;
+
   QVector<SectionContext> stack;
   QString titleBuffer;
-  QString paragraphBuffer;
-  QString annotationBuffer;
-
+  QString currentParagraphPlain;
+  QString currentParagraphHtml;
   bool inBinary = false;
   bool inTitleInfo = false;
   bool inPublishInfo = false;
   bool inBookTitle = false;
   bool inPublisher = false;
   bool inAnnotation = false;
-  bool inAnnotationParagraph = false;
   bool inAuthor = false;
   bool inCoverpage = false;
   bool inBody = false;
@@ -284,6 +383,52 @@ std::unique_ptr<FormatDocument> Fb2Provider::open(const QString &path, QString *
   QString authorNick;
   QString authorField;
   int sectionDepth = 0;
+
+  auto flushParagraph = [&]() {
+    if (!inParagraph) {
+      return;
+    }
+    inParagraph = false;
+    if (stack.isEmpty()) {
+      currentParagraphPlain.clear();
+      currentParagraphHtml.clear();
+      return;
+    }
+    SectionContext &ctx = stack.last();
+    const QString plain = currentParagraphPlain.trimmed();
+    const QString html = currentParagraphHtml.trimmed();
+    if (!plain.isEmpty() || !html.isEmpty()) {
+      QString blockHtml = html.isEmpty() ? escapeHtml(plain) : html;
+      if (!blockHtml.startsWith('<')) {
+        blockHtml = QString("<p>%1</p>").arg(blockHtml);
+      } else if (!blockHtml.startsWith("<p") && !blockHtml.startsWith("<h")) {
+        blockHtml = QString("<p>%1</p>").arg(blockHtml);
+      }
+      ctx.htmlBlocks.append(blockHtml);
+      if (!plain.isEmpty()) {
+        ctx.plainBlocks.append(plain);
+      }
+    }
+    currentParagraphPlain.clear();
+    currentParagraphHtml.clear();
+  };
+
+  auto appendImage = [&](const QString &id) {
+    if (stack.isEmpty()) {
+      return;
+    }
+    QString imgPath = ensureImageFile(id, assets, outDir);
+    if (imgPath.isEmpty()) {
+      return;
+    }
+    const QString imgTag = QString("<img src=\"%1\"/>")
+                                .arg(QUrl::fromLocalFile(imgPath).toString());
+    if (inParagraph) {
+      currentParagraphHtml.append(imgTag);
+    } else {
+      stack.last().htmlBlocks.append(QString("<p>%1</p>").arg(imgTag));
+    }
+  };
 
   while (!xml.atEnd()) {
     xml.readNext();
@@ -304,8 +449,7 @@ std::unique_ptr<FormatDocument> Fb2Provider::open(const QString &path, QString *
       } else if (!inBinary && inTitleInfo && name == QLatin1String("coverpage")) {
         inCoverpage = true;
       } else if (!inBinary && inCoverpage && name == QLatin1String("image")) {
-        const QString href = findHrefAttribute(xml.attributes());
-        QString id = href;
+        QString id = findHrefAttribute(xml.attributes());
         if (id.startsWith('#')) {
           id = id.mid(1);
         }
@@ -324,7 +468,6 @@ std::unique_ptr<FormatDocument> Fb2Provider::open(const QString &path, QString *
                                            name == QLatin1String("last-name") ||
                                            name == QLatin1String("nickname"))) {
         authorField = name;
-        titleBuffer.clear();
       } else if (!inBinary && inTitleInfo && name == QLatin1String("sequence")) {
         const QString seqName = xml.attributes().value("name").toString();
         const QString seqNumber = xml.attributes().value("number").toString();
@@ -341,18 +484,29 @@ std::unique_ptr<FormatDocument> Fb2Provider::open(const QString &path, QString *
       } else if (!inBinary && inBody && name == QLatin1String("section")) {
         SectionContext ctx;
         ctx.depth = ++sectionDepth;
+        ctx.topIndex = stack.isEmpty() ? chapterTitles.size() : stack.last().topIndex;
         stack.append(ctx);
       } else if (!inBinary && inBody && name == QLatin1String("title") && !stack.isEmpty()) {
         inSectionTitle = true;
         titleBuffer.clear();
-      } else if (!inBinary && inBody && isParagraphElement(name) && !stack.isEmpty()) {
+      } else if (!inBinary && inBody && !inSectionTitle && isParagraphElement(name) && !stack.isEmpty()) {
         inParagraph = true;
-        paragraphBuffer.clear();
+        currentParagraphPlain.clear();
+        currentParagraphHtml.clear();
       } else if (!inBinary && inBody && name == QLatin1String("empty-line") && !stack.isEmpty()) {
-        stack.last().paragraphs.append(QString());
-      } else if (!inBinary && inAnnotation && name == QLatin1String("p")) {
-        inAnnotationParagraph = true;
-        annotationBuffer.clear();
+        stack.last().htmlBlocks.append("<br/>");
+        stack.last().plainBlocks.append(QString());
+      } else if (!inBinary && inBody && name == QLatin1String("image")) {
+        QString id = findHrefAttribute(xml.attributes());
+        if (id.startsWith('#')) {
+          id = id.mid(1);
+        }
+        appendImage(id);
+      } else if (!inBinary && inBody && inParagraph && isInlineTag(name)) {
+        currentParagraphHtml.append(openInlineTag(name, xml.attributes()));
+      } else if (!inBinary && inBody && inParagraph && name == QLatin1String("br")) {
+        currentParagraphHtml.append("<br/>");
+        currentParagraphPlain.append("\n");
       }
     } else if (xml.isCharacters()) {
       if (inBinary) {
@@ -366,42 +520,28 @@ std::unique_ptr<FormatDocument> Fb2Provider::open(const QString &path, QString *
         if (!title.isEmpty()) {
           title.append(' ');
         }
-        title.append(stripText(text));
+        title.append(normalizeWhitespace(text).trimmed());
       }
       if (inAuthor && !authorField.isEmpty()) {
         QString &field = (authorField == QLatin1String("first-name")) ? authorFirst
                              : (authorField == QLatin1String("middle-name")) ? authorMiddle
                              : (authorField == QLatin1String("last-name")) ? authorLast
                              : authorNick;
-        if (!field.isEmpty()) {
-          field.append(' ');
-        }
-        field.append(stripText(text));
+        appendPlain(field, text);
       }
       if (inPublisher) {
         if (!publisher.isEmpty()) {
           publisher.append(' ');
         }
-        publisher.append(stripText(text));
+        publisher.append(normalizeWhitespace(text).trimmed());
       }
-      if (inAnnotation && inAnnotationParagraph) {
-        if (!annotationBuffer.isEmpty()) {
-          annotationBuffer.append(' ');
-        }
-        annotationBuffer.append(stripText(text));
+      if (inAnnotation) {
+        appendPlain(description, text);
       }
-      if (!stack.isEmpty()) {
-        if (inSectionTitle) {
-          if (!titleBuffer.isEmpty()) {
-            titleBuffer.append(' ');
-          }
-          titleBuffer.append(stripText(text));
-        } else if (inParagraph) {
-          if (!paragraphBuffer.isEmpty()) {
-            paragraphBuffer.append(' ');
-          }
-          paragraphBuffer.append(stripText(text));
-        }
+      if (inSectionTitle) {
+        appendPlain(titleBuffer, text);
+      } else if (inParagraph) {
+        appendText(currentParagraphPlain, currentParagraphHtml, text);
       }
     } else if (xml.isEndElement()) {
       const QString name = xml.name().toString().toLower();
@@ -419,61 +559,63 @@ std::unique_ptr<FormatDocument> Fb2Provider::open(const QString &path, QString *
         inPublisher = false;
       } else if (name == QLatin1String("annotation")) {
         inAnnotation = false;
-      } else if (name == QLatin1String("p") && inAnnotationParagraph) {
-        const QString paragraph = stripText(annotationBuffer);
-        if (!paragraph.isEmpty()) {
-          if (!description.isEmpty()) {
-            description.append("\n\n");
-          }
-          description.append(paragraph);
-        }
-        annotationBuffer.clear();
-        inAnnotationParagraph = false;
       } else if (name == QLatin1String("author") && inAuthor) {
         inAuthor = false;
         authorField.clear();
         QString fullName = joinParts({authorFirst, authorMiddle, authorLast});
         if (fullName.isEmpty()) {
-          fullName = stripText(authorNick);
+          fullName = normalizeWhitespace(authorNick).trimmed();
         } else if (!authorNick.isEmpty()) {
-          fullName = QString("%1 (%2)").arg(fullName, stripText(authorNick));
+          fullName = QString("%1 (%2)").arg(fullName, normalizeWhitespace(authorNick).trimmed());
         }
         if (!fullName.isEmpty()) {
           authors.append(fullName);
         }
       } else if (name == QLatin1String("title") && !stack.isEmpty()) {
         inSectionTitle = false;
-        if (!titleBuffer.trimmed().isEmpty()) {
+        const QString sectionTitle = titleBuffer.trimmed();
+        if (!sectionTitle.isEmpty()) {
           if (stack.last().title.isEmpty()) {
-            stack.last().title = titleBuffer.trimmed();
+            stack.last().title = sectionTitle;
           }
-          stack.last().paragraphs.append(titleBuffer.trimmed());
+          stack.last().htmlBlocks.append(QString("<h2>%1</h2>").arg(escapeHtml(sectionTitle)));
+          stack.last().plainBlocks.append(sectionTitle);
         }
         titleBuffer.clear();
-      } else if (isParagraphElement(name) && !stack.isEmpty()) {
-        if (inParagraph && !paragraphBuffer.trimmed().isEmpty()) {
-          stack.last().paragraphs.append(paragraphBuffer.trimmed());
-        }
-        paragraphBuffer.clear();
-        inParagraph = false;
+      } else if (isParagraphElement(name)) {
+        flushParagraph();
+      } else if (inBody && inParagraph && isInlineTag(name)) {
+        currentParagraphHtml.append(closeInlineTag(name));
       } else if (name == QLatin1String("section") && !stack.isEmpty()) {
+        flushParagraph();
         SectionContext ctx = stack.takeLast();
         sectionDepth--;
-        const QString sectionText = ctx.paragraphs.join("\n\n").trimmed();
-        if (!sectionText.isEmpty()) {
-          if (!stack.isEmpty()) {
-            stack.last().paragraphs.append(sectionText);
-          } else {
-            sections.append(sectionText);
-          }
-        }
-        if (ctx.depth == 1 && !sectionText.isEmpty()) {
+        const QString sectionHtml = ctx.htmlBlocks.join("\n").trimmed();
+        const QString sectionPlain = ctx.plainBlocks.join("\n\n").trimmed();
+        if (ctx.depth == 1) {
           QString chapterTitle = ctx.title.trimmed();
           if (chapterTitle.isEmpty()) {
-            chapterTitle = QString("Section %1").arg(chapterTexts.size() + 1);
+            chapterTitle = QString("Section %1").arg(chapterTitles.size() + 1);
           }
-          chapters.append(chapterTitle);
-          chapterTexts.append(sectionText);
+          chapterTitles.append(chapterTitle);
+          if (!sectionHtml.isEmpty()) {
+            chapterHtml.append(sectionHtml);
+          } else {
+            chapterHtml.append(escapeHtml(sectionPlain));
+          }
+          chapterPlain.append(sectionPlain);
+        }
+        if (!ctx.title.trimmed().isEmpty() && ctx.topIndex >= 0) {
+          tocTitles.append(ctx.title.trimmed());
+          tocIndices.append(ctx.topIndex);
+        }
+        if (!stack.isEmpty()) {
+          if (!sectionHtml.isEmpty()) {
+            stack.last().htmlBlocks.append(sectionHtml);
+          }
+          if (!sectionPlain.isEmpty()) {
+            stack.last().plainBlocks.append(sectionPlain);
+          }
         }
       } else if (name == QLatin1String("body")) {
         inBody = false;
@@ -493,29 +635,50 @@ std::unique_ptr<FormatDocument> Fb2Provider::open(const QString &path, QString *
     title = info.completeBaseName();
   }
 
-  QString fullText;
-  if (!chapterTexts.isEmpty()) {
-    fullText = chapterTexts.join("\n\n");
-  } else {
-    fullText = sections.join("\n\n");
+  if (chapterHtml.isEmpty() && !chapterPlain.isEmpty()) {
+    for (const QString &plain : chapterPlain) {
+      chapterHtml.append(escapeHtml(plain));
+    }
   }
 
-  if (fullText.isEmpty()) {
+  QString fullHtml;
+  QString fullPlain;
+  if (!chapterHtml.isEmpty()) {
+    fullHtml = chapterHtml.join("\n\n");
+    fullPlain = chapterPlain.join("\n\n");
+  }
+
+  if (fullPlain.trimmed().isEmpty()) {
     if (error) {
       *error = "No readable text in FB2";
     }
     return nullptr;
   }
 
-  QString coverPath = extractCoverImage(data, coverId, info);
-  if (coverPath.isEmpty()) {
-    coverPath = extractFallbackImage(data, info);
+  if (tocTitles.isEmpty()) {
+    tocTitles = chapterTitles;
+    tocIndices.clear();
+    for (int i = 0; i < chapterTitles.size(); ++i) {
+      tocIndices.append(i);
+    }
+  }
+
+  QString coverPath;
+  if (!coverId.isEmpty()) {
+    coverPath = ensureImageFile(coverId, assets, outDir);
+  }
+  if (coverPath.isEmpty() && !fallbackImageId.isEmpty()) {
+    coverPath = ensureImageFile(fallbackImageId, assets, outDir);
   }
 
   return std::make_unique<Fb2Document>(title,
-                                       fullText,
-                                       chapters,
-                                       chapterTexts,
+                                       fullHtml,
+                                       fullPlain,
+                                       chapterTitles,
+                                       chapterHtml,
+                                       chapterPlain,
+                                       tocTitles,
+                                       tocIndices,
                                        authors.join(", "),
                                        series,
                                        publisher,

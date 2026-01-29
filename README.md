@@ -22,7 +22,7 @@ A fast, secure, offline-first ebook reader for Linux and Android built with Qt 6
 ## Format status (initial)
 - EPUB: implemented (text + TOC + inline images)
 - PDF: implemented (rendering + caching + advanced settings)
-- FB2: implemented (text + metadata + cover)
+- FB2: implemented (text + metadata + cover + inline images)
 - CBZ: implemented (image extraction)
 - CBR: implemented if bsdtar/unrar/unar is available
 - MOBI/AZW3: experimental (known rendering issues; pending libmobi updates)
