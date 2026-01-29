@@ -14,7 +14,7 @@ POPPLER_REF="001"
 LIBARCHIVE_REMOTE="https://github.com/libarchive/libarchive"
 LIBARCHIVE_REF="v3.7.2"
 LIBMOBI_REMOTE="https://github.com/BigRangaTech/libmobi"
-LIBMOBI_REF="v001"
+LIBMOBI_REF="a01.1"
 
 update_monocypher() {
   echo "Updating Monocypher to $MONOCYPHER_REF"
