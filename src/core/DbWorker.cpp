@@ -420,7 +420,8 @@ LibraryItem DbWorker::makeItemFromFile(const QString &filePath) {
   item.addedAt = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
   const QString ext = item.format;
   const bool wantsMetadata =
-      (ext == "mobi" || ext == "azw" || ext == "azw3" || ext == "azw4" || ext == "prc");
+      (ext == "mobi" || ext == "azw" || ext == "azw3" || ext == "azw4" || ext == "prc" ||
+       ext == "fb2");
   if (wantsMetadata) {
     auto registry = FormatRegistry::createDefault();
     QString metaError;

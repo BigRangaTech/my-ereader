@@ -22,11 +22,11 @@ A fast, secure, offline-first ebook reader for Linux and Android built with Qt 6
 ## Format status (initial)
 - EPUB: implemented (text + TOC + inline images)
 - PDF: implemented (rendering + caching + advanced settings)
-- FB2: implemented (basic text)
+- FB2: implemented (text + metadata + cover)
 - CBZ: implemented (image extraction)
 - CBR: implemented if bsdtar/unrar/unar is available
 - MOBI/AZW3: experimental (known rendering issues; pending libmobi updates)
-- DJVU: planned (not implemented yet)
+- DJVU: implemented (page rendering via djvulibre tools)
 
 ## Updates
 - Desktop: git pull updates (fast-forward only)
@@ -55,7 +55,7 @@ Settings are stored under `config/` at the repo root.
   - `config/txt.ini`
   - `config/mobi.ini` (experimental)
   - `config/azw*.ini` / `config/prc.ini` (experimental)
-  - `config/djvu.ini` (reserved)
+  - `config/djvu.ini`
 
 ## Docs
 - docs/ARCHITECTURE.md

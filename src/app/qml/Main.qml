@@ -12,10 +12,15 @@ ApplicationWindow {
   height: 800
   visible: true
   title: "My Ereader"
-  icon: settings.iconPath
 
   readonly property string uiFont: "Space Grotesk"
   readonly property string readingFont: "Literata"
+  function fileUrl(path) {
+    if (!path || path.length === 0) return ""
+    if (path.startsWith("file:") || path.startsWith("qrc:")) return path
+    if (path.startsWith("/")) return "file://" + path
+    return path
+  }
 
   function textFontSizeFor(format) {
     const f = (format || "").toLowerCase()
@@ -120,7 +125,7 @@ ApplicationWindow {
   FileDialog {
     id: fileDialog
     title: "Add book"
-    nameFilters: ["Books (*.epub *.pdf *.mobi *.azw *.azw3 *.fb2 *.cbz *.cbr *.txt)"]
+    nameFilters: ["Books (*.epub *.pdf *.mobi *.azw *.azw3 *.fb2 *.cbz *.cbr *.djvu *.djv *.txt)"]
     onAccepted: {
       var path = ""
       if (selectedFile && selectedFile.toLocalFile) {
@@ -1013,11 +1018,15 @@ ApplicationWindow {
             Image {
               source: reader.currentCoverUrl.toString().length > 0
                       ? reader.currentCoverUrl
-                      : settings.iconPath
+                      : root.fileUrl(settings.iconPath)
               visible: source.toString().length > 0
               fillMode: Image.PreserveAspectFit
               width: 40
               height: 56
+              Layout.preferredWidth: 40
+              Layout.preferredHeight: 56
+              Layout.maximumWidth: 40
+              Layout.maximumHeight: 56
               cache: false
             }
 
@@ -2204,16 +2213,16 @@ ApplicationWindow {
               from: 72
               to: 240
               stepSize: 6
-              value: settings.pdfDpi
-              onMoved: settings.pdfDpi = Math.round(value)
+              value: settings.djvuDpi
+              onMoved: settings.djvuDpi = Math.round(value)
             }
 
             SpinBox {
               from: 72
               to: 240
-              value: settings.pdfDpi
+              value: settings.djvuDpi
               editable: true
-              onValueModified: settings.pdfDpi = value
+              onValueModified: settings.djvuDpi = value
             }
           }
 
@@ -2234,16 +2243,124 @@ ApplicationWindow {
               from: 5
               to: 120
               stepSize: 1
-              value: settings.pdfCacheLimit
-              onMoved: settings.pdfCacheLimit = Math.round(value)
+              value: settings.djvuCacheLimit
+              onMoved: settings.djvuCacheLimit = Math.round(value)
             }
 
             SpinBox {
               from: 5
               to: 120
-              value: settings.pdfCacheLimit
+              value: settings.djvuCacheLimit
               editable: true
-              onValueModified: settings.pdfCacheLimit = value
+              onValueModified: settings.djvuCacheLimit = value
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Prefetch"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 0
+              to: 6
+              stepSize: 1
+              value: settings.djvuPrefetchDistance
+              onMoved: settings.djvuPrefetchDistance = Math.round(value)
+            }
+
+            SpinBox {
+              from: 0
+              to: 6
+              value: settings.djvuPrefetchDistance
+              editable: true
+              onValueModified: settings.djvuPrefetchDistance = value
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Cache policy"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            ComboBox {
+              Layout.fillWidth: true
+              model: ["fifo", "lru"]
+              currentIndex: model.indexOf(settings.djvuCachePolicy)
+              onActivated: settings.djvuCachePolicy = model[currentIndex]
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Output format"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            ComboBox {
+              Layout.fillWidth: true
+              model: ["ppm", "tiff"]
+              currentIndex: model.indexOf(settings.djvuImageFormat)
+              onActivated: settings.djvuImageFormat = model[currentIndex]
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Extract text"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            CheckBox {
+              checked: settings.djvuExtractText
+              onToggled: settings.djvuExtractText = checked
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Rotation"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            ComboBox {
+              Layout.fillWidth: true
+              model: ["0", "90", "180", "270"]
+              currentIndex: model.indexOf(String(settings.djvuRotation))
+              onActivated: settings.djvuRotation = parseInt(model[currentIndex])
             }
           }
 
@@ -2252,6 +2369,19 @@ ApplicationWindow {
             color: theme.textMuted
             font.pixelSize: 11
             font.family: root.uiFont
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Button {
+              text: "Reset DJVU"
+              onClicked: settings.resetDjvuDefaults()
+              font.family: root.uiFont
+            }
+
+            Item { Layout.fillWidth: true }
           }
 
           Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }

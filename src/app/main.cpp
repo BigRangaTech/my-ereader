@@ -1,4 +1,7 @@
 #include <QGuiApplication>
+#include <QIcon>
+#include <QDir>
+#include <QFileInfo>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
 #include <QQmlContext>
@@ -13,6 +16,22 @@
 #include "SyncManager.h"
 #include "TtsController.h"
 #include "VaultController.h"
+
+namespace {
+QString findIconPath() {
+  QDir dir(QCoreApplication::applicationDirPath());
+  for (int i = 0; i < 6; ++i) {
+    const QString candidate = dir.filePath("icon/icon.png");
+    if (QFileInfo::exists(candidate)) {
+      return candidate;
+    }
+    if (!dir.cdUp()) {
+      break;
+    }
+  }
+  return {};
+}
+} // namespace
 
 int main(int argc, char *argv[]) {
   QGuiApplication app(argc, argv);
@@ -31,6 +50,11 @@ int main(int argc, char *argv[]) {
   qmlRegisterType<SyncManager>("Ereader", 1, 0, "SyncManager");
   qmlRegisterType<TtsController>("Ereader", 1, 0, "TtsController");
   qmlRegisterType<VaultController>("Ereader", 1, 0, "VaultController");
+
+  const QString iconPath = findIconPath();
+  if (!iconPath.isEmpty()) {
+    app.setWindowIcon(QIcon(iconPath));
+  }
 
   QQmlApplicationEngine engine;
   QObject::connect(

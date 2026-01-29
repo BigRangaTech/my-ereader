@@ -32,6 +32,13 @@ class SettingsManager : public QObject {
   Q_PROPERTY(int pdfTileSize READ pdfTileSize WRITE setPdfTileSize NOTIFY pdfTileSizeChanged)
   Q_PROPERTY(bool pdfProgressiveRendering READ pdfProgressiveRendering WRITE setPdfProgressiveRendering NOTIFY pdfProgressiveRenderingChanged)
   Q_PROPERTY(int pdfProgressiveDpi READ pdfProgressiveDpi WRITE setPdfProgressiveDpi NOTIFY pdfProgressiveDpiChanged)
+  Q_PROPERTY(int djvuDpi READ djvuDpi WRITE setDjvuDpi NOTIFY djvuDpiChanged)
+  Q_PROPERTY(int djvuCacheLimit READ djvuCacheLimit WRITE setDjvuCacheLimit NOTIFY djvuCacheLimitChanged)
+  Q_PROPERTY(int djvuPrefetchDistance READ djvuPrefetchDistance WRITE setDjvuPrefetchDistance NOTIFY djvuPrefetchDistanceChanged)
+  Q_PROPERTY(QString djvuCachePolicy READ djvuCachePolicy WRITE setDjvuCachePolicy NOTIFY djvuCachePolicyChanged)
+  Q_PROPERTY(QString djvuImageFormat READ djvuImageFormat WRITE setDjvuImageFormat NOTIFY djvuImageFormatChanged)
+  Q_PROPERTY(bool djvuExtractText READ djvuExtractText WRITE setDjvuExtractText NOTIFY djvuExtractTextChanged)
+  Q_PROPERTY(int djvuRotation READ djvuRotation WRITE setDjvuRotation NOTIFY djvuRotationChanged)
   Q_PROPERTY(double comicMinZoom READ comicMinZoom WRITE setComicMinZoom NOTIFY comicMinZoomChanged)
   Q_PROPERTY(double comicMaxZoom READ comicMaxZoom WRITE setComicMaxZoom NOTIFY comicMaxZoomChanged)
   Q_PROPERTY(QString settingsPath READ settingsPath CONSTANT)
@@ -67,6 +74,13 @@ public:
   int pdfTileSize() const;
   bool pdfProgressiveRendering() const;
   int pdfProgressiveDpi() const;
+  int djvuDpi() const;
+  int djvuCacheLimit() const;
+  int djvuPrefetchDistance() const;
+  QString djvuCachePolicy() const;
+  QString djvuImageFormat() const;
+  bool djvuExtractText() const;
+  int djvuRotation() const;
   double comicMinZoom() const;
   double comicMaxZoom() const;
   QString settingsPath() const;
@@ -100,6 +114,13 @@ public:
   void setPdfTileSize(int value);
   void setPdfProgressiveRendering(bool value);
   void setPdfProgressiveDpi(int value);
+  void setDjvuDpi(int value);
+  void setDjvuCacheLimit(int value);
+  void setDjvuPrefetchDistance(int value);
+  void setDjvuCachePolicy(const QString &value);
+  void setDjvuImageFormat(const QString &value);
+  void setDjvuExtractText(bool value);
+  void setDjvuRotation(int value);
   void setComicMinZoom(double value);
   void setComicMaxZoom(double value);
 
@@ -110,6 +131,7 @@ public:
   Q_INVOKABLE void resetTxtDefaults();
   Q_INVOKABLE void resetMobiDefaults();
   Q_INVOKABLE void resetComicDefaults();
+  Q_INVOKABLE void resetDjvuDefaults();
   Q_INVOKABLE void reload();
   Q_INVOKABLE QString sidebarModeForPath(const QString &path) const;
   Q_INVOKABLE void setSidebarModeForPath(const QString &path, const QString &mode);
@@ -142,6 +164,13 @@ signals:
   void pdfTileSizeChanged();
   void pdfProgressiveRenderingChanged();
   void pdfProgressiveDpiChanged();
+  void djvuDpiChanged();
+  void djvuCacheLimitChanged();
+  void djvuPrefetchDistanceChanged();
+  void djvuCachePolicyChanged();
+  void djvuImageFormatChanged();
+  void djvuExtractTextChanged();
+  void djvuRotationChanged();
   void comicMinZoomChanged();
   void comicMaxZoomChanged();
 
@@ -183,6 +212,13 @@ private:
   int m_pdfTileSize = 0;
   bool m_pdfProgressiveRendering = false;
   int m_pdfProgressiveDpi = 72;
+  int m_djvuDpi = 120;
+  int m_djvuCacheLimit = 30;
+  int m_djvuPrefetchDistance = 1;
+  QString m_djvuCachePolicy = "fifo";
+  QString m_djvuImageFormat = "ppm";
+  bool m_djvuExtractText = true;
+  int m_djvuRotation = 0;
   double m_comicMinZoom = 0.5;
   double m_comicMaxZoom = 4.0;
 };

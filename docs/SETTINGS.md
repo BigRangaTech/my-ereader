@@ -50,7 +50,12 @@ Settings live under `config/` at the repo root.
 - `render/extract_text` (default: true)
 - `render/tile_size` (default: 0) — 0 disables tiling
 
-## DJVU (reserved, not implemented)
+## DJVU
 - `config/djvu.ini`
 - `render/dpi` (default: 120)
 - `render/cache_limit` (default: 30)
+- `render/prefetch_distance` (default: 1)
+- `render/cache_policy` (default: `fifo`) — `fifo|lru`
+- `render/format` (default: `ppm`) — `ppm|tiff`
+- `render/extract_text` (default: true)
+- `render/rotation` (default: 0) — `0|90|180|270`

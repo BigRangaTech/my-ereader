@@ -8,6 +8,7 @@
 #include "Fb2Provider.h"
 #include "CbzProvider.h"
 #include "MobiProvider.h"
+#include "DjvuProvider.h"
 
 std::unique_ptr<FormatRegistry> FormatRegistry::createDefault() {
   auto registry = std::make_unique<FormatRegistry>();
@@ -17,6 +18,7 @@ std::unique_ptr<FormatRegistry> FormatRegistry::createDefault() {
   registry->registerProvider(std::make_unique<MobiProvider>());
   registry->registerProvider(std::make_unique<Fb2Provider>());
   registry->registerProvider(std::make_unique<CbzProvider>());
+  registry->registerProvider(std::make_unique<DjvuProvider>());
   return registry;
 }
 

@@ -90,6 +90,13 @@ bool SettingsManager::pdfExtractText() const { return m_pdfExtractText; }
 int SettingsManager::pdfTileSize() const { return m_pdfTileSize; }
 bool SettingsManager::pdfProgressiveRendering() const { return m_pdfProgressiveRendering; }
 int SettingsManager::pdfProgressiveDpi() const { return m_pdfProgressiveDpi; }
+int SettingsManager::djvuDpi() const { return m_djvuDpi; }
+int SettingsManager::djvuCacheLimit() const { return m_djvuCacheLimit; }
+int SettingsManager::djvuPrefetchDistance() const { return m_djvuPrefetchDistance; }
+QString SettingsManager::djvuCachePolicy() const { return m_djvuCachePolicy; }
+QString SettingsManager::djvuImageFormat() const { return m_djvuImageFormat; }
+bool SettingsManager::djvuExtractText() const { return m_djvuExtractText; }
+int SettingsManager::djvuRotation() const { return m_djvuRotation; }
 double SettingsManager::comicMinZoom() const { return m_comicMinZoom; }
 double SettingsManager::comicMaxZoom() const { return m_comicMaxZoom; }
 
@@ -389,6 +396,84 @@ void SettingsManager::setPdfProgressiveDpi(int value) {
   emit pdfProgressiveDpiChanged();
 }
 
+void SettingsManager::setDjvuDpi(int value) {
+  value = clampInt(value, 72, 240);
+  if (m_djvuDpi == value) {
+    return;
+  }
+  m_djvuDpi = value;
+  saveFormatValue("djvu", "render/dpi", value);
+  emit djvuDpiChanged();
+}
+
+void SettingsManager::setDjvuCacheLimit(int value) {
+  value = clampInt(value, 5, 120);
+  if (m_djvuCacheLimit == value) {
+    return;
+  }
+  m_djvuCacheLimit = value;
+  saveFormatValue("djvu", "render/cache_limit", value);
+  emit djvuCacheLimitChanged();
+}
+
+void SettingsManager::setDjvuPrefetchDistance(int value) {
+  value = clampInt(value, 0, 6);
+  if (m_djvuPrefetchDistance == value) {
+    return;
+  }
+  m_djvuPrefetchDistance = value;
+  saveFormatValue("djvu", "render/prefetch_distance", value);
+  emit djvuPrefetchDistanceChanged();
+}
+
+void SettingsManager::setDjvuCachePolicy(const QString &value) {
+  QString normalized = value.trimmed().toLower();
+  if (normalized != "fifo" && normalized != "lru") {
+    normalized = "fifo";
+  }
+  if (m_djvuCachePolicy == normalized) {
+    return;
+  }
+  m_djvuCachePolicy = normalized;
+  saveFormatValue("djvu", "render/cache_policy", normalized);
+  emit djvuCachePolicyChanged();
+}
+
+void SettingsManager::setDjvuImageFormat(const QString &value) {
+  QString normalized = value.trimmed().toLower();
+  if (normalized != "ppm" && normalized != "tiff") {
+    normalized = "ppm";
+  }
+  if (m_djvuImageFormat == normalized) {
+    return;
+  }
+  m_djvuImageFormat = normalized;
+  saveFormatValue("djvu", "render/format", normalized);
+  emit djvuImageFormatChanged();
+}
+
+void SettingsManager::setDjvuExtractText(bool value) {
+  if (m_djvuExtractText == value) {
+    return;
+  }
+  m_djvuExtractText = value;
+  saveFormatValue("djvu", "render/extract_text", value);
+  emit djvuExtractTextChanged();
+}
+
+void SettingsManager::setDjvuRotation(int value) {
+  int normalized = value;
+  if (normalized != 0 && normalized != 90 && normalized != 180 && normalized != 270) {
+    normalized = 0;
+  }
+  if (m_djvuRotation == normalized) {
+    return;
+  }
+  m_djvuRotation = normalized;
+  saveFormatValue("djvu", "render/rotation", normalized);
+  emit djvuRotationChanged();
+}
+
 void SettingsManager::setComicMinZoom(double value) {
   value = clampDouble(value, 0.2, m_comicMaxZoom - 0.1);
   if (qFuzzyCompare(m_comicMinZoom, value)) {
@@ -437,6 +522,13 @@ void SettingsManager::resetDefaults() {
   setPdfTileSize(0);
   setPdfProgressiveRendering(false);
   setPdfProgressiveDpi(72);
+  setDjvuDpi(120);
+  setDjvuCacheLimit(30);
+  setDjvuPrefetchDistance(1);
+  setDjvuCachePolicy("fifo");
+  setDjvuImageFormat("ppm");
+  setDjvuExtractText(true);
+  setDjvuRotation(0);
   setComicMinZoom(0.5);
   setComicMaxZoom(4.0);
 }
@@ -484,6 +576,16 @@ void SettingsManager::resetMobiDefaults() {
 void SettingsManager::resetComicDefaults() {
   setComicMinZoom(0.5);
   setComicMaxZoom(4.0);
+}
+
+void SettingsManager::resetDjvuDefaults() {
+  setDjvuDpi(120);
+  setDjvuCacheLimit(30);
+  setDjvuPrefetchDistance(1);
+  setDjvuCachePolicy("fifo");
+  setDjvuImageFormat("ppm");
+  setDjvuExtractText(true);
+  setDjvuRotation(0);
 }
 
 void SettingsManager::reload() {
@@ -568,6 +670,31 @@ void SettingsManager::loadFromSettings() {
   m_pdfProgressiveDpi =
       clampInt(readFormatValue("pdf", "render/progressive_dpi", 72).toInt(), 48, m_pdfDpi);
 
+  m_djvuDpi =
+      clampInt(readFormatValue("djvu", "render/dpi", 120).toInt(), 72, 240);
+  m_djvuCacheLimit =
+      clampInt(readFormatValue("djvu", "render/cache_limit", 30).toInt(), 5, 120);
+  m_djvuPrefetchDistance =
+      clampInt(readFormatValue("djvu", "render/prefetch_distance", 1).toInt(), 0, 6);
+  m_djvuCachePolicy =
+      readFormatValue("djvu", "render/cache_policy", "fifo").toString().toLower();
+  if (m_djvuCachePolicy != "fifo" && m_djvuCachePolicy != "lru") {
+    m_djvuCachePolicy = "fifo";
+  }
+  m_djvuImageFormat =
+      readFormatValue("djvu", "render/format", "ppm").toString().toLower();
+  if (m_djvuImageFormat != "ppm" && m_djvuImageFormat != "tiff") {
+    m_djvuImageFormat = "ppm";
+  }
+  m_djvuExtractText =
+      readFormatValue("djvu", "render/extract_text", true).toBool();
+  m_djvuRotation =
+      clampInt(readFormatValue("djvu", "render/rotation", 0).toInt(), 0, 270);
+  if (m_djvuRotation != 0 && m_djvuRotation != 90 &&
+      m_djvuRotation != 180 && m_djvuRotation != 270) {
+    m_djvuRotation = 0;
+  }
+
   m_comicMinZoom =
       clampDouble(readFormatValue("cbz", "zoom/min", m_settings.value("comics/min_zoom", 0.5)).toDouble(), 0.2, 7.0);
   m_comicMaxZoom =
@@ -607,8 +734,13 @@ void SettingsManager::loadFromSettings() {
   saveFormatValue("pdf", "render/tile_size", m_pdfTileSize);
   saveFormatValue("pdf", "render/progressive", m_pdfProgressiveRendering);
   saveFormatValue("pdf", "render/progressive_dpi", m_pdfProgressiveDpi);
-  saveFormatValue("djvu", "render/dpi", m_pdfDpi);
-  saveFormatValue("djvu", "render/cache_limit", m_pdfCacheLimit);
+  saveFormatValue("djvu", "render/dpi", m_djvuDpi);
+  saveFormatValue("djvu", "render/cache_limit", m_djvuCacheLimit);
+  saveFormatValue("djvu", "render/prefetch_distance", m_djvuPrefetchDistance);
+  saveFormatValue("djvu", "render/cache_policy", m_djvuCachePolicy);
+  saveFormatValue("djvu", "render/format", m_djvuImageFormat);
+  saveFormatValue("djvu", "render/extract_text", m_djvuExtractText);
+  saveFormatValue("djvu", "render/rotation", m_djvuRotation);
   saveComicValue("zoom/min", m_comicMinZoom);
   saveComicValue("zoom/max", m_comicMaxZoom);
 
@@ -639,6 +771,13 @@ void SettingsManager::loadFromSettings() {
   emit pdfTileSizeChanged();
   emit pdfProgressiveRenderingChanged();
   emit pdfProgressiveDpiChanged();
+  emit djvuDpiChanged();
+  emit djvuCacheLimitChanged();
+  emit djvuPrefetchDistanceChanged();
+  emit djvuCachePolicyChanged();
+  emit djvuImageFormatChanged();
+  emit djvuExtractTextChanged();
+  emit djvuRotationChanged();
   emit comicMinZoomChanged();
   emit comicMaxZoomChanged();
 }

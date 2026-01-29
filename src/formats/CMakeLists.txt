@@ -5,12 +5,14 @@ add_library(formats STATIC
   Fb2Provider.cpp
   CbzProvider.cpp
   PdfProvider.cpp
+  DjvuProvider.cpp
   TxtProvider.cpp
   EpubProvider.h
   MobiProvider.h
   Fb2Provider.h
   CbzProvider.h
   PdfProvider.h
+  DjvuProvider.h
 )
 
 target_include_directories(formats PUBLIC include)
