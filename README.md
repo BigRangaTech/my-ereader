@@ -20,8 +20,8 @@ A fast, secure, offline-first ebook reader for Linux and Android built with Qt 6
 6) DJVU
 
 ## Format status (initial)
-- EPUB: implemented (basic text + TOC)
-- PDF: implemented (basic text extraction)
+- EPUB: implemented (text + TOC + inline images)
+- PDF: implemented (rendering + caching + advanced settings)
 - FB2: implemented (basic text)
 - CBZ: implemented (image extraction)
 - CBR: implemented if bsdtar/unrar/unar is available
@@ -42,12 +42,28 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ```
 
+## Settings
+Settings are stored under `config/` at the repo root.
+
+- `config/settings.ini` holds general app settings (and legacy fallbacks).
+- Per-format settings live in their own files:
+  - `config/epub.ini`
+  - `config/pdf.ini`
+  - `config/cbz.ini`
+  - `config/cbr.ini`
+  - `config/fb2.ini`
+  - `config/txt.ini`
+  - `config/mobi.ini` (experimental)
+  - `config/azw*.ini` / `config/prc.ini` (experimental)
+  - `config/djvu.ini` (reserved)
+
 ## Docs
 - docs/ARCHITECTURE.md
 - docs/SECURITY.md
 - docs/ROADMAP.md
 - docs/UPDATES.md
 - docs/CRYPTO.md
+- docs/SETTINGS.md
 - docs/THIRD_PARTY.md
 - third_party/README.md
 - docs/POPPLER.md

@@ -35,6 +35,7 @@ class SettingsManager : public QObject {
   Q_PROPERTY(double comicMinZoom READ comicMinZoom WRITE setComicMinZoom NOTIFY comicMinZoomChanged)
   Q_PROPERTY(double comicMaxZoom READ comicMaxZoom WRITE setComicMaxZoom NOTIFY comicMaxZoomChanged)
   Q_PROPERTY(QString settingsPath READ settingsPath CONSTANT)
+  Q_PROPERTY(QString iconPath READ iconPath CONSTANT)
 
 public:
   explicit SettingsManager(QObject *parent = nullptr);
@@ -69,6 +70,7 @@ public:
   double comicMinZoom() const;
   double comicMaxZoom() const;
   QString settingsPath() const;
+  QString iconPath() const;
   Q_INVOKABLE QString formatSettingsPath(const QString &format) const;
 
   void setReadingFontSize(int value);
@@ -102,6 +104,12 @@ public:
   void setComicMaxZoom(double value);
 
   Q_INVOKABLE void resetDefaults();
+  Q_INVOKABLE void resetPdfDefaults();
+  Q_INVOKABLE void resetEpubDefaults();
+  Q_INVOKABLE void resetFb2Defaults();
+  Q_INVOKABLE void resetTxtDefaults();
+  Q_INVOKABLE void resetMobiDefaults();
+  Q_INVOKABLE void resetComicDefaults();
   Q_INVOKABLE void reload();
   Q_INVOKABLE QString sidebarModeForPath(const QString &path) const;
   Q_INVOKABLE void setSidebarModeForPath(const QString &path, const QString &mode);

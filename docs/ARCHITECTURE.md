@@ -8,7 +8,7 @@
   - Library management (SQLite)
   - Reading state + progress
   - Annotation storage
-  - Preferences
+  - Preferences (general + per-format INI files under `config/`)
 - Formats (C++)
   - FormatProvider interface
   - FormatRegistry

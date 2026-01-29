@@ -12,6 +12,7 @@ ApplicationWindow {
   height: 800
   visible: true
   title: "My Ereader"
+  icon: settings.iconPath
 
   readonly property string uiFont: "Space Grotesk"
   readonly property string readingFont: "Literata"
@@ -1010,8 +1011,10 @@ ApplicationWindow {
             }
 
             Image {
-              source: reader.currentCoverUrl
-              visible: reader.currentCoverUrl.toString().length > 0
+              source: reader.currentCoverUrl.toString().length > 0
+                      ? reader.currentCoverUrl
+                      : settings.iconPath
+              visible: source.toString().length > 0
               fillMode: Image.PreserveAspectFit
               width: 40
               height: 56
@@ -1391,6 +1394,19 @@ ApplicationWindow {
             font.family: root.uiFont
           }
 
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Button {
+              text: "Reset EPUB"
+              onClicked: settings.resetEpubDefaults()
+              font.family: root.uiFont
+            }
+
+            Item { Layout.fillWidth: true }
+          }
+
           Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
 
           Text {
@@ -1465,6 +1481,19 @@ ApplicationWindow {
             color: theme.textMuted
             font.pixelSize: 11
             font.family: root.uiFont
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Button {
+              text: "Reset FB2"
+              onClicked: settings.resetFb2Defaults()
+              font.family: root.uiFont
+            }
+
+            Item { Layout.fillWidth: true }
           }
 
           Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
@@ -1543,6 +1572,19 @@ ApplicationWindow {
             font.family: root.uiFont
           }
 
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Button {
+              text: "Reset TXT"
+              onClicked: settings.resetTxtDefaults()
+              font.family: root.uiFont
+            }
+
+            Item { Layout.fillWidth: true }
+          }
+
           Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
 
           Text {
@@ -1617,6 +1659,19 @@ ApplicationWindow {
             color: theme.textMuted
             font.pixelSize: 11
             font.family: root.uiFont
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Button {
+              text: "Reset MOBI"
+              onClicked: settings.resetMobiDefaults()
+              font.family: root.uiFont
+            }
+
+            Item { Layout.fillWidth: true }
           }
 
           Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
@@ -2014,6 +2069,19 @@ ApplicationWindow {
             font.family: root.uiFont
           }
 
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Button {
+              text: "Reset PDF"
+              onClicked: settings.resetPdfDefaults()
+              font.family: root.uiFont
+            }
+
+            Item { Layout.fillWidth: true }
+          }
+
           Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
 
           Text {
@@ -2095,6 +2163,19 @@ ApplicationWindow {
             color: theme.textMuted
             font.pixelSize: 11
             font.family: root.uiFont
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Button {
+              text: "Reset Comics"
+              onClicked: settings.resetComicDefaults()
+              font.family: root.uiFont
+            }
+
+            Item { Layout.fillWidth: true }
           }
 
           Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }

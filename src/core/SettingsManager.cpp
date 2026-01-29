@@ -54,6 +54,15 @@ QString SettingsManager::settingsPath() const {
   return m_settings.fileName();
 }
 
+QString SettingsManager::iconPath() const {
+  const QString root = findRepoRoot();
+  const QString path = QDir(root).filePath("icon/icon.png");
+  if (QFileInfo::exists(path)) {
+    return path;
+  }
+  return {};
+}
+
 int SettingsManager::readingFontSize() const { return m_readingFontSize; }
 double SettingsManager::readingLineHeight() const { return m_readingLineHeight; }
 int SettingsManager::epubFontSize() const { return m_epubFontSize; }
@@ -428,6 +437,51 @@ void SettingsManager::resetDefaults() {
   setPdfTileSize(0);
   setPdfProgressiveRendering(false);
   setPdfProgressiveDpi(72);
+  setComicMinZoom(0.5);
+  setComicMaxZoom(4.0);
+}
+
+void SettingsManager::resetPdfDefaults() {
+  setPdfRenderPreset("custom");
+  setPdfDpi(120);
+  setPdfCacheLimit(30);
+  setPdfCachePolicy("fifo");
+  setPdfPrefetchDistance(1);
+  setPdfPrefetchStrategy("symmetric");
+  setPdfProgressiveRendering(false);
+  setPdfProgressiveDpi(72);
+  setPdfColorMode("color");
+  setPdfBackgroundMode("white");
+  setPdfBackgroundColor("#202633");
+  setPdfMaxWidth(0);
+  setPdfMaxHeight(0);
+  setPdfImageFormat("png");
+  setPdfJpegQuality(85);
+  setPdfExtractText(true);
+  setPdfTileSize(0);
+}
+
+void SettingsManager::resetEpubDefaults() {
+  setEpubFontSize(20);
+  setEpubLineHeight(1.4);
+}
+
+void SettingsManager::resetFb2Defaults() {
+  setFb2FontSize(20);
+  setFb2LineHeight(1.4);
+}
+
+void SettingsManager::resetTxtDefaults() {
+  setTxtFontSize(20);
+  setTxtLineHeight(1.4);
+}
+
+void SettingsManager::resetMobiDefaults() {
+  setMobiFontSize(20);
+  setMobiLineHeight(1.4);
+}
+
+void SettingsManager::resetComicDefaults() {
   setComicMinZoom(0.5);
   setComicMaxZoom(4.0);
 }
