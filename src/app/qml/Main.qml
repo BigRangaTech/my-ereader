@@ -15,6 +15,7 @@ ApplicationWindow {
 
   readonly property string uiFont: "Space Grotesk"
   readonly property string readingFont: "Literata"
+  readonly property string monoFont: "JetBrains Mono"
   function fileUrl(path) {
     if (!path || path.length === 0) return ""
     if (path.startsWith("file:") || path.startsWith("qrc:")) return path
@@ -29,6 +30,12 @@ ApplicationWindow {
     if (f === "txt") return settings.txtFontSize
     if (f === "mobi" || f === "azw" || f === "azw3" || f === "azw4" || f === "prc") return settings.mobiFontSize
     return settings.readingFontSize
+  }
+
+  function textFontFamilyFor(format) {
+    const f = (format || "").toLowerCase()
+    if (f === "txt" && settings.txtMonospace) return monoFont
+    return readingFont
   }
 
   function textLineHeightFor(format) {
@@ -529,7 +536,7 @@ ApplicationWindow {
             text: reader.currentText
             color: theme.textPrimary
             font.pixelSize: root.textFontSizeFor(reader.currentFormat)
-            font.family: root.readingFont
+            font.family: root.textFontFamilyFor(reader.currentFormat)
             wrapMode: Text.WordWrap
             lineHeight: root.textLineHeightFor(reader.currentFormat)
             lineHeightMode: Text.ProportionalHeight
@@ -1561,6 +1568,24 @@ ApplicationWindow {
               font.pixelSize: 13
               font.family: root.uiFont
               Layout.preferredWidth: 48
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Monospace"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            CheckBox {
+              checked: settings.txtMonospace
+              onToggled: settings.txtMonospace = checked
             }
           }
 

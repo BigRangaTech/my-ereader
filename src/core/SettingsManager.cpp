@@ -71,6 +71,7 @@ int SettingsManager::fb2FontSize() const { return m_fb2FontSize; }
 double SettingsManager::fb2LineHeight() const { return m_fb2LineHeight; }
 int SettingsManager::txtFontSize() const { return m_txtFontSize; }
 double SettingsManager::txtLineHeight() const { return m_txtLineHeight; }
+bool SettingsManager::txtMonospace() const { return m_txtMonospace; }
 int SettingsManager::mobiFontSize() const { return m_mobiFontSize; }
 double SettingsManager::mobiLineHeight() const { return m_mobiLineHeight; }
 int SettingsManager::pdfDpi() const { return m_pdfDpi; }
@@ -182,6 +183,15 @@ void SettingsManager::setTxtLineHeight(double value) {
   m_txtLineHeight = value;
   saveFormatValue("txt", "reading/line_height", value);
   emit txtLineHeightChanged();
+}
+
+void SettingsManager::setTxtMonospace(bool value) {
+  if (m_txtMonospace == value) {
+    return;
+  }
+  m_txtMonospace = value;
+  saveFormatValue("txt", "render/monospace", value);
+  emit txtMonospaceChanged();
 }
 
 void SettingsManager::setMobiFontSize(int value) {
@@ -503,6 +513,7 @@ void SettingsManager::resetDefaults() {
   setFb2LineHeight(1.4);
   setTxtFontSize(20);
   setTxtLineHeight(1.4);
+  setTxtMonospace(false);
   setMobiFontSize(20);
   setMobiLineHeight(1.4);
   setPdfDpi(120);
@@ -566,6 +577,7 @@ void SettingsManager::resetFb2Defaults() {
 void SettingsManager::resetTxtDefaults() {
   setTxtFontSize(20);
   setTxtLineHeight(1.4);
+  setTxtMonospace(false);
 }
 
 void SettingsManager::resetMobiDefaults() {
@@ -607,6 +619,7 @@ void SettingsManager::loadFromSettings() {
   m_txtFontSize = clampInt(readFormatValue("txt", "reading/font_size", m_readingFontSize).toInt(), 12, 36);
   m_txtLineHeight =
       clampDouble(readFormatValue("txt", "reading/line_height", m_readingLineHeight).toDouble(), 1.0, 2.0);
+  m_txtMonospace = readFormatValue("txt", "render/monospace", false).toBool();
 
   m_mobiFontSize = clampInt(readFormatValue("mobi", "reading/font_size", m_readingFontSize).toInt(), 12, 36);
   m_mobiLineHeight =
@@ -707,6 +720,7 @@ void SettingsManager::loadFromSettings() {
   saveFormatValue("fb2", "reading/line_height", m_fb2LineHeight);
   saveFormatValue("txt", "reading/font_size", m_txtFontSize);
   saveFormatValue("txt", "reading/line_height", m_txtLineHeight);
+  saveFormatValue("txt", "render/monospace", m_txtMonospace);
   saveFormatValue("mobi", "reading/font_size", m_mobiFontSize);
   saveFormatValue("mobi", "reading/line_height", m_mobiLineHeight);
   saveFormatValue("azw", "reading/font_size", m_mobiFontSize);
@@ -752,6 +766,7 @@ void SettingsManager::loadFromSettings() {
   emit fb2LineHeightChanged();
   emit txtFontSizeChanged();
   emit txtLineHeightChanged();
+  emit txtMonospaceChanged();
   emit mobiFontSizeChanged();
   emit mobiLineHeightChanged();
   emit pdfDpiChanged();

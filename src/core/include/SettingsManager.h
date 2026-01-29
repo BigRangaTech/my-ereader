@@ -13,6 +13,7 @@ class SettingsManager : public QObject {
   Q_PROPERTY(double fb2LineHeight READ fb2LineHeight WRITE setFb2LineHeight NOTIFY fb2LineHeightChanged)
   Q_PROPERTY(int txtFontSize READ txtFontSize WRITE setTxtFontSize NOTIFY txtFontSizeChanged)
   Q_PROPERTY(double txtLineHeight READ txtLineHeight WRITE setTxtLineHeight NOTIFY txtLineHeightChanged)
+  Q_PROPERTY(bool txtMonospace READ txtMonospace WRITE setTxtMonospace NOTIFY txtMonospaceChanged)
   Q_PROPERTY(int mobiFontSize READ mobiFontSize WRITE setMobiFontSize NOTIFY mobiFontSizeChanged)
   Q_PROPERTY(double mobiLineHeight READ mobiLineHeight WRITE setMobiLineHeight NOTIFY mobiLineHeightChanged)
   Q_PROPERTY(int pdfDpi READ pdfDpi WRITE setPdfDpi NOTIFY pdfDpiChanged)
@@ -55,6 +56,7 @@ public:
   double fb2LineHeight() const;
   int txtFontSize() const;
   double txtLineHeight() const;
+  bool txtMonospace() const;
   int mobiFontSize() const;
   double mobiLineHeight() const;
   int pdfDpi() const;
@@ -95,6 +97,7 @@ public:
   void setFb2LineHeight(double value);
   void setTxtFontSize(int value);
   void setTxtLineHeight(double value);
+  void setTxtMonospace(bool value);
   void setMobiFontSize(int value);
   void setMobiLineHeight(double value);
   void setPdfDpi(int value);
@@ -145,6 +148,7 @@ signals:
   void fb2LineHeightChanged();
   void txtFontSizeChanged();
   void txtLineHeightChanged();
+  void txtMonospaceChanged();
   void mobiFontSizeChanged();
   void mobiLineHeightChanged();
   void pdfDpiChanged();
@@ -193,6 +197,7 @@ private:
   double m_fb2LineHeight = 1.4;
   int m_txtFontSize = 20;
   double m_txtLineHeight = 1.4;
+  bool m_txtMonospace = false;
   int m_mobiFontSize = 20;
   double m_mobiLineHeight = 1.4;
   int m_pdfDpi = 120;

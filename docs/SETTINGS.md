@@ -27,6 +27,14 @@ Settings live under `config/` at the repo root.
 ## TXT (`config/txt.ini`)
 - `reading/font_size` (default: 20)
 - `reading/line_height` (default: 1.4)
+- `render/encoding` (default: `auto`) — `auto|utf-8|utf-16le|utf-16be|utf-32le|utf-32be|latin1`
+- `render/normalize_line_endings` (default: true)
+- `render/trim_trailing_whitespace` (default: false)
+- `render/tab_width` (default: 4)
+- `render/max_blank_lines` (default: 0) — 0 disables limiting
+- `render/split_on_formfeed` (default: true)
+- `render/auto_chapters` (default: true) — heading-based chapter detection
+- `render/monospace` (default: false)
 
 ## MOBI/AZW/PRC (experimental)
 - `config/mobi.ini`, `config/azw.ini`, `config/azw3.ini`, `config/azw4.ini`, `config/prc.ini`

@@ -10,8 +10,8 @@ target_link_libraries(crypto PUBLIC Qt6::Core)
 
 option(ENABLE_MONOCYPHER "Enable vendored Monocypher backend" ON)
 if (ENABLE_MONOCYPHER)
-  target_sources(crypto PRIVATE ../../third_party/monocypher/monocypher.c)
-  target_include_directories(crypto PRIVATE ../../third_party/monocypher)
+  target_sources(crypto PRIVATE ../../third_party/monocypher/src/monocypher.c)
+  target_include_directories(crypto PRIVATE ../../third_party/monocypher/src)
   target_compile_definitions(crypto PUBLIC HAVE_MONOCYPHER=1)
 endif()
 
