@@ -1,5 +1,6 @@
 #include "MobiProvider.h"
 
+#include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDebug>
 #include <QDir>
@@ -8,6 +9,7 @@
 #include <QImageReader>
 #include <QHash>
 #include <QRegularExpression>
+#include <QSettings>
 #include <QStandardPaths>
 #include <QUrl>
 #include <QXmlStreamReader>
@@ -223,12 +225,83 @@ QString normalizeHtmlFragment(const QString &html) {
   QString out = html;
   out.replace(QRegularExpression("(?is)<script[^>]*>.*?</script>"), "");
   out.replace(QRegularExpression("(?is)<style[^>]*>.*?</style>"), "");
+  out.replace("data:image", "data:image-blocked");
   out.replace("&nbsp;", " ");
   out.replace("&#160;", " ");
   out.replace("&shy;", "");
   out.replace("&#173;", "");
   out.replace(QChar(0x00A0), QChar(' '));
   out.replace(QChar(0x00AD), QChar());
+  return out;
+}
+
+QString formatSettingsPath(const QString &format) {
+  QDir dir(QCoreApplication::applicationDirPath());
+  for (int i = 0; i < 6; ++i) {
+    if (QFileInfo::exists(dir.filePath("README.md"))) {
+      return dir.filePath(QString("config/%1.ini").arg(format));
+    }
+    if (!dir.cdUp()) {
+      break;
+    }
+  }
+  return QDir(QCoreApplication::applicationDirPath()).filePath(QString("%1.ini").arg(format));
+}
+
+int clampInt(int value, int minValue, int maxValue) {
+  return std::max(minValue, std::min(maxValue, value));
+}
+
+double clampDouble(double value, double minValue, double maxValue) {
+  return std::max(minValue, std::min(maxValue, value));
+}
+
+struct MobiRenderSettings {
+  bool showImages = true;
+  QString textAlign = "left";
+  double paragraphSpacingEm = 0.6;
+  double paragraphIndentEm = 0.0;
+  int imageMaxWidthPercent = 100;
+  double imageSpacingEm = 0.6;
+};
+
+MobiRenderSettings loadMobiSettings(const QString &formatKey) {
+  QSettings settings(formatSettingsPath(formatKey), QSettings::IniFormat);
+  MobiRenderSettings out;
+  out.showImages = settings.value("render/show_images", true).toBool();
+  out.textAlign = settings.value("render/text_align", "left").toString().toLower();
+  if (out.textAlign != "left" && out.textAlign != "right" &&
+      out.textAlign != "center" && out.textAlign != "justify") {
+    out.textAlign = "left";
+  }
+  out.paragraphSpacingEm =
+      clampDouble(settings.value("render/paragraph_spacing_em", 0.6).toDouble(), 0.0, 3.0);
+  out.paragraphIndentEm =
+      clampDouble(settings.value("render/paragraph_indent_em", 0.0).toDouble(), 0.0, 3.0);
+  out.imageMaxWidthPercent =
+      clampInt(settings.value("render/image_max_width_percent", 100).toInt(), 10, 100);
+  out.imageSpacingEm =
+      clampDouble(settings.value("render/image_spacing_em", 0.6).toDouble(), 0.0, 4.0);
+  return out;
+}
+
+QString applyMobiStyles(const QString &html, const MobiRenderSettings &settings) {
+  if (html.trimmed().isEmpty()) {
+    return html;
+  }
+  QString out = html;
+  const QString pStyle = QString("margin:0 0 %1em 0; text-indent:%2em; text-align:%3;")
+                              .arg(settings.paragraphSpacingEm, 0, 'f', 2)
+                              .arg(settings.paragraphIndentEm, 0, 'f', 2)
+                              .arg(settings.textAlign);
+  const QString hStyle = QString("margin:0 0 %1em 0; text-align:%2;")
+                              .arg(settings.paragraphSpacingEm, 0, 'f', 2)
+                              .arg(settings.textAlign);
+  out.replace(QRegularExpression("<p\\s*>", QRegularExpression::CaseInsensitiveOption),
+              QString("<p style=\"%1\">").arg(pStyle));
+  out.replace(QRegularExpression("<h([1-6])\\s*>", QRegularExpression::CaseInsensitiveOption),
+              QString("<h\\1 style=\"%1\">").arg(hStyle));
+  out = QString("<div style=\"text-align:%1;\">%2</div>").arg(settings.textAlign, out);
   return out;
 }
 
@@ -307,7 +380,8 @@ std::optional<size_t> resolveImageUidFromSrc(const QString &src, const MOBIRawml
 
 QString replaceImageSources(const QString &html,
                             const MOBIRawml *rawml,
-                            const QHash<size_t, ImageAsset> &assets) {
+                            const QHash<size_t, ImageAsset> &assets,
+                            const MobiRenderSettings &settings) {
   QString out;
   QRegularExpression imgTagRe("<img\\b[^>]*>", QRegularExpression::CaseInsensitiveOption);
   QRegularExpression srcRe("src\\s*=\\s*(['\"])([^'\"]+)\\1",
@@ -322,28 +396,44 @@ QString replaceImageSources(const QString &html,
     QString tag = match.captured(0);
     auto srcMatch = srcRe.match(tag);
     if (!srcMatch.hasMatch()) {
-      out.append(tag);
+      if (settings.showImages) {
+        out.append(tag);
+      }
       last = match.capturedEnd();
       continue;
     }
     const QString src = srcMatch.captured(2);
     const auto uid = resolveImageUidFromSrc(src, rawml);
     if (!uid.has_value() || !assets.contains(uid.value())) {
-      out.append(tag);
+      if (settings.showImages) {
+        out.append(tag);
+      }
       last = match.capturedEnd();
       continue;
     }
     const ImageAsset asset = assets.value(uid.value());
     if (asset.path.isEmpty()) {
-      out.append(tag);
+      if (settings.showImages) {
+        out.append(tag);
+      }
+      last = match.capturedEnd();
+      continue;
+    }
+    if (!settings.showImages) {
       last = match.capturedEnd();
       continue;
     }
     const QString fileUrl = QUrl::fromLocalFile(asset.path).toString();
     const int targetWidth =
         asset.width > 0 ? std::min(asset.width, 720) : 720;
+    const QString style = QString("max-width:%1%%; height:auto; margin:0 0 %2em 0;")
+                              .arg(settings.imageMaxWidthPercent)
+                              .arg(settings.imageSpacingEm, 0, 'f', 2);
     const QString rebuilt =
-        QString("<img src=\"%1\" width=\"%2\" />").arg(fileUrl).arg(targetWidth);
+        QString("<img src=\"%1\" width=\"%2\" style=\"%3\" />")
+            .arg(fileUrl)
+            .arg(targetWidth)
+            .arg(style);
     out.append(rebuilt);
     last = match.capturedEnd();
   }
@@ -527,7 +617,8 @@ struct ChapterPayload {
 
 ChapterPayload extractMarkupContent(const MOBIRawml *rawml,
                                     const QHash<size_t, ImageAsset> &assets,
-                                    bool richText) {
+                                    bool richText,
+                                    const MobiRenderSettings &settings) {
   ChapterPayload payload;
   if (!rawml || !rawml->markup) {
     return payload;
@@ -543,10 +634,11 @@ ChapterPayload extractMarkupContent(const MOBIRawml *rawml,
       if (richText) {
         display = QString::fromUtf8(htmlBytes);
         display = normalizeHtmlFragment(display);
-        display = replaceImageSources(display, rawml, assets);
+        display = replaceImageSources(display, rawml, assets, settings);
         if (!display.contains("<html", Qt::CaseInsensitive)) {
           display = QString("<div>%1</div>").arg(display);
         }
+        display = applyMobiStyles(display, settings);
       } else {
         display = plain;
       }
@@ -870,10 +962,15 @@ std::unique_ptr<FormatDocument> MobiProvider::open(const QString &path, QString 
 
   const QString series = opfMeta.series;
 
+  const QString formatKey = info.suffix().toLower().trimmed().isEmpty()
+                                ? QString("mobi")
+                                : info.suffix().toLower().trimmed();
+  const MobiRenderSettings renderSettings = loadMobiSettings(formatKey);
+
   const auto assets = exportImageResources(rawml, info);
   QString coverPath = extractCover(data, rawml, info, assets);
 
-  ChapterPayload payload = extractMarkupContent(rawml, assets, true);
+  ChapterPayload payload = extractMarkupContent(rawml, assets, true, renderSettings);
   QStringList chapterDisplay = payload.display;
   QStringList chapterPlain = payload.plain;
   QStringList chapterTitles;
