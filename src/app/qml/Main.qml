@@ -1633,6 +1633,26 @@ ApplicationWindow {
             spacing: 12
 
             Text {
+              text: "Quality preset"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            ComboBox {
+              Layout.fillWidth: true
+              model: ["custom", "fast", "balanced", "high"]
+              currentIndex: model.indexOf(settings.pdfRenderPreset)
+              onActivated: settings.pdfRenderPreset = model[currentIndex]
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
               text: "Render DPI"
               color: theme.textMuted
               font.pixelSize: 13
@@ -1646,6 +1666,7 @@ ApplicationWindow {
               to: 240
               stepSize: 6
               value: settings.pdfDpi
+              enabled: settings.pdfRenderPreset === "custom"
               onMoved: settings.pdfDpi = Math.round(value)
             }
 
@@ -1654,6 +1675,7 @@ ApplicationWindow {
               to: 240
               value: settings.pdfDpi
               editable: true
+              enabled: settings.pdfRenderPreset === "custom"
               onValueModified: settings.pdfDpi = value
             }
           }
@@ -1693,6 +1715,26 @@ ApplicationWindow {
             spacing: 12
 
             Text {
+              text: "Cache policy"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            ComboBox {
+              Layout.fillWidth: true
+              model: ["fifo", "lru"]
+              currentIndex: model.indexOf(settings.pdfCachePolicy)
+              onActivated: settings.pdfCachePolicy = model[currentIndex]
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
               text: "Prefetch distance"
               color: theme.textMuted
               font.pixelSize: 13
@@ -1715,6 +1757,26 @@ ApplicationWindow {
               value: settings.pdfPrefetchDistance
               editable: true
               onValueModified: settings.pdfPrefetchDistance = value
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Prefetch strategy"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            ComboBox {
+              Layout.fillWidth: true
+              model: ["forward", "symmetric", "backward"]
+              currentIndex: model.indexOf(settings.pdfPrefetchStrategy)
+              onActivated: settings.pdfPrefetchStrategy = model[currentIndex]
             }
           }
 
@@ -1765,6 +1827,183 @@ ApplicationWindow {
               value: settings.pdfProgressiveDpi
               editable: true
               onValueModified: settings.pdfProgressiveDpi = value
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Color mode"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            ComboBox {
+              Layout.fillWidth: true
+              model: ["color", "grayscale"]
+              currentIndex: model.indexOf(settings.pdfColorMode)
+              onActivated: settings.pdfColorMode = model[currentIndex]
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Background"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            ComboBox {
+              Layout.fillWidth: true
+              model: ["white", "transparent", "theme", "custom"]
+              currentIndex: model.indexOf(settings.pdfBackgroundMode)
+              onActivated: settings.pdfBackgroundMode = model[currentIndex]
+            }
+
+            TextField {
+              Layout.preferredWidth: 120
+              text: settings.pdfBackgroundColor
+              placeholderText: "#202633"
+              enabled: settings.pdfBackgroundMode !== "transparent"
+              onEditingFinished: settings.pdfBackgroundColor = text
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Max size"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            SpinBox {
+              from: 0
+              to: 20000
+              value: settings.pdfMaxWidth
+              editable: true
+              onValueModified: settings.pdfMaxWidth = value
+            }
+
+            SpinBox {
+              from: 0
+              to: 20000
+              value: settings.pdfMaxHeight
+              editable: true
+              onValueModified: settings.pdfMaxHeight = value
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Image format"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            ComboBox {
+              Layout.fillWidth: true
+              model: ["png", "jpeg"]
+              currentIndex: model.indexOf(settings.pdfImageFormat)
+              onActivated: settings.pdfImageFormat = model[currentIndex]
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+            enabled: settings.pdfImageFormat === "jpeg"
+
+            Text {
+              text: "JPEG quality"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 1
+              to: 100
+              stepSize: 1
+              value: settings.pdfJpegQuality
+              onMoved: settings.pdfJpegQuality = Math.round(value)
+            }
+
+            SpinBox {
+              from: 1
+              to: 100
+              value: settings.pdfJpegQuality
+              editable: true
+              onValueModified: settings.pdfJpegQuality = value
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Extract text"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            CheckBox {
+              checked: settings.pdfExtractText
+              text: settings.pdfExtractText ? "On" : "Off"
+              onToggled: settings.pdfExtractText = checked
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Tile size"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 0
+              to: 4096
+              stepSize: 256
+              value: settings.pdfTileSize
+              onMoved: settings.pdfTileSize = Math.round(value / 256) * 256
+            }
+
+            SpinBox {
+              from: 0
+              to: 8192
+              value: settings.pdfTileSize
+              editable: true
+              onValueModified: settings.pdfTileSize = value
             }
           }
 

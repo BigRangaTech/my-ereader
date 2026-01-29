@@ -67,6 +67,18 @@ double SettingsManager::mobiLineHeight() const { return m_mobiLineHeight; }
 int SettingsManager::pdfDpi() const { return m_pdfDpi; }
 int SettingsManager::pdfCacheLimit() const { return m_pdfCacheLimit; }
 int SettingsManager::pdfPrefetchDistance() const { return m_pdfPrefetchDistance; }
+QString SettingsManager::pdfPrefetchStrategy() const { return m_pdfPrefetchStrategy; }
+QString SettingsManager::pdfCachePolicy() const { return m_pdfCachePolicy; }
+QString SettingsManager::pdfRenderPreset() const { return m_pdfRenderPreset; }
+QString SettingsManager::pdfColorMode() const { return m_pdfColorMode; }
+QString SettingsManager::pdfBackgroundMode() const { return m_pdfBackgroundMode; }
+QString SettingsManager::pdfBackgroundColor() const { return m_pdfBackgroundColor; }
+int SettingsManager::pdfMaxWidth() const { return m_pdfMaxWidth; }
+int SettingsManager::pdfMaxHeight() const { return m_pdfMaxHeight; }
+QString SettingsManager::pdfImageFormat() const { return m_pdfImageFormat; }
+int SettingsManager::pdfJpegQuality() const { return m_pdfJpegQuality; }
+bool SettingsManager::pdfExtractText() const { return m_pdfExtractText; }
+int SettingsManager::pdfTileSize() const { return m_pdfTileSize; }
 bool SettingsManager::pdfProgressiveRendering() const { return m_pdfProgressiveRendering; }
 int SettingsManager::pdfProgressiveDpi() const { return m_pdfProgressiveDpi; }
 double SettingsManager::comicMinZoom() const { return m_comicMinZoom; }
@@ -206,6 +218,149 @@ void SettingsManager::setPdfPrefetchDistance(int value) {
   emit pdfPrefetchDistanceChanged();
 }
 
+void SettingsManager::setPdfPrefetchStrategy(const QString &value) {
+  QString normalized = value.trimmed().toLower();
+  if (normalized != "forward" && normalized != "symmetric" && normalized != "backward") {
+    normalized = "symmetric";
+  }
+  if (m_pdfPrefetchStrategy == normalized) {
+    return;
+  }
+  m_pdfPrefetchStrategy = normalized;
+  saveFormatValue("pdf", "render/prefetch_strategy", normalized);
+  emit pdfPrefetchStrategyChanged();
+}
+
+void SettingsManager::setPdfCachePolicy(const QString &value) {
+  QString normalized = value.trimmed().toLower();
+  if (normalized != "fifo" && normalized != "lru") {
+    normalized = "fifo";
+  }
+  if (m_pdfCachePolicy == normalized) {
+    return;
+  }
+  m_pdfCachePolicy = normalized;
+  saveFormatValue("pdf", "render/cache_policy", normalized);
+  emit pdfCachePolicyChanged();
+}
+
+void SettingsManager::setPdfRenderPreset(const QString &value) {
+  QString normalized = value.trimmed().toLower();
+  if (normalized != "custom" && normalized != "fast" && normalized != "balanced" && normalized != "high") {
+    normalized = "custom";
+  }
+  if (m_pdfRenderPreset == normalized) {
+    return;
+  }
+  m_pdfRenderPreset = normalized;
+  saveFormatValue("pdf", "render/preset", normalized);
+  emit pdfRenderPresetChanged();
+}
+
+void SettingsManager::setPdfColorMode(const QString &value) {
+  QString normalized = value.trimmed().toLower();
+  if (normalized != "color" && normalized != "grayscale") {
+    normalized = "color";
+  }
+  if (m_pdfColorMode == normalized) {
+    return;
+  }
+  m_pdfColorMode = normalized;
+  saveFormatValue("pdf", "render/color_mode", normalized);
+  emit pdfColorModeChanged();
+}
+
+void SettingsManager::setPdfBackgroundMode(const QString &value) {
+  QString normalized = value.trimmed().toLower();
+  if (normalized != "white" && normalized != "transparent" && normalized != "theme" && normalized != "custom") {
+    normalized = "white";
+  }
+  if (m_pdfBackgroundMode == normalized) {
+    return;
+  }
+  m_pdfBackgroundMode = normalized;
+  saveFormatValue("pdf", "render/background_mode", normalized);
+  emit pdfBackgroundModeChanged();
+}
+
+void SettingsManager::setPdfBackgroundColor(const QString &value) {
+  QString normalized = value.trimmed();
+  if (!normalized.startsWith('#')) {
+    normalized.prepend('#');
+  }
+  if (m_pdfBackgroundColor == normalized) {
+    return;
+  }
+  m_pdfBackgroundColor = normalized;
+  saveFormatValue("pdf", "render/background_color", normalized);
+  emit pdfBackgroundColorChanged();
+}
+
+void SettingsManager::setPdfMaxWidth(int value) {
+  value = clampInt(value, 0, 20000);
+  if (m_pdfMaxWidth == value) {
+    return;
+  }
+  m_pdfMaxWidth = value;
+  saveFormatValue("pdf", "render/max_width", value);
+  emit pdfMaxWidthChanged();
+}
+
+void SettingsManager::setPdfMaxHeight(int value) {
+  value = clampInt(value, 0, 20000);
+  if (m_pdfMaxHeight == value) {
+    return;
+  }
+  m_pdfMaxHeight = value;
+  saveFormatValue("pdf", "render/max_height", value);
+  emit pdfMaxHeightChanged();
+}
+
+void SettingsManager::setPdfImageFormat(const QString &value) {
+  QString normalized = value.trimmed().toLower();
+  if (normalized != "png" && normalized != "jpeg" && normalized != "jpg") {
+    normalized = "png";
+  }
+  if (normalized == "jpg") {
+    normalized = "jpeg";
+  }
+  if (m_pdfImageFormat == normalized) {
+    return;
+  }
+  m_pdfImageFormat = normalized;
+  saveFormatValue("pdf", "render/image_format", normalized);
+  emit pdfImageFormatChanged();
+}
+
+void SettingsManager::setPdfJpegQuality(int value) {
+  value = clampInt(value, 1, 100);
+  if (m_pdfJpegQuality == value) {
+    return;
+  }
+  m_pdfJpegQuality = value;
+  saveFormatValue("pdf", "render/jpeg_quality", value);
+  emit pdfJpegQualityChanged();
+}
+
+void SettingsManager::setPdfExtractText(bool value) {
+  if (m_pdfExtractText == value) {
+    return;
+  }
+  m_pdfExtractText = value;
+  saveFormatValue("pdf", "render/extract_text", value);
+  emit pdfExtractTextChanged();
+}
+
+void SettingsManager::setPdfTileSize(int value) {
+  value = clampInt(value, 0, 8192);
+  if (m_pdfTileSize == value) {
+    return;
+  }
+  m_pdfTileSize = value;
+  saveFormatValue("pdf", "render/tile_size", value);
+  emit pdfTileSizeChanged();
+}
+
 void SettingsManager::setPdfProgressiveRendering(bool value) {
   if (m_pdfProgressiveRendering == value) {
     return;
@@ -259,6 +414,18 @@ void SettingsManager::resetDefaults() {
   setPdfDpi(120);
   setPdfCacheLimit(30);
   setPdfPrefetchDistance(1);
+  setPdfPrefetchStrategy("symmetric");
+  setPdfCachePolicy("fifo");
+  setPdfRenderPreset("custom");
+  setPdfColorMode("color");
+  setPdfBackgroundMode("white");
+  setPdfBackgroundColor("#202633");
+  setPdfMaxWidth(0);
+  setPdfMaxHeight(0);
+  setPdfImageFormat("png");
+  setPdfJpegQuality(85);
+  setPdfExtractText(true);
+  setPdfTileSize(0);
   setPdfProgressiveRendering(false);
   setPdfProgressiveDpi(72);
   setComicMinZoom(0.5);
@@ -294,6 +461,54 @@ void SettingsManager::loadFromSettings() {
       clampInt(readFormatValue("pdf", "render/cache_limit", m_settings.value("pdf/cache_limit", 30)).toInt(), 5, 120);
   m_pdfPrefetchDistance =
       clampInt(readFormatValue("pdf", "render/prefetch_distance", 1).toInt(), 0, 6);
+  m_pdfPrefetchStrategy =
+      readFormatValue("pdf", "render/prefetch_strategy", "symmetric").toString().toLower();
+  if (m_pdfPrefetchStrategy != "forward" && m_pdfPrefetchStrategy != "symmetric" &&
+      m_pdfPrefetchStrategy != "backward") {
+    m_pdfPrefetchStrategy = "symmetric";
+  }
+  m_pdfCachePolicy =
+      readFormatValue("pdf", "render/cache_policy", "fifo").toString().toLower();
+  if (m_pdfCachePolicy != "fifo" && m_pdfCachePolicy != "lru") {
+    m_pdfCachePolicy = "fifo";
+  }
+  m_pdfRenderPreset =
+      readFormatValue("pdf", "render/preset", "custom").toString().toLower();
+  if (m_pdfRenderPreset != "custom" && m_pdfRenderPreset != "fast" &&
+      m_pdfRenderPreset != "balanced" && m_pdfRenderPreset != "high") {
+    m_pdfRenderPreset = "custom";
+  }
+  m_pdfColorMode =
+      readFormatValue("pdf", "render/color_mode", "color").toString().toLower();
+  if (m_pdfColorMode != "color" && m_pdfColorMode != "grayscale") {
+    m_pdfColorMode = "color";
+  }
+  m_pdfBackgroundMode =
+      readFormatValue("pdf", "render/background_mode", "white").toString().toLower();
+  if (m_pdfBackgroundMode != "white" && m_pdfBackgroundMode != "transparent" &&
+      m_pdfBackgroundMode != "theme" && m_pdfBackgroundMode != "custom") {
+    m_pdfBackgroundMode = "white";
+  }
+  m_pdfBackgroundColor =
+      readFormatValue("pdf", "render/background_color", "#202633").toString();
+  m_pdfMaxWidth =
+      clampInt(readFormatValue("pdf", "render/max_width", 0).toInt(), 0, 20000);
+  m_pdfMaxHeight =
+      clampInt(readFormatValue("pdf", "render/max_height", 0).toInt(), 0, 20000);
+  m_pdfImageFormat =
+      readFormatValue("pdf", "render/image_format", "png").toString().toLower();
+  if (m_pdfImageFormat == "jpg") {
+    m_pdfImageFormat = "jpeg";
+  }
+  if (m_pdfImageFormat != "png" && m_pdfImageFormat != "jpeg") {
+    m_pdfImageFormat = "png";
+  }
+  m_pdfJpegQuality =
+      clampInt(readFormatValue("pdf", "render/jpeg_quality", 85).toInt(), 1, 100);
+  m_pdfExtractText =
+      readFormatValue("pdf", "render/extract_text", true).toBool();
+  m_pdfTileSize =
+      clampInt(readFormatValue("pdf", "render/tile_size", 0).toInt(), 0, 8192);
   m_pdfProgressiveRendering =
       readFormatValue("pdf", "render/progressive", false).toBool();
   m_pdfProgressiveDpi =
@@ -324,6 +539,18 @@ void SettingsManager::loadFromSettings() {
   saveFormatValue("pdf", "render/dpi", m_pdfDpi);
   saveFormatValue("pdf", "render/cache_limit", m_pdfCacheLimit);
   saveFormatValue("pdf", "render/prefetch_distance", m_pdfPrefetchDistance);
+  saveFormatValue("pdf", "render/prefetch_strategy", m_pdfPrefetchStrategy);
+  saveFormatValue("pdf", "render/cache_policy", m_pdfCachePolicy);
+  saveFormatValue("pdf", "render/preset", m_pdfRenderPreset);
+  saveFormatValue("pdf", "render/color_mode", m_pdfColorMode);
+  saveFormatValue("pdf", "render/background_mode", m_pdfBackgroundMode);
+  saveFormatValue("pdf", "render/background_color", m_pdfBackgroundColor);
+  saveFormatValue("pdf", "render/max_width", m_pdfMaxWidth);
+  saveFormatValue("pdf", "render/max_height", m_pdfMaxHeight);
+  saveFormatValue("pdf", "render/image_format", m_pdfImageFormat);
+  saveFormatValue("pdf", "render/jpeg_quality", m_pdfJpegQuality);
+  saveFormatValue("pdf", "render/extract_text", m_pdfExtractText);
+  saveFormatValue("pdf", "render/tile_size", m_pdfTileSize);
   saveFormatValue("pdf", "render/progressive", m_pdfProgressiveRendering);
   saveFormatValue("pdf", "render/progressive_dpi", m_pdfProgressiveDpi);
   saveFormatValue("djvu", "render/dpi", m_pdfDpi);
@@ -344,6 +571,18 @@ void SettingsManager::loadFromSettings() {
   emit pdfDpiChanged();
   emit pdfCacheLimitChanged();
   emit pdfPrefetchDistanceChanged();
+  emit pdfPrefetchStrategyChanged();
+  emit pdfCachePolicyChanged();
+  emit pdfRenderPresetChanged();
+  emit pdfColorModeChanged();
+  emit pdfBackgroundModeChanged();
+  emit pdfBackgroundColorChanged();
+  emit pdfMaxWidthChanged();
+  emit pdfMaxHeightChanged();
+  emit pdfImageFormatChanged();
+  emit pdfJpegQualityChanged();
+  emit pdfExtractTextChanged();
+  emit pdfTileSizeChanged();
   emit pdfProgressiveRenderingChanged();
   emit pdfProgressiveDpiChanged();
   emit comicMinZoomChanged();

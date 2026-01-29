@@ -18,6 +18,18 @@ class SettingsManager : public QObject {
   Q_PROPERTY(int pdfDpi READ pdfDpi WRITE setPdfDpi NOTIFY pdfDpiChanged)
   Q_PROPERTY(int pdfCacheLimit READ pdfCacheLimit WRITE setPdfCacheLimit NOTIFY pdfCacheLimitChanged)
   Q_PROPERTY(int pdfPrefetchDistance READ pdfPrefetchDistance WRITE setPdfPrefetchDistance NOTIFY pdfPrefetchDistanceChanged)
+  Q_PROPERTY(QString pdfPrefetchStrategy READ pdfPrefetchStrategy WRITE setPdfPrefetchStrategy NOTIFY pdfPrefetchStrategyChanged)
+  Q_PROPERTY(QString pdfCachePolicy READ pdfCachePolicy WRITE setPdfCachePolicy NOTIFY pdfCachePolicyChanged)
+  Q_PROPERTY(QString pdfRenderPreset READ pdfRenderPreset WRITE setPdfRenderPreset NOTIFY pdfRenderPresetChanged)
+  Q_PROPERTY(QString pdfColorMode READ pdfColorMode WRITE setPdfColorMode NOTIFY pdfColorModeChanged)
+  Q_PROPERTY(QString pdfBackgroundMode READ pdfBackgroundMode WRITE setPdfBackgroundMode NOTIFY pdfBackgroundModeChanged)
+  Q_PROPERTY(QString pdfBackgroundColor READ pdfBackgroundColor WRITE setPdfBackgroundColor NOTIFY pdfBackgroundColorChanged)
+  Q_PROPERTY(int pdfMaxWidth READ pdfMaxWidth WRITE setPdfMaxWidth NOTIFY pdfMaxWidthChanged)
+  Q_PROPERTY(int pdfMaxHeight READ pdfMaxHeight WRITE setPdfMaxHeight NOTIFY pdfMaxHeightChanged)
+  Q_PROPERTY(QString pdfImageFormat READ pdfImageFormat WRITE setPdfImageFormat NOTIFY pdfImageFormatChanged)
+  Q_PROPERTY(int pdfJpegQuality READ pdfJpegQuality WRITE setPdfJpegQuality NOTIFY pdfJpegQualityChanged)
+  Q_PROPERTY(bool pdfExtractText READ pdfExtractText WRITE setPdfExtractText NOTIFY pdfExtractTextChanged)
+  Q_PROPERTY(int pdfTileSize READ pdfTileSize WRITE setPdfTileSize NOTIFY pdfTileSizeChanged)
   Q_PROPERTY(bool pdfProgressiveRendering READ pdfProgressiveRendering WRITE setPdfProgressiveRendering NOTIFY pdfProgressiveRenderingChanged)
   Q_PROPERTY(int pdfProgressiveDpi READ pdfProgressiveDpi WRITE setPdfProgressiveDpi NOTIFY pdfProgressiveDpiChanged)
   Q_PROPERTY(double comicMinZoom READ comicMinZoom WRITE setComicMinZoom NOTIFY comicMinZoomChanged)
@@ -40,6 +52,18 @@ public:
   int pdfDpi() const;
   int pdfCacheLimit() const;
   int pdfPrefetchDistance() const;
+  QString pdfPrefetchStrategy() const;
+  QString pdfCachePolicy() const;
+  QString pdfRenderPreset() const;
+  QString pdfColorMode() const;
+  QString pdfBackgroundMode() const;
+  QString pdfBackgroundColor() const;
+  int pdfMaxWidth() const;
+  int pdfMaxHeight() const;
+  QString pdfImageFormat() const;
+  int pdfJpegQuality() const;
+  bool pdfExtractText() const;
+  int pdfTileSize() const;
   bool pdfProgressiveRendering() const;
   int pdfProgressiveDpi() const;
   double comicMinZoom() const;
@@ -60,6 +84,18 @@ public:
   void setPdfDpi(int value);
   void setPdfCacheLimit(int value);
   void setPdfPrefetchDistance(int value);
+  void setPdfPrefetchStrategy(const QString &value);
+  void setPdfCachePolicy(const QString &value);
+  void setPdfRenderPreset(const QString &value);
+  void setPdfColorMode(const QString &value);
+  void setPdfBackgroundMode(const QString &value);
+  void setPdfBackgroundColor(const QString &value);
+  void setPdfMaxWidth(int value);
+  void setPdfMaxHeight(int value);
+  void setPdfImageFormat(const QString &value);
+  void setPdfJpegQuality(int value);
+  void setPdfExtractText(bool value);
+  void setPdfTileSize(int value);
   void setPdfProgressiveRendering(bool value);
   void setPdfProgressiveDpi(int value);
   void setComicMinZoom(double value);
@@ -84,6 +120,18 @@ signals:
   void pdfDpiChanged();
   void pdfCacheLimitChanged();
   void pdfPrefetchDistanceChanged();
+  void pdfPrefetchStrategyChanged();
+  void pdfCachePolicyChanged();
+  void pdfRenderPresetChanged();
+  void pdfColorModeChanged();
+  void pdfBackgroundModeChanged();
+  void pdfBackgroundColorChanged();
+  void pdfMaxWidthChanged();
+  void pdfMaxHeightChanged();
+  void pdfImageFormatChanged();
+  void pdfJpegQualityChanged();
+  void pdfExtractTextChanged();
+  void pdfTileSizeChanged();
   void pdfProgressiveRenderingChanged();
   void pdfProgressiveDpiChanged();
   void comicMinZoomChanged();
@@ -113,6 +161,18 @@ private:
   int m_pdfDpi = 120;
   int m_pdfCacheLimit = 30;
   int m_pdfPrefetchDistance = 1;
+  QString m_pdfPrefetchStrategy = "symmetric";
+  QString m_pdfCachePolicy = "fifo";
+  QString m_pdfRenderPreset = "custom";
+  QString m_pdfColorMode = "color";
+  QString m_pdfBackgroundMode = "white";
+  QString m_pdfBackgroundColor = "#202633";
+  int m_pdfMaxWidth = 0;
+  int m_pdfMaxHeight = 0;
+  QString m_pdfImageFormat = "png";
+  int m_pdfJpegQuality = 85;
+  bool m_pdfExtractText = true;
+  int m_pdfTileSize = 0;
   bool m_pdfProgressiveRendering = false;
   int m_pdfProgressiveDpi = 72;
   double m_comicMinZoom = 0.5;
