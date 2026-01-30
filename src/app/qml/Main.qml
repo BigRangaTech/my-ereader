@@ -1383,6 +1383,164 @@ ApplicationWindow {
             }
           }
 
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Show images"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            CheckBox {
+              checked: settings.epubShowImages
+              onToggled: settings.epubShowImages = checked
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Text align"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            ComboBox {
+              Layout.fillWidth: true
+              model: ["left", "justify", "center", "right"]
+              currentIndex: Math.max(0, model.indexOf(settings.epubTextAlign))
+              onActivated: settings.epubTextAlign = model[currentIndex]
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Paragraph spacing"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 0.0
+              to: 3.0
+              stepSize: 0.05
+              value: settings.epubParagraphSpacing
+              onMoved: settings.epubParagraphSpacing = Math.round(value * 100) / 100
+            }
+
+            Text {
+              text: settings.epubParagraphSpacing.toFixed(2)
+              color: theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 48
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Paragraph indent"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 0.0
+              to: 3.0
+              stepSize: 0.05
+              value: settings.epubParagraphIndent
+              onMoved: settings.epubParagraphIndent = Math.round(value * 100) / 100
+            }
+
+            Text {
+              text: settings.epubParagraphIndent.toFixed(2)
+              color: theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 48
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Image max width"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 10
+              to: 100
+              stepSize: 5
+              value: settings.epubImageMaxWidth
+              onMoved: settings.epubImageMaxWidth = Math.round(value)
+            }
+
+            Text {
+              text: settings.epubImageMaxWidth + "%"
+              color: theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 48
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Image spacing"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 0.0
+              to: 4.0
+              stepSize: 0.05
+              value: settings.epubImageSpacing
+              onMoved: settings.epubImageSpacing = Math.round(value * 100) / 100
+            }
+
+            Text {
+              text: settings.epubImageSpacing.toFixed(2)
+              color: theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 48
+            }
+          }
+
           Text {
             text: settings.formatSettingsPath("epub")
             color: theme.textMuted
@@ -1465,6 +1623,164 @@ ApplicationWindow {
 
             Text {
               text: settings.fb2LineHeight.toFixed(2)
+              color: theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 48
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Show images"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            CheckBox {
+              checked: settings.fb2ShowImages
+              onToggled: settings.fb2ShowImages = checked
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Text align"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            ComboBox {
+              Layout.fillWidth: true
+              model: ["left", "justify", "center", "right"]
+              currentIndex: Math.max(0, model.indexOf(settings.fb2TextAlign))
+              onActivated: settings.fb2TextAlign = model[currentIndex]
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Paragraph spacing"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 0.0
+              to: 3.0
+              stepSize: 0.05
+              value: settings.fb2ParagraphSpacing
+              onMoved: settings.fb2ParagraphSpacing = Math.round(value * 100) / 100
+            }
+
+            Text {
+              text: settings.fb2ParagraphSpacing.toFixed(2)
+              color: theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 48
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Paragraph indent"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 0.0
+              to: 3.0
+              stepSize: 0.05
+              value: settings.fb2ParagraphIndent
+              onMoved: settings.fb2ParagraphIndent = Math.round(value * 100) / 100
+            }
+
+            Text {
+              text: settings.fb2ParagraphIndent.toFixed(2)
+              color: theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 48
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Image max width"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 10
+              to: 100
+              stepSize: 5
+              value: settings.fb2ImageMaxWidth
+              onMoved: settings.fb2ImageMaxWidth = Math.round(value)
+            }
+
+            Text {
+              text: settings.fb2ImageMaxWidth + "%"
+              color: theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 48
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Image spacing"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 0.0
+              to: 4.0
+              stepSize: 0.05
+              value: settings.fb2ImageSpacing
+              onMoved: settings.fb2ImageSpacing = Math.round(value * 100) / 100
+            }
+
+            Text {
+              text: settings.fb2ImageSpacing.toFixed(2)
               color: theme.textPrimary
               font.pixelSize: 13
               font.family: root.uiFont
@@ -1558,6 +1874,92 @@ ApplicationWindow {
               font.pixelSize: 13
               font.family: root.uiFont
               Layout.preferredWidth: 48
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Encoding"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            ComboBox {
+              Layout.fillWidth: true
+              model: ["auto", "utf-8", "utf-16le", "utf-16be", "utf-32le", "utf-32be", "latin1"]
+              currentIndex: Math.max(0, model.indexOf(settings.txtEncoding))
+              onActivated: settings.txtEncoding = model[currentIndex]
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Tab width"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 0
+              to: 16
+              stepSize: 1
+              value: settings.txtTabWidth
+              onMoved: settings.txtTabWidth = Math.round(value)
+            }
+
+            Text {
+              text: settings.txtTabWidth.toString()
+              color: theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 48
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Trim whitespace"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            CheckBox {
+              checked: settings.txtTrimWhitespace
+              onToggled: settings.txtTrimWhitespace = checked
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Auto chapters"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            CheckBox {
+              checked: settings.txtAutoChapters
+              onToggled: settings.txtAutoChapters = checked
             }
           }
 
@@ -1661,6 +2063,164 @@ ApplicationWindow {
 
             Text {
               text: settings.mobiLineHeight.toFixed(2)
+              color: theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 48
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Show images"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            CheckBox {
+              checked: settings.mobiShowImages
+              onToggled: settings.mobiShowImages = checked
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Text align"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            ComboBox {
+              Layout.fillWidth: true
+              model: ["left", "justify", "center", "right"]
+              currentIndex: Math.max(0, model.indexOf(settings.mobiTextAlign))
+              onActivated: settings.mobiTextAlign = model[currentIndex]
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Paragraph spacing"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 0.0
+              to: 3.0
+              stepSize: 0.05
+              value: settings.mobiParagraphSpacing
+              onMoved: settings.mobiParagraphSpacing = Math.round(value * 100) / 100
+            }
+
+            Text {
+              text: settings.mobiParagraphSpacing.toFixed(2)
+              color: theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 48
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Paragraph indent"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 0.0
+              to: 3.0
+              stepSize: 0.05
+              value: settings.mobiParagraphIndent
+              onMoved: settings.mobiParagraphIndent = Math.round(value * 100) / 100
+            }
+
+            Text {
+              text: settings.mobiParagraphIndent.toFixed(2)
+              color: theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 48
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Image max width"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 10
+              to: 100
+              stepSize: 5
+              value: settings.mobiImageMaxWidth
+              onMoved: settings.mobiImageMaxWidth = Math.round(value)
+            }
+
+            Text {
+              text: settings.mobiImageMaxWidth + "%"
+              color: theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 48
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Image spacing"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 0.0
+              to: 4.0
+              stepSize: 0.05
+              value: settings.mobiImageSpacing
+              onMoved: settings.mobiImageSpacing = Math.round(value * 100) / 100
+            }
+
+            Text {
+              text: settings.mobiImageSpacing.toFixed(2)
               color: theme.textPrimary
               font.pixelSize: 13
               font.family: root.uiFont
@@ -2162,6 +2722,44 @@ ApplicationWindow {
               font.pixelSize: 13
               font.family: root.uiFont
               Layout.preferredWidth: 48
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Sort mode"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            ComboBox {
+              Layout.fillWidth: true
+              model: ["path", "filename", "archive"]
+              currentIndex: Math.max(0, model.indexOf(settings.comicSortMode))
+              onActivated: settings.comicSortMode = model[currentIndex]
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Descending"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            CheckBox {
+              checked: settings.comicSortDescending
+              onToggled: settings.comicSortDescending = checked
             }
           }
 

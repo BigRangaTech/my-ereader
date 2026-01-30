@@ -27,6 +27,15 @@ int clampInt(int value, int minValue, int maxValue) {
 double clampDouble(double value, double minValue, double maxValue) {
   return std::max(minValue, std::min(maxValue, value));
 }
+
+QString normalizeTextAlign(const QString &value) {
+  const QString normalized = value.trimmed().toLower();
+  if (normalized == "left" || normalized == "right" ||
+      normalized == "center" || normalized == "justify") {
+    return normalized;
+  }
+  return "left";
+}
 } // namespace
 
 SettingsManager::SettingsManager(QObject *parent)
@@ -67,13 +76,35 @@ int SettingsManager::readingFontSize() const { return m_readingFontSize; }
 double SettingsManager::readingLineHeight() const { return m_readingLineHeight; }
 int SettingsManager::epubFontSize() const { return m_epubFontSize; }
 double SettingsManager::epubLineHeight() const { return m_epubLineHeight; }
+bool SettingsManager::epubShowImages() const { return m_epubShowImages; }
+QString SettingsManager::epubTextAlign() const { return m_epubTextAlign; }
+double SettingsManager::epubParagraphSpacing() const { return m_epubParagraphSpacing; }
+double SettingsManager::epubParagraphIndent() const { return m_epubParagraphIndent; }
+int SettingsManager::epubImageMaxWidth() const { return m_epubImageMaxWidth; }
+double SettingsManager::epubImageSpacing() const { return m_epubImageSpacing; }
 int SettingsManager::fb2FontSize() const { return m_fb2FontSize; }
 double SettingsManager::fb2LineHeight() const { return m_fb2LineHeight; }
+bool SettingsManager::fb2ShowImages() const { return m_fb2ShowImages; }
+QString SettingsManager::fb2TextAlign() const { return m_fb2TextAlign; }
+double SettingsManager::fb2ParagraphSpacing() const { return m_fb2ParagraphSpacing; }
+double SettingsManager::fb2ParagraphIndent() const { return m_fb2ParagraphIndent; }
+int SettingsManager::fb2ImageMaxWidth() const { return m_fb2ImageMaxWidth; }
+double SettingsManager::fb2ImageSpacing() const { return m_fb2ImageSpacing; }
 int SettingsManager::txtFontSize() const { return m_txtFontSize; }
 double SettingsManager::txtLineHeight() const { return m_txtLineHeight; }
 bool SettingsManager::txtMonospace() const { return m_txtMonospace; }
+QString SettingsManager::txtEncoding() const { return m_txtEncoding; }
+int SettingsManager::txtTabWidth() const { return m_txtTabWidth; }
+bool SettingsManager::txtTrimWhitespace() const { return m_txtTrimWhitespace; }
+bool SettingsManager::txtAutoChapters() const { return m_txtAutoChapters; }
 int SettingsManager::mobiFontSize() const { return m_mobiFontSize; }
 double SettingsManager::mobiLineHeight() const { return m_mobiLineHeight; }
+bool SettingsManager::mobiShowImages() const { return m_mobiShowImages; }
+QString SettingsManager::mobiTextAlign() const { return m_mobiTextAlign; }
+double SettingsManager::mobiParagraphSpacing() const { return m_mobiParagraphSpacing; }
+double SettingsManager::mobiParagraphIndent() const { return m_mobiParagraphIndent; }
+int SettingsManager::mobiImageMaxWidth() const { return m_mobiImageMaxWidth; }
+double SettingsManager::mobiImageSpacing() const { return m_mobiImageSpacing; }
 int SettingsManager::pdfDpi() const { return m_pdfDpi; }
 int SettingsManager::pdfCacheLimit() const { return m_pdfCacheLimit; }
 int SettingsManager::pdfPrefetchDistance() const { return m_pdfPrefetchDistance; }
@@ -100,6 +131,8 @@ bool SettingsManager::djvuExtractText() const { return m_djvuExtractText; }
 int SettingsManager::djvuRotation() const { return m_djvuRotation; }
 double SettingsManager::comicMinZoom() const { return m_comicMinZoom; }
 double SettingsManager::comicMaxZoom() const { return m_comicMaxZoom; }
+QString SettingsManager::comicSortMode() const { return m_comicSortMode; }
+bool SettingsManager::comicSortDescending() const { return m_comicSortDescending; }
 
 QString SettingsManager::formatSettingsPath(const QString &format) const {
   return resolveFormatSettingsPath(format);
@@ -145,6 +178,65 @@ void SettingsManager::setEpubLineHeight(double value) {
   emit epubLineHeightChanged();
 }
 
+void SettingsManager::setEpubShowImages(bool value) {
+  if (m_epubShowImages == value) {
+    return;
+  }
+  m_epubShowImages = value;
+  saveFormatValue("epub", "render/show_images", value);
+  emit epubShowImagesChanged();
+}
+
+void SettingsManager::setEpubTextAlign(const QString &value) {
+  const QString normalized = normalizeTextAlign(value);
+  if (m_epubTextAlign == normalized) {
+    return;
+  }
+  m_epubTextAlign = normalized;
+  saveFormatValue("epub", "render/text_align", normalized);
+  emit epubTextAlignChanged();
+}
+
+void SettingsManager::setEpubParagraphSpacing(double value) {
+  value = clampDouble(value, 0.0, 3.0);
+  if (qFuzzyCompare(m_epubParagraphSpacing, value)) {
+    return;
+  }
+  m_epubParagraphSpacing = value;
+  saveFormatValue("epub", "render/paragraph_spacing_em", value);
+  emit epubParagraphSpacingChanged();
+}
+
+void SettingsManager::setEpubParagraphIndent(double value) {
+  value = clampDouble(value, 0.0, 3.0);
+  if (qFuzzyCompare(m_epubParagraphIndent, value)) {
+    return;
+  }
+  m_epubParagraphIndent = value;
+  saveFormatValue("epub", "render/paragraph_indent_em", value);
+  emit epubParagraphIndentChanged();
+}
+
+void SettingsManager::setEpubImageMaxWidth(int value) {
+  value = clampInt(value, 10, 100);
+  if (m_epubImageMaxWidth == value) {
+    return;
+  }
+  m_epubImageMaxWidth = value;
+  saveFormatValue("epub", "render/image_max_width_percent", value);
+  emit epubImageMaxWidthChanged();
+}
+
+void SettingsManager::setEpubImageSpacing(double value) {
+  value = clampDouble(value, 0.0, 4.0);
+  if (qFuzzyCompare(m_epubImageSpacing, value)) {
+    return;
+  }
+  m_epubImageSpacing = value;
+  saveFormatValue("epub", "render/image_spacing_em", value);
+  emit epubImageSpacingChanged();
+}
+
 void SettingsManager::setFb2FontSize(int value) {
   value = clampInt(value, 12, 36);
   if (m_fb2FontSize == value) {
@@ -163,6 +255,65 @@ void SettingsManager::setFb2LineHeight(double value) {
   m_fb2LineHeight = value;
   saveFormatValue("fb2", "reading/line_height", value);
   emit fb2LineHeightChanged();
+}
+
+void SettingsManager::setFb2ShowImages(bool value) {
+  if (m_fb2ShowImages == value) {
+    return;
+  }
+  m_fb2ShowImages = value;
+  saveFormatValue("fb2", "render/show_images", value);
+  emit fb2ShowImagesChanged();
+}
+
+void SettingsManager::setFb2TextAlign(const QString &value) {
+  const QString normalized = normalizeTextAlign(value);
+  if (m_fb2TextAlign == normalized) {
+    return;
+  }
+  m_fb2TextAlign = normalized;
+  saveFormatValue("fb2", "render/text_align", normalized);
+  emit fb2TextAlignChanged();
+}
+
+void SettingsManager::setFb2ParagraphSpacing(double value) {
+  value = clampDouble(value, 0.0, 3.0);
+  if (qFuzzyCompare(m_fb2ParagraphSpacing, value)) {
+    return;
+  }
+  m_fb2ParagraphSpacing = value;
+  saveFormatValue("fb2", "render/paragraph_spacing_em", value);
+  emit fb2ParagraphSpacingChanged();
+}
+
+void SettingsManager::setFb2ParagraphIndent(double value) {
+  value = clampDouble(value, 0.0, 3.0);
+  if (qFuzzyCompare(m_fb2ParagraphIndent, value)) {
+    return;
+  }
+  m_fb2ParagraphIndent = value;
+  saveFormatValue("fb2", "render/paragraph_indent_em", value);
+  emit fb2ParagraphIndentChanged();
+}
+
+void SettingsManager::setFb2ImageMaxWidth(int value) {
+  value = clampInt(value, 10, 100);
+  if (m_fb2ImageMaxWidth == value) {
+    return;
+  }
+  m_fb2ImageMaxWidth = value;
+  saveFormatValue("fb2", "render/image_max_width_percent", value);
+  emit fb2ImageMaxWidthChanged();
+}
+
+void SettingsManager::setFb2ImageSpacing(double value) {
+  value = clampDouble(value, 0.0, 4.0);
+  if (qFuzzyCompare(m_fb2ImageSpacing, value)) {
+    return;
+  }
+  m_fb2ImageSpacing = value;
+  saveFormatValue("fb2", "render/image_spacing_em", value);
+  emit fb2ImageSpacingChanged();
 }
 
 void SettingsManager::setTxtFontSize(int value) {
@@ -194,13 +345,52 @@ void SettingsManager::setTxtMonospace(bool value) {
   emit txtMonospaceChanged();
 }
 
+void SettingsManager::setTxtEncoding(const QString &value) {
+  const QString normalized = value.trimmed().toLower();
+  const QString encoding = normalized.isEmpty() ? QString("auto") : normalized;
+  if (m_txtEncoding == encoding) {
+    return;
+  }
+  m_txtEncoding = encoding;
+  saveFormatValue("txt", "render/encoding", encoding);
+  emit txtEncodingChanged();
+}
+
+void SettingsManager::setTxtTabWidth(int value) {
+  value = clampInt(value, 0, 16);
+  if (m_txtTabWidth == value) {
+    return;
+  }
+  m_txtTabWidth = value;
+  saveFormatValue("txt", "render/tab_width", value);
+  emit txtTabWidthChanged();
+}
+
+void SettingsManager::setTxtTrimWhitespace(bool value) {
+  if (m_txtTrimWhitespace == value) {
+    return;
+  }
+  m_txtTrimWhitespace = value;
+  saveFormatValue("txt", "render/trim_trailing_whitespace", value);
+  emit txtTrimWhitespaceChanged();
+}
+
+void SettingsManager::setTxtAutoChapters(bool value) {
+  if (m_txtAutoChapters == value) {
+    return;
+  }
+  m_txtAutoChapters = value;
+  saveFormatValue("txt", "render/auto_chapters", value);
+  emit txtAutoChaptersChanged();
+}
+
 void SettingsManager::setMobiFontSize(int value) {
   value = clampInt(value, 12, 36);
   if (m_mobiFontSize == value) {
     return;
   }
   m_mobiFontSize = value;
-  saveFormatValue("mobi", "reading/font_size", value);
+  saveMobiFamilyValue("reading/font_size", value);
   emit mobiFontSizeChanged();
 }
 
@@ -210,8 +400,67 @@ void SettingsManager::setMobiLineHeight(double value) {
     return;
   }
   m_mobiLineHeight = value;
-  saveFormatValue("mobi", "reading/line_height", value);
+  saveMobiFamilyValue("reading/line_height", value);
   emit mobiLineHeightChanged();
+}
+
+void SettingsManager::setMobiShowImages(bool value) {
+  if (m_mobiShowImages == value) {
+    return;
+  }
+  m_mobiShowImages = value;
+  saveMobiFamilyValue("render/show_images", value);
+  emit mobiShowImagesChanged();
+}
+
+void SettingsManager::setMobiTextAlign(const QString &value) {
+  const QString normalized = normalizeTextAlign(value);
+  if (m_mobiTextAlign == normalized) {
+    return;
+  }
+  m_mobiTextAlign = normalized;
+  saveMobiFamilyValue("render/text_align", normalized);
+  emit mobiTextAlignChanged();
+}
+
+void SettingsManager::setMobiParagraphSpacing(double value) {
+  value = clampDouble(value, 0.0, 3.0);
+  if (qFuzzyCompare(m_mobiParagraphSpacing, value)) {
+    return;
+  }
+  m_mobiParagraphSpacing = value;
+  saveMobiFamilyValue("render/paragraph_spacing_em", value);
+  emit mobiParagraphSpacingChanged();
+}
+
+void SettingsManager::setMobiParagraphIndent(double value) {
+  value = clampDouble(value, 0.0, 3.0);
+  if (qFuzzyCompare(m_mobiParagraphIndent, value)) {
+    return;
+  }
+  m_mobiParagraphIndent = value;
+  saveMobiFamilyValue("render/paragraph_indent_em", value);
+  emit mobiParagraphIndentChanged();
+}
+
+void SettingsManager::setMobiImageMaxWidth(int value) {
+  value = clampInt(value, 10, 100);
+  if (m_mobiImageMaxWidth == value) {
+    return;
+  }
+  m_mobiImageMaxWidth = value;
+  saveMobiFamilyValue("render/image_max_width_percent", value);
+  emit mobiImageMaxWidthChanged();
+}
+
+void SettingsManager::setMobiImageSpacing(double value) {
+  value = clampDouble(value, 0.0, 4.0);
+  if (qFuzzyCompare(m_mobiImageSpacing, value)) {
+    return;
+  }
+  m_mobiImageSpacing = value;
+  saveMobiFamilyValue("render/image_spacing_em", value);
+  emit mobiImageSpacingChanged();
 }
 
 void SettingsManager::setPdfDpi(int value) {
@@ -504,18 +753,63 @@ void SettingsManager::setComicMaxZoom(double value) {
   emit comicMaxZoomChanged();
 }
 
+void SettingsManager::setComicSortMode(const QString &value) {
+  const QString normalized = value.trimmed().toLower();
+  QString mode = normalized;
+  if (mode != "path" && mode != "filename" && mode != "archive") {
+    mode = "path";
+  }
+  if (m_comicSortMode == mode) {
+    return;
+  }
+  m_comicSortMode = mode;
+  saveComicValue("render/sort_mode", mode);
+  emit comicSortModeChanged();
+}
+
+void SettingsManager::setComicSortDescending(bool value) {
+  if (m_comicSortDescending == value) {
+    return;
+  }
+  m_comicSortDescending = value;
+  saveComicValue("render/sort_desc", value);
+  emit comicSortDescendingChanged();
+}
+
 void SettingsManager::resetDefaults() {
   setReadingFontSize(20);
   setReadingLineHeight(1.4);
   setEpubFontSize(20);
   setEpubLineHeight(1.4);
+  setEpubShowImages(true);
+  setEpubTextAlign("left");
+  setEpubParagraphSpacing(0.6);
+  setEpubParagraphIndent(0.0);
+  setEpubImageMaxWidth(100);
+  setEpubImageSpacing(0.6);
   setFb2FontSize(20);
   setFb2LineHeight(1.4);
+  setFb2ShowImages(true);
+  setFb2TextAlign("left");
+  setFb2ParagraphSpacing(0.6);
+  setFb2ParagraphIndent(0.0);
+  setFb2ImageMaxWidth(100);
+  setFb2ImageSpacing(0.6);
   setTxtFontSize(20);
   setTxtLineHeight(1.4);
   setTxtMonospace(false);
+  setTxtEncoding("auto");
+  setTxtTabWidth(4);
+  setTxtTrimWhitespace(false);
+  setTxtAutoChapters(true);
   setMobiFontSize(20);
   setMobiLineHeight(1.4);
+  setMobiShowImages(true);
+  setMobiTextAlign("left");
+  setMobiParagraphSpacing(0.6);
+  setMobiParagraphIndent(0.0);
+  setMobiImageMaxWidth(100);
+  setMobiImageSpacing(0.6);
   setPdfDpi(120);
   setPdfCacheLimit(30);
   setPdfPrefetchDistance(1);
@@ -542,6 +836,8 @@ void SettingsManager::resetDefaults() {
   setDjvuRotation(0);
   setComicMinZoom(0.5);
   setComicMaxZoom(4.0);
+  setComicSortMode("path");
+  setComicSortDescending(false);
 }
 
 void SettingsManager::resetPdfDefaults() {
@@ -567,27 +863,51 @@ void SettingsManager::resetPdfDefaults() {
 void SettingsManager::resetEpubDefaults() {
   setEpubFontSize(20);
   setEpubLineHeight(1.4);
+  setEpubShowImages(true);
+  setEpubTextAlign("left");
+  setEpubParagraphSpacing(0.6);
+  setEpubParagraphIndent(0.0);
+  setEpubImageMaxWidth(100);
+  setEpubImageSpacing(0.6);
 }
 
 void SettingsManager::resetFb2Defaults() {
   setFb2FontSize(20);
   setFb2LineHeight(1.4);
+  setFb2ShowImages(true);
+  setFb2TextAlign("left");
+  setFb2ParagraphSpacing(0.6);
+  setFb2ParagraphIndent(0.0);
+  setFb2ImageMaxWidth(100);
+  setFb2ImageSpacing(0.6);
 }
 
 void SettingsManager::resetTxtDefaults() {
   setTxtFontSize(20);
   setTxtLineHeight(1.4);
   setTxtMonospace(false);
+  setTxtEncoding("auto");
+  setTxtTabWidth(4);
+  setTxtTrimWhitespace(false);
+  setTxtAutoChapters(true);
 }
 
 void SettingsManager::resetMobiDefaults() {
   setMobiFontSize(20);
   setMobiLineHeight(1.4);
+  setMobiShowImages(true);
+  setMobiTextAlign("left");
+  setMobiParagraphSpacing(0.6);
+  setMobiParagraphIndent(0.0);
+  setMobiImageMaxWidth(100);
+  setMobiImageSpacing(0.6);
 }
 
 void SettingsManager::resetComicDefaults() {
   setComicMinZoom(0.5);
   setComicMaxZoom(4.0);
+  setComicSortMode("path");
+  setComicSortDescending(false);
 }
 
 void SettingsManager::resetDjvuDefaults() {
@@ -611,19 +931,56 @@ void SettingsManager::loadFromSettings() {
   m_epubFontSize = clampInt(readFormatValue("epub", "reading/font_size", m_readingFontSize).toInt(), 12, 36);
   m_epubLineHeight =
       clampDouble(readFormatValue("epub", "reading/line_height", m_readingLineHeight).toDouble(), 1.0, 2.0);
+  m_epubShowImages = readFormatValue("epub", "render/show_images", true).toBool();
+  m_epubTextAlign = normalizeTextAlign(readFormatValue("epub", "render/text_align", "left").toString());
+  m_epubParagraphSpacing =
+      clampDouble(readFormatValue("epub", "render/paragraph_spacing_em", 0.6).toDouble(), 0.0, 3.0);
+  m_epubParagraphIndent =
+      clampDouble(readFormatValue("epub", "render/paragraph_indent_em", 0.0).toDouble(), 0.0, 3.0);
+  m_epubImageMaxWidth =
+      clampInt(readFormatValue("epub", "render/image_max_width_percent", 100).toInt(), 10, 100);
+  m_epubImageSpacing =
+      clampDouble(readFormatValue("epub", "render/image_spacing_em", 0.6).toDouble(), 0.0, 4.0);
 
   m_fb2FontSize = clampInt(readFormatValue("fb2", "reading/font_size", m_readingFontSize).toInt(), 12, 36);
   m_fb2LineHeight =
       clampDouble(readFormatValue("fb2", "reading/line_height", m_readingLineHeight).toDouble(), 1.0, 2.0);
+  m_fb2ShowImages = readFormatValue("fb2", "render/show_images", true).toBool();
+  m_fb2TextAlign = normalizeTextAlign(readFormatValue("fb2", "render/text_align", "left").toString());
+  m_fb2ParagraphSpacing =
+      clampDouble(readFormatValue("fb2", "render/paragraph_spacing_em", 0.6).toDouble(), 0.0, 3.0);
+  m_fb2ParagraphIndent =
+      clampDouble(readFormatValue("fb2", "render/paragraph_indent_em", 0.0).toDouble(), 0.0, 3.0);
+  m_fb2ImageMaxWidth =
+      clampInt(readFormatValue("fb2", "render/image_max_width_percent", 100).toInt(), 10, 100);
+  m_fb2ImageSpacing =
+      clampDouble(readFormatValue("fb2", "render/image_spacing_em", 0.6).toDouble(), 0.0, 4.0);
 
   m_txtFontSize = clampInt(readFormatValue("txt", "reading/font_size", m_readingFontSize).toInt(), 12, 36);
   m_txtLineHeight =
       clampDouble(readFormatValue("txt", "reading/line_height", m_readingLineHeight).toDouble(), 1.0, 2.0);
   m_txtMonospace = readFormatValue("txt", "render/monospace", false).toBool();
+  m_txtEncoding = readFormatValue("txt", "render/encoding", "auto").toString().trimmed().toLower();
+  if (m_txtEncoding.isEmpty()) {
+    m_txtEncoding = "auto";
+  }
+  m_txtTabWidth = clampInt(readFormatValue("txt", "render/tab_width", 4).toInt(), 0, 16);
+  m_txtTrimWhitespace = readFormatValue("txt", "render/trim_trailing_whitespace", false).toBool();
+  m_txtAutoChapters = readFormatValue("txt", "render/auto_chapters", true).toBool();
 
   m_mobiFontSize = clampInt(readFormatValue("mobi", "reading/font_size", m_readingFontSize).toInt(), 12, 36);
   m_mobiLineHeight =
       clampDouble(readFormatValue("mobi", "reading/line_height", m_readingLineHeight).toDouble(), 1.0, 2.0);
+  m_mobiShowImages = readFormatValue("mobi", "render/show_images", true).toBool();
+  m_mobiTextAlign = normalizeTextAlign(readFormatValue("mobi", "render/text_align", "left").toString());
+  m_mobiParagraphSpacing =
+      clampDouble(readFormatValue("mobi", "render/paragraph_spacing_em", 0.6).toDouble(), 0.0, 3.0);
+  m_mobiParagraphIndent =
+      clampDouble(readFormatValue("mobi", "render/paragraph_indent_em", 0.0).toDouble(), 0.0, 3.0);
+  m_mobiImageMaxWidth =
+      clampInt(readFormatValue("mobi", "render/image_max_width_percent", 100).toInt(), 10, 100);
+  m_mobiImageSpacing =
+      clampDouble(readFormatValue("mobi", "render/image_spacing_em", 0.6).toDouble(), 0.0, 4.0);
 
   m_pdfDpi = clampInt(readFormatValue("pdf", "render/dpi", m_settings.value("pdf/dpi", 120)).toInt(), 72, 240);
   m_pdfCacheLimit =
@@ -713,14 +1070,36 @@ void SettingsManager::loadFromSettings() {
   m_comicMaxZoom =
       clampDouble(readFormatValue("cbz", "zoom/max", m_settings.value("comics/max_zoom", 4.0)).toDouble(),
                   m_comicMinZoom + 0.1, 8.0);
+  m_comicSortMode =
+      readFormatValue("cbz", "render/sort_mode", "path").toString().trimmed().toLower();
+  if (m_comicSortMode != "path" && m_comicSortMode != "filename" && m_comicSortMode != "archive") {
+    m_comicSortMode = "path";
+  }
+  m_comicSortDescending = readFormatValue("cbz", "render/sort_desc", false).toBool();
 
   saveFormatValue("epub", "reading/font_size", m_epubFontSize);
   saveFormatValue("epub", "reading/line_height", m_epubLineHeight);
+  saveFormatValue("epub", "render/show_images", m_epubShowImages);
+  saveFormatValue("epub", "render/text_align", m_epubTextAlign);
+  saveFormatValue("epub", "render/paragraph_spacing_em", m_epubParagraphSpacing);
+  saveFormatValue("epub", "render/paragraph_indent_em", m_epubParagraphIndent);
+  saveFormatValue("epub", "render/image_max_width_percent", m_epubImageMaxWidth);
+  saveFormatValue("epub", "render/image_spacing_em", m_epubImageSpacing);
   saveFormatValue("fb2", "reading/font_size", m_fb2FontSize);
   saveFormatValue("fb2", "reading/line_height", m_fb2LineHeight);
+  saveFormatValue("fb2", "render/show_images", m_fb2ShowImages);
+  saveFormatValue("fb2", "render/text_align", m_fb2TextAlign);
+  saveFormatValue("fb2", "render/paragraph_spacing_em", m_fb2ParagraphSpacing);
+  saveFormatValue("fb2", "render/paragraph_indent_em", m_fb2ParagraphIndent);
+  saveFormatValue("fb2", "render/image_max_width_percent", m_fb2ImageMaxWidth);
+  saveFormatValue("fb2", "render/image_spacing_em", m_fb2ImageSpacing);
   saveFormatValue("txt", "reading/font_size", m_txtFontSize);
   saveFormatValue("txt", "reading/line_height", m_txtLineHeight);
   saveFormatValue("txt", "render/monospace", m_txtMonospace);
+  saveFormatValue("txt", "render/encoding", m_txtEncoding);
+  saveFormatValue("txt", "render/tab_width", m_txtTabWidth);
+  saveFormatValue("txt", "render/trim_trailing_whitespace", m_txtTrimWhitespace);
+  saveFormatValue("txt", "render/auto_chapters", m_txtAutoChapters);
   saveFormatValue("mobi", "reading/font_size", m_mobiFontSize);
   saveFormatValue("mobi", "reading/line_height", m_mobiLineHeight);
   saveFormatValue("azw", "reading/font_size", m_mobiFontSize);
@@ -731,6 +1110,12 @@ void SettingsManager::loadFromSettings() {
   saveFormatValue("azw4", "reading/line_height", m_mobiLineHeight);
   saveFormatValue("prc", "reading/font_size", m_mobiFontSize);
   saveFormatValue("prc", "reading/line_height", m_mobiLineHeight);
+  saveMobiFamilyValue("render/show_images", m_mobiShowImages);
+  saveMobiFamilyValue("render/text_align", m_mobiTextAlign);
+  saveMobiFamilyValue("render/paragraph_spacing_em", m_mobiParagraphSpacing);
+  saveMobiFamilyValue("render/paragraph_indent_em", m_mobiParagraphIndent);
+  saveMobiFamilyValue("render/image_max_width_percent", m_mobiImageMaxWidth);
+  saveMobiFamilyValue("render/image_spacing_em", m_mobiImageSpacing);
   saveFormatValue("pdf", "render/dpi", m_pdfDpi);
   saveFormatValue("pdf", "render/cache_limit", m_pdfCacheLimit);
   saveFormatValue("pdf", "render/prefetch_distance", m_pdfPrefetchDistance);
@@ -757,18 +1142,42 @@ void SettingsManager::loadFromSettings() {
   saveFormatValue("djvu", "render/rotation", m_djvuRotation);
   saveComicValue("zoom/min", m_comicMinZoom);
   saveComicValue("zoom/max", m_comicMaxZoom);
+  saveComicValue("render/sort_mode", m_comicSortMode);
+  saveComicValue("render/sort_desc", m_comicSortDescending);
 
   emit readingFontSizeChanged();
   emit readingLineHeightChanged();
   emit epubFontSizeChanged();
   emit epubLineHeightChanged();
+  emit epubShowImagesChanged();
+  emit epubTextAlignChanged();
+  emit epubParagraphSpacingChanged();
+  emit epubParagraphIndentChanged();
+  emit epubImageMaxWidthChanged();
+  emit epubImageSpacingChanged();
   emit fb2FontSizeChanged();
   emit fb2LineHeightChanged();
+  emit fb2ShowImagesChanged();
+  emit fb2TextAlignChanged();
+  emit fb2ParagraphSpacingChanged();
+  emit fb2ParagraphIndentChanged();
+  emit fb2ImageMaxWidthChanged();
+  emit fb2ImageSpacingChanged();
   emit txtFontSizeChanged();
   emit txtLineHeightChanged();
   emit txtMonospaceChanged();
+  emit txtEncodingChanged();
+  emit txtTabWidthChanged();
+  emit txtTrimWhitespaceChanged();
+  emit txtAutoChaptersChanged();
   emit mobiFontSizeChanged();
   emit mobiLineHeightChanged();
+  emit mobiShowImagesChanged();
+  emit mobiTextAlignChanged();
+  emit mobiParagraphSpacingChanged();
+  emit mobiParagraphIndentChanged();
+  emit mobiImageMaxWidthChanged();
+  emit mobiImageSpacingChanged();
   emit pdfDpiChanged();
   emit pdfCacheLimitChanged();
   emit pdfPrefetchDistanceChanged();
@@ -795,6 +1204,8 @@ void SettingsManager::loadFromSettings() {
   emit djvuRotationChanged();
   emit comicMinZoomChanged();
   emit comicMaxZoomChanged();
+  emit comicSortModeChanged();
+  emit comicSortDescendingChanged();
 }
 
 void SettingsManager::saveValue(const QString &key, const QVariant &value) {
@@ -824,6 +1235,14 @@ void SettingsManager::saveFormatValue(const QString &format, const QString &key,
 void SettingsManager::saveComicValue(const QString &key, const QVariant &value) const {
   saveFormatValue("cbz", key, value);
   saveFormatValue("cbr", key, value);
+}
+
+void SettingsManager::saveMobiFamilyValue(const QString &key, const QVariant &value) const {
+  saveFormatValue("mobi", key, value);
+  saveFormatValue("azw", key, value);
+  saveFormatValue("azw3", key, value);
+  saveFormatValue("azw4", key, value);
+  saveFormatValue("prc", key, value);
 }
 
 QString SettingsManager::sidebarModeForPath(const QString &path) const {

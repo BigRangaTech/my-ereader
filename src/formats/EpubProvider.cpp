@@ -1,5 +1,6 @@
 #include "EpubProvider.h"
 
+#include <QCoreApplication>
 #include <QFileInfo>
 #include <QDebug>
 #include <QDir>
@@ -8,10 +9,78 @@
 #include <QUrl>
 #include <QXmlStreamReader>
 #include <QCryptographicHash>
+#include <QSettings>
+#include <QRegularExpression>
+#include <algorithm>
 
 #include "miniz.h"
 
 namespace {
+QString formatSettingsPath() {
+  QDir dir(QCoreApplication::applicationDirPath());
+  for (int i = 0; i < 6; ++i) {
+    if (QFileInfo::exists(dir.filePath("README.md"))) {
+      return dir.filePath("config/epub.ini");
+    }
+    if (!dir.cdUp()) {
+      break;
+    }
+  }
+  return QDir(QCoreApplication::applicationDirPath()).filePath("epub.ini");
+}
+
+int clampInt(int value, int minValue, int maxValue) {
+  return std::max(minValue, std::min(maxValue, value));
+}
+
+double clampDouble(double value, double minValue, double maxValue) {
+  return std::max(minValue, std::min(maxValue, value));
+}
+
+struct EpubRenderSettings {
+  bool showImages = true;
+  QString textAlign = "left";
+  double paragraphSpacingEm = 0.6;
+  double paragraphIndentEm = 0.0;
+  int imageMaxWidthPercent = 100;
+  double imageSpacingEm = 0.6;
+};
+
+EpubRenderSettings loadEpubSettings() {
+  QSettings settings(formatSettingsPath(), QSettings::IniFormat);
+  EpubRenderSettings out;
+  out.showImages = settings.value("render/show_images", true).toBool();
+  out.textAlign = settings.value("render/text_align", "left").toString().toLower();
+  if (out.textAlign != "left" && out.textAlign != "right" &&
+      out.textAlign != "center" && out.textAlign != "justify") {
+    out.textAlign = "left";
+  }
+  out.paragraphSpacingEm =
+      clampDouble(settings.value("render/paragraph_spacing_em", 0.6).toDouble(), 0.0, 3.0);
+  out.paragraphIndentEm =
+      clampDouble(settings.value("render/paragraph_indent_em", 0.0).toDouble(), 0.0, 3.0);
+  out.imageMaxWidthPercent =
+      clampInt(settings.value("render/image_max_width_percent", 100).toInt(), 10, 100);
+  out.imageSpacingEm =
+      clampDouble(settings.value("render/image_spacing_em", 0.6).toDouble(), 0.0, 4.0);
+  return out;
+}
+
+QString applyEpubStyles(const QString &html, const EpubRenderSettings &settings) {
+  if (html.trimmed().isEmpty()) {
+    return html;
+  }
+  QString out = html;
+  const QString pStyle = QString("margin:0 0 %1em 0; text-indent:%2em; text-align:%3;")
+                              .arg(settings.paragraphSpacingEm, 0, 'f', 2)
+                              .arg(settings.paragraphIndentEm, 0, 'f', 2)
+                              .arg(settings.textAlign);
+  out.replace(QRegularExpression("<p\\s*>", QRegularExpression::CaseInsensitiveOption),
+              QString("<p style=\"%1\">").arg(pStyle));
+  out = QString("<div style=\"text-align:%1;\">%2</div>").arg(settings.textAlign, out);
+  return out;
+}
+
 class EpubDocument final : public FormatDocument {
 public:
   EpubDocument(QString title,
@@ -387,6 +456,7 @@ QString extractXhtmlRichText(const QByteArray &xhtml,
                              const QString &currentPath,
                              ZipReader &zip,
                              const QFileInfo &info,
+                             const EpubRenderSettings &settings,
                              QString *headingOut) {
   QXmlStreamReader xml(xhtml);
   QString out;
@@ -442,6 +512,9 @@ QString extractXhtmlRichText(const QByteArray &xhtml,
         out.append("<a href=\"").append(escapeHtmlAttribute(href))
             .append("\" style=\"color:#7fb3ff; text-decoration:underline;\">");
       } else if (name == QLatin1String("img")) {
+        if (!settings.showImages) {
+          continue;
+        }
         const QString src = xml.attributes().value(QLatin1String("src")).toString();
         const QString widthAttr = xml.attributes().value(QLatin1String("width")).toString();
         const QString heightAttr = xml.attributes().value(QLatin1String("height")).toString();
@@ -460,7 +533,9 @@ QString extractXhtmlRichText(const QByteArray &xhtml,
           const QByteArray imageData = zip.readFile(resolved);
           const QString outPath = writeAssetToTemp(info, resolved, imageData);
           if (!outPath.isEmpty()) {
-            QString style = "max-width:100%; height:auto; display:block; margin:0.6em auto;";
+            QString style = QString("max-width:%1%; height:auto; display:block; margin:%2em auto;")
+                                .arg(settings.imageMaxWidthPercent)
+                                .arg(settings.imageSpacingEm, 0, 'f', 2);
             if (pendingImageWidth > 0) {
               style.prepend(QString("width:%1px; ").arg(pendingImageWidth));
             }
@@ -984,6 +1059,7 @@ std::unique_ptr<FormatDocument> EpubProvider::open(const QString &path, QString 
     }
   }
 
+  const EpubRenderSettings renderSettings = loadEpubSettings();
   QStringList sections;
   QStringList plainSections;
   QStringList chapterTitles;
@@ -1007,7 +1083,7 @@ std::unique_ptr<FormatDocument> EpubProvider::open(const QString &path, QString 
         continue;
       }
       QString heading;
-      const QString richText = extractXhtmlRichText(xhtml, itemPath, zip, info, &heading);
+      QString richText = extractXhtmlRichText(xhtml, itemPath, zip, info, renderSettings, &heading);
       const QString plainText = extractXhtmlText(xhtml, &heading);
       if (!plainText.isEmpty() || !richText.isEmpty()) {
         const QString plainNormalized = plainText.simplified();
@@ -1027,6 +1103,7 @@ std::unique_ptr<FormatDocument> EpubProvider::open(const QString &path, QString 
         chapterTitle = normalizeTitle(chapterTitle);
         chapterTitles.append(chapterTitle);
         if (!richText.isEmpty()) {
+          richText = applyEpubStyles(richText, renderSettings);
           sections.append(richText);
         } else {
           sections.append(plainText);

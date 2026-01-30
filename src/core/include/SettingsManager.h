@@ -9,13 +9,35 @@ class SettingsManager : public QObject {
   Q_PROPERTY(double readingLineHeight READ readingLineHeight WRITE setReadingLineHeight NOTIFY readingLineHeightChanged)
   Q_PROPERTY(int epubFontSize READ epubFontSize WRITE setEpubFontSize NOTIFY epubFontSizeChanged)
   Q_PROPERTY(double epubLineHeight READ epubLineHeight WRITE setEpubLineHeight NOTIFY epubLineHeightChanged)
+  Q_PROPERTY(bool epubShowImages READ epubShowImages WRITE setEpubShowImages NOTIFY epubShowImagesChanged)
+  Q_PROPERTY(QString epubTextAlign READ epubTextAlign WRITE setEpubTextAlign NOTIFY epubTextAlignChanged)
+  Q_PROPERTY(double epubParagraphSpacing READ epubParagraphSpacing WRITE setEpubParagraphSpacing NOTIFY epubParagraphSpacingChanged)
+  Q_PROPERTY(double epubParagraphIndent READ epubParagraphIndent WRITE setEpubParagraphIndent NOTIFY epubParagraphIndentChanged)
+  Q_PROPERTY(int epubImageMaxWidth READ epubImageMaxWidth WRITE setEpubImageMaxWidth NOTIFY epubImageMaxWidthChanged)
+  Q_PROPERTY(double epubImageSpacing READ epubImageSpacing WRITE setEpubImageSpacing NOTIFY epubImageSpacingChanged)
   Q_PROPERTY(int fb2FontSize READ fb2FontSize WRITE setFb2FontSize NOTIFY fb2FontSizeChanged)
   Q_PROPERTY(double fb2LineHeight READ fb2LineHeight WRITE setFb2LineHeight NOTIFY fb2LineHeightChanged)
+  Q_PROPERTY(bool fb2ShowImages READ fb2ShowImages WRITE setFb2ShowImages NOTIFY fb2ShowImagesChanged)
+  Q_PROPERTY(QString fb2TextAlign READ fb2TextAlign WRITE setFb2TextAlign NOTIFY fb2TextAlignChanged)
+  Q_PROPERTY(double fb2ParagraphSpacing READ fb2ParagraphSpacing WRITE setFb2ParagraphSpacing NOTIFY fb2ParagraphSpacingChanged)
+  Q_PROPERTY(double fb2ParagraphIndent READ fb2ParagraphIndent WRITE setFb2ParagraphIndent NOTIFY fb2ParagraphIndentChanged)
+  Q_PROPERTY(int fb2ImageMaxWidth READ fb2ImageMaxWidth WRITE setFb2ImageMaxWidth NOTIFY fb2ImageMaxWidthChanged)
+  Q_PROPERTY(double fb2ImageSpacing READ fb2ImageSpacing WRITE setFb2ImageSpacing NOTIFY fb2ImageSpacingChanged)
   Q_PROPERTY(int txtFontSize READ txtFontSize WRITE setTxtFontSize NOTIFY txtFontSizeChanged)
   Q_PROPERTY(double txtLineHeight READ txtLineHeight WRITE setTxtLineHeight NOTIFY txtLineHeightChanged)
   Q_PROPERTY(bool txtMonospace READ txtMonospace WRITE setTxtMonospace NOTIFY txtMonospaceChanged)
+  Q_PROPERTY(QString txtEncoding READ txtEncoding WRITE setTxtEncoding NOTIFY txtEncodingChanged)
+  Q_PROPERTY(int txtTabWidth READ txtTabWidth WRITE setTxtTabWidth NOTIFY txtTabWidthChanged)
+  Q_PROPERTY(bool txtTrimWhitespace READ txtTrimWhitespace WRITE setTxtTrimWhitespace NOTIFY txtTrimWhitespaceChanged)
+  Q_PROPERTY(bool txtAutoChapters READ txtAutoChapters WRITE setTxtAutoChapters NOTIFY txtAutoChaptersChanged)
   Q_PROPERTY(int mobiFontSize READ mobiFontSize WRITE setMobiFontSize NOTIFY mobiFontSizeChanged)
   Q_PROPERTY(double mobiLineHeight READ mobiLineHeight WRITE setMobiLineHeight NOTIFY mobiLineHeightChanged)
+  Q_PROPERTY(bool mobiShowImages READ mobiShowImages WRITE setMobiShowImages NOTIFY mobiShowImagesChanged)
+  Q_PROPERTY(QString mobiTextAlign READ mobiTextAlign WRITE setMobiTextAlign NOTIFY mobiTextAlignChanged)
+  Q_PROPERTY(double mobiParagraphSpacing READ mobiParagraphSpacing WRITE setMobiParagraphSpacing NOTIFY mobiParagraphSpacingChanged)
+  Q_PROPERTY(double mobiParagraphIndent READ mobiParagraphIndent WRITE setMobiParagraphIndent NOTIFY mobiParagraphIndentChanged)
+  Q_PROPERTY(int mobiImageMaxWidth READ mobiImageMaxWidth WRITE setMobiImageMaxWidth NOTIFY mobiImageMaxWidthChanged)
+  Q_PROPERTY(double mobiImageSpacing READ mobiImageSpacing WRITE setMobiImageSpacing NOTIFY mobiImageSpacingChanged)
   Q_PROPERTY(int pdfDpi READ pdfDpi WRITE setPdfDpi NOTIFY pdfDpiChanged)
   Q_PROPERTY(int pdfCacheLimit READ pdfCacheLimit WRITE setPdfCacheLimit NOTIFY pdfCacheLimitChanged)
   Q_PROPERTY(int pdfPrefetchDistance READ pdfPrefetchDistance WRITE setPdfPrefetchDistance NOTIFY pdfPrefetchDistanceChanged)
@@ -42,6 +64,8 @@ class SettingsManager : public QObject {
   Q_PROPERTY(int djvuRotation READ djvuRotation WRITE setDjvuRotation NOTIFY djvuRotationChanged)
   Q_PROPERTY(double comicMinZoom READ comicMinZoom WRITE setComicMinZoom NOTIFY comicMinZoomChanged)
   Q_PROPERTY(double comicMaxZoom READ comicMaxZoom WRITE setComicMaxZoom NOTIFY comicMaxZoomChanged)
+  Q_PROPERTY(QString comicSortMode READ comicSortMode WRITE setComicSortMode NOTIFY comicSortModeChanged)
+  Q_PROPERTY(bool comicSortDescending READ comicSortDescending WRITE setComicSortDescending NOTIFY comicSortDescendingChanged)
   Q_PROPERTY(QString settingsPath READ settingsPath CONSTANT)
   Q_PROPERTY(QString iconPath READ iconPath CONSTANT)
 
@@ -52,13 +76,35 @@ public:
   double readingLineHeight() const;
   int epubFontSize() const;
   double epubLineHeight() const;
+  bool epubShowImages() const;
+  QString epubTextAlign() const;
+  double epubParagraphSpacing() const;
+  double epubParagraphIndent() const;
+  int epubImageMaxWidth() const;
+  double epubImageSpacing() const;
   int fb2FontSize() const;
   double fb2LineHeight() const;
+  bool fb2ShowImages() const;
+  QString fb2TextAlign() const;
+  double fb2ParagraphSpacing() const;
+  double fb2ParagraphIndent() const;
+  int fb2ImageMaxWidth() const;
+  double fb2ImageSpacing() const;
   int txtFontSize() const;
   double txtLineHeight() const;
   bool txtMonospace() const;
+  QString txtEncoding() const;
+  int txtTabWidth() const;
+  bool txtTrimWhitespace() const;
+  bool txtAutoChapters() const;
   int mobiFontSize() const;
   double mobiLineHeight() const;
+  bool mobiShowImages() const;
+  QString mobiTextAlign() const;
+  double mobiParagraphSpacing() const;
+  double mobiParagraphIndent() const;
+  int mobiImageMaxWidth() const;
+  double mobiImageSpacing() const;
   int pdfDpi() const;
   int pdfCacheLimit() const;
   int pdfPrefetchDistance() const;
@@ -85,6 +131,8 @@ public:
   int djvuRotation() const;
   double comicMinZoom() const;
   double comicMaxZoom() const;
+  QString comicSortMode() const;
+  bool comicSortDescending() const;
   QString settingsPath() const;
   QString iconPath() const;
   Q_INVOKABLE QString formatSettingsPath(const QString &format) const;
@@ -93,13 +141,35 @@ public:
   void setReadingLineHeight(double value);
   void setEpubFontSize(int value);
   void setEpubLineHeight(double value);
+  void setEpubShowImages(bool value);
+  void setEpubTextAlign(const QString &value);
+  void setEpubParagraphSpacing(double value);
+  void setEpubParagraphIndent(double value);
+  void setEpubImageMaxWidth(int value);
+  void setEpubImageSpacing(double value);
   void setFb2FontSize(int value);
   void setFb2LineHeight(double value);
+  void setFb2ShowImages(bool value);
+  void setFb2TextAlign(const QString &value);
+  void setFb2ParagraphSpacing(double value);
+  void setFb2ParagraphIndent(double value);
+  void setFb2ImageMaxWidth(int value);
+  void setFb2ImageSpacing(double value);
   void setTxtFontSize(int value);
   void setTxtLineHeight(double value);
   void setTxtMonospace(bool value);
+  void setTxtEncoding(const QString &value);
+  void setTxtTabWidth(int value);
+  void setTxtTrimWhitespace(bool value);
+  void setTxtAutoChapters(bool value);
   void setMobiFontSize(int value);
   void setMobiLineHeight(double value);
+  void setMobiShowImages(bool value);
+  void setMobiTextAlign(const QString &value);
+  void setMobiParagraphSpacing(double value);
+  void setMobiParagraphIndent(double value);
+  void setMobiImageMaxWidth(int value);
+  void setMobiImageSpacing(double value);
   void setPdfDpi(int value);
   void setPdfCacheLimit(int value);
   void setPdfPrefetchDistance(int value);
@@ -126,6 +196,8 @@ public:
   void setDjvuRotation(int value);
   void setComicMinZoom(double value);
   void setComicMaxZoom(double value);
+  void setComicSortMode(const QString &value);
+  void setComicSortDescending(bool value);
 
   Q_INVOKABLE void resetDefaults();
   Q_INVOKABLE void resetPdfDefaults();
@@ -144,13 +216,35 @@ signals:
   void readingLineHeightChanged();
   void epubFontSizeChanged();
   void epubLineHeightChanged();
+  void epubShowImagesChanged();
+  void epubTextAlignChanged();
+  void epubParagraphSpacingChanged();
+  void epubParagraphIndentChanged();
+  void epubImageMaxWidthChanged();
+  void epubImageSpacingChanged();
   void fb2FontSizeChanged();
   void fb2LineHeightChanged();
+  void fb2ShowImagesChanged();
+  void fb2TextAlignChanged();
+  void fb2ParagraphSpacingChanged();
+  void fb2ParagraphIndentChanged();
+  void fb2ImageMaxWidthChanged();
+  void fb2ImageSpacingChanged();
   void txtFontSizeChanged();
   void txtLineHeightChanged();
   void txtMonospaceChanged();
+  void txtEncodingChanged();
+  void txtTabWidthChanged();
+  void txtTrimWhitespaceChanged();
+  void txtAutoChaptersChanged();
   void mobiFontSizeChanged();
   void mobiLineHeightChanged();
+  void mobiShowImagesChanged();
+  void mobiTextAlignChanged();
+  void mobiParagraphSpacingChanged();
+  void mobiParagraphIndentChanged();
+  void mobiImageMaxWidthChanged();
+  void mobiImageSpacingChanged();
   void pdfDpiChanged();
   void pdfCacheLimitChanged();
   void pdfPrefetchDistanceChanged();
@@ -177,6 +271,8 @@ signals:
   void djvuRotationChanged();
   void comicMinZoomChanged();
   void comicMaxZoomChanged();
+  void comicSortModeChanged();
+  void comicSortDescendingChanged();
 
 private:
   void loadFromSettings();
@@ -186,6 +282,7 @@ private:
   QVariant readFormatValue(const QString &format, const QString &key, const QVariant &fallback) const;
   void saveFormatValue(const QString &format, const QString &key, const QVariant &value) const;
   void saveComicValue(const QString &key, const QVariant &value) const;
+  void saveMobiFamilyValue(const QString &key, const QVariant &value) const;
   static QString normalizeFormatKey(const QString &format);
 
   QSettings m_settings;
@@ -193,13 +290,35 @@ private:
   double m_readingLineHeight = 1.4;
   int m_epubFontSize = 20;
   double m_epubLineHeight = 1.4;
+  bool m_epubShowImages = true;
+  QString m_epubTextAlign = "left";
+  double m_epubParagraphSpacing = 0.6;
+  double m_epubParagraphIndent = 0.0;
+  int m_epubImageMaxWidth = 100;
+  double m_epubImageSpacing = 0.6;
   int m_fb2FontSize = 20;
   double m_fb2LineHeight = 1.4;
+  bool m_fb2ShowImages = true;
+  QString m_fb2TextAlign = "left";
+  double m_fb2ParagraphSpacing = 0.6;
+  double m_fb2ParagraphIndent = 0.0;
+  int m_fb2ImageMaxWidth = 100;
+  double m_fb2ImageSpacing = 0.6;
   int m_txtFontSize = 20;
   double m_txtLineHeight = 1.4;
   bool m_txtMonospace = false;
+  QString m_txtEncoding = "auto";
+  int m_txtTabWidth = 4;
+  bool m_txtTrimWhitespace = false;
+  bool m_txtAutoChapters = true;
   int m_mobiFontSize = 20;
   double m_mobiLineHeight = 1.4;
+  bool m_mobiShowImages = true;
+  QString m_mobiTextAlign = "left";
+  double m_mobiParagraphSpacing = 0.6;
+  double m_mobiParagraphIndent = 0.0;
+  int m_mobiImageMaxWidth = 100;
+  double m_mobiImageSpacing = 0.6;
   int m_pdfDpi = 120;
   int m_pdfCacheLimit = 30;
   int m_pdfPrefetchDistance = 1;
@@ -226,4 +345,6 @@ private:
   int m_djvuRotation = 0;
   double m_comicMinZoom = 0.5;
   double m_comicMaxZoom = 4.0;
+  QString m_comicSortMode = "path";
+  bool m_comicSortDescending = false;
 };
