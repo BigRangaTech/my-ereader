@@ -1,13 +1,17 @@
 #include "CbzProvider.h"
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QCryptographicHash>
 #include <QFileInfo>
+#include <QSettings>
 #include <QStandardPaths>
 #include <QCollator>
 #include <QProcess>
 #include <QDebug>
 #include <QDirIterator>
+#include <functional>
+#include <algorithm>
 
 #ifdef HAVE_LIBARCHIVE
 #include <archive.h>
@@ -80,11 +84,17 @@ QString tempDirFor(const QFileInfo &info) {
       .filePath(QString("ereader_cbz_%1").arg(QString::fromUtf8(hash)));
 }
 
-void naturalSort(QStringList &paths) {
+void naturalSort(QStringList &paths, const std::function<QString(const QString &)> &keyFn) {
   QCollator collator;
   collator.setNumericMode(true);
   collator.setCaseSensitivity(Qt::CaseInsensitive);
-  std::sort(paths.begin(), paths.end(), [&collator](const QString &a, const QString &b) {
+  std::sort(paths.begin(), paths.end(), [&collator, &keyFn](const QString &a, const QString &b) {
+    const QString keyA = keyFn ? keyFn(a) : a;
+    const QString keyB = keyFn ? keyFn(b) : b;
+    const int result = collator.compare(keyA, keyB);
+    if (result != 0) {
+      return result < 0;
+    }
     return collator.compare(a, b) < 0;
   });
 }
@@ -122,6 +132,57 @@ QStringList collectImagesRecursive(const QString &root) {
     if (isImageFile(path)) {
       images.append(path);
     }
+  }
+  return images;
+}
+
+QString formatSettingsPath(const QString &format) {
+  QDir dir(QCoreApplication::applicationDirPath());
+  for (int i = 0; i < 6; ++i) {
+    if (QFileInfo::exists(dir.filePath("README.md"))) {
+      return dir.filePath(QString("config/%1.ini").arg(format));
+    }
+    if (!dir.cdUp()) {
+      break;
+    }
+  }
+  return QDir(QCoreApplication::applicationDirPath()).filePath(QString("%1.ini").arg(format));
+}
+
+struct ComicSettings {
+  QString sortMode = "path";
+  bool sortDescending = false;
+};
+
+ComicSettings loadComicSettings(const QString &format) {
+  QSettings settings(formatSettingsPath(format), QSettings::IniFormat);
+  ComicSettings out;
+  out.sortMode = settings.value("render/sort_mode", "path").toString().toLower();
+  if (out.sortMode != "path" && out.sortMode != "filename" && out.sortMode != "archive") {
+    out.sortMode = "path";
+  }
+  out.sortDescending = settings.value("render/sort_desc", false).toBool();
+  return out;
+}
+
+QStringList sortImages(QStringList images, const ComicSettings &settings, bool supportsArchiveOrder) {
+  if (settings.sortMode == "archive" && supportsArchiveOrder) {
+    if (settings.sortDescending) {
+      std::reverse(images.begin(), images.end());
+    }
+    return images;
+  }
+
+  if (settings.sortMode == "filename") {
+    naturalSort(images, [](const QString &path) {
+      return QFileInfo(path).fileName();
+    });
+  } else {
+    naturalSort(images, nullptr);
+  }
+
+  if (settings.sortDescending) {
+    std::reverse(images.begin(), images.end());
   }
   return images;
 }
@@ -169,6 +230,7 @@ QStringList CbzProvider::supportedExtensions() const { return {"cbz", "cbr"}; }
 std::unique_ptr<FormatDocument> CbzProvider::open(const QString &path, QString *error) {
   const QFileInfo info(path);
   const QString ext = info.suffix().toLower();
+  const ComicSettings settings = loadComicSettings(ext);
   if (ext == "cbr") {
     const QString outDir = tempDirFor(info);
     QDir().mkpath(outDir);
@@ -193,7 +255,7 @@ std::unique_ptr<FormatDocument> CbzProvider::open(const QString &path, QString *
       return nullptr;
     }
     QStringList images = collectImagesRecursive(outDir);
-    naturalSort(images);
+    images = sortImages(std::move(images), settings, false);
     if (images.isEmpty()) {
       if (error) {
         *error = "No images found in CBR";
@@ -235,8 +297,7 @@ std::unique_ptr<FormatDocument> CbzProvider::open(const QString &path, QString *
     extracted.append(outPath);
   }
 
-  extracted.sort();
-  naturalSort(extracted);
+  extracted = sortImages(std::move(extracted), settings, true);
   if (extracted.isEmpty()) {
     if (error) {
       *error = "No images found in CBZ";

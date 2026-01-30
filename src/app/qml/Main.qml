@@ -143,11 +143,6 @@ ApplicationWindow {
       }
       if (path.length > 0) {
         const ext = path.split(".").pop().toLowerCase()
-        if (ext === "mobi" || ext === "azw" || ext === "azw3" || ext === "azw4" || ext === "prc") {
-          formatWarningDialog.messageText =
-              "MOBI/AZW support is experimental and may render incorrectly."
-          formatWarningDialog.open()
-        }
         libraryModel.addBook(path)
       }
     }
@@ -879,11 +874,6 @@ ApplicationWindow {
                 onClicked: {
                   reader.close()
                   const ext = model.path.split(".").pop().toLowerCase()
-                  if (ext === "mobi" || ext === "azw" || ext === "azw3" || ext === "azw4" || ext === "prc") {
-                    formatWarningDialog.messageText =
-                        "MOBI/AZW support is experimental and may render incorrectly."
-                    formatWarningDialog.open()
-                  }
                   reader.openFileAsync(model.path)
                   annotationModel.libraryItemId = model.id
                   stack.push(readerPage)
@@ -1612,7 +1602,7 @@ ApplicationWindow {
           Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
 
           Text {
-            text: "MOBI (experimental)"
+            text: "MOBI/AZW/PRC"
             color: theme.textPrimary
             font.pixelSize: 20
             font.family: root.uiFont

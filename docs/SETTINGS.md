@@ -36,7 +36,7 @@ Settings live under `config/` at the repo root.
 - `render/auto_chapters` (default: true) — heading-based chapter detection
 - `render/monospace` (default: false)
 
-## MOBI/AZW/PRC (experimental)
+## MOBI/AZW/PRC
 - `config/mobi.ini`, `config/azw.ini`, `config/azw3.ini`, `config/azw4.ini`, `config/prc.ini`
 - `reading/font_size` (default: 20)
 - `reading/line_height` (default: 1.4)
@@ -50,6 +50,8 @@ Settings live under `config/` at the repo root.
 ## Comics (`config/cbz.ini`, `config/cbr.ini`)
 - `zoom/min` (default: 0.5)
 - `zoom/max` (default: 4.0)
+- `render/sort_mode` (default: `path`) — `path|filename|archive`
+- `render/sort_desc` (default: false)
 
 ## PDF (`config/pdf.ini`)
 - `render/preset` (default: `custom`) — `custom|fast|balanced|high`

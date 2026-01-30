@@ -25,7 +25,7 @@ A fast, secure, offline-first ebook reader for Linux and Android built with Qt 6
 - FB2: implemented (text + metadata + cover + inline images)
 - CBZ: implemented (image extraction)
 - CBR: implemented if bsdtar/unrar/unar is available
-- MOBI/AZW3: experimental (known rendering issues; pending libmobi updates)
+- MOBI/AZW3
 - DJVU: implemented (page rendering via djvulibre tools)
 
 ## Updates
@@ -61,8 +61,8 @@ Settings are stored under `config/` at the repo root.
   - `config/cbr.ini`
   - `config/fb2.ini`
   - `config/txt.ini`
-  - `config/mobi.ini` (experimental)
-  - `config/azw*.ini` / `config/prc.ini` (experimental)
+  - `config/mobi.ini`
+  - `config/azw*.ini` / `config/prc.ini`
   - `config/djvu.ini`
 
 ## Docs
