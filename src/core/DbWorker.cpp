@@ -204,6 +204,36 @@ void DbWorker::addAnnotation(int libraryItemId,
   loadAnnotations(libraryItemId);
 }
 
+void DbWorker::updateAnnotation(int annotationId,
+                                int libraryItemId,
+                                const QString &locator,
+                                const QString &type,
+                                const QString &text,
+                                const QString &color) {
+  if (!m_db.isOpen()) {
+    emit updateAnnotationFinished(false, "Database not open");
+    return;
+  }
+  if (libraryItemId <= 0 || annotationId <= 0) {
+    emit updateAnnotationFinished(false, "No annotation selected");
+    return;
+  }
+  QSqlQuery query(m_db);
+  query.prepare("UPDATE annotations SET locator = ?, type = ?, text = ?, color = ? WHERE id = ? AND library_item_id = ?");
+  query.addBindValue(locator);
+  query.addBindValue(type);
+  query.addBindValue(text);
+  query.addBindValue(color);
+  query.addBindValue(annotationId);
+  query.addBindValue(libraryItemId);
+  if (!query.exec()) {
+    emit updateAnnotationFinished(false, query.lastError().text());
+    return;
+  }
+  emit updateAnnotationFinished(true, "");
+  loadAnnotations(libraryItemId);
+}
+
 void DbWorker::deleteAnnotation(int annotationId, int libraryItemId) {
   if (!m_db.isOpen()) {
     emit deleteAnnotationFinished(false, "Database not open");

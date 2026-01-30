@@ -48,6 +48,11 @@ public:
                                  const QString &type,
                                  const QString &text,
                                  const QString &color);
+  Q_INVOKABLE bool updateAnnotation(int id,
+                                    const QString &locator,
+                                    const QString &type,
+                                    const QString &text,
+                                    const QString &color);
 
   Q_INVOKABLE bool deleteAnnotation(int id);
   Q_INVOKABLE bool attachDatabase(const QString &dbPath);

@@ -153,19 +153,39 @@ ApplicationWindow {
     title: "Add Annotation"
     modal: true
     standardButtons: Dialog.Ok | Dialog.Cancel
-    width: 460
-    height: 260
+    width: 520
+    height: 360
 
     property string errorText: ""
     property string locatorText: ""
     property string noteText: ""
+    property string selectedType: "note"
+    property string selectedColor: "#ffb347"
+    property int editId: 0
+    property bool editing: false
+
+    function currentLocator() {
+      if (reader.hasImages && reader.imageCount > 0) {
+        return "Page " + (reader.currentImageIndex + 1)
+      }
+      if (reader.chapterCount > 0) {
+        return "Chapter " + (reader.currentChapterIndex + 1)
+      }
+      return ""
+    }
 
     onOpened: {
-      errorText = ""
-      locatorField.text = ""
-      noteField.text = ""
-      locatorText = ""
-      noteText = ""
+      if (!editing) {
+        errorText = ""
+        locatorField.text = currentLocator()
+        noteField.text = ""
+        locatorText = ""
+        noteText = ""
+        selectedType = "note"
+        selectedColor = "#ffb347"
+        editId = 0
+      }
+      editing = false
     }
 
     onAccepted: {
@@ -173,9 +193,20 @@ ApplicationWindow {
         errorText = "Locator required (page/chapter)"
         return
       }
-      if (!annotationModel.addAnnotation(locatorField.text, "note", noteField.text, "#ffb347")) {
-        errorText = annotationModel.lastError
-        return
+      if (editId > 0) {
+        if (!annotationModel.updateAnnotation(editId,
+                                              locatorField.text,
+                                              selectedType,
+                                              noteField.text,
+                                              selectedColor)) {
+          errorText = annotationModel.lastError
+          return
+        }
+      } else {
+        if (!annotationModel.addAnnotation(locatorField.text, selectedType, noteField.text, selectedColor)) {
+          errorText = annotationModel.lastError
+          return
+        }
       }
       annotationDialog.close()
     }
@@ -189,9 +220,71 @@ ApplicationWindow {
         anchors.margins: 16
         spacing: 10
 
-        TextField {
-          id: locatorField
-          placeholderText: "Locator (page/chapter id)"
+        RowLayout {
+          Layout.fillWidth: true
+          spacing: 8
+
+          TextField {
+            id: locatorField
+            Layout.fillWidth: true
+            placeholderText: "Locator (page/chapter id)"
+          }
+
+          Button {
+            text: "Use Current"
+            onClicked: locatorField.text = annotationDialog.currentLocator()
+            font.family: root.uiFont
+          }
+        }
+
+        RowLayout {
+          Layout.fillWidth: true
+          spacing: 12
+
+          Text {
+            text: "Type"
+            color: theme.textMuted
+            font.pixelSize: 12
+            font.family: root.uiFont
+            Layout.preferredWidth: 60
+          }
+
+          ComboBox {
+            Layout.fillWidth: true
+            model: ["note", "highlight", "bookmark"]
+            currentIndex: model.indexOf(annotationDialog.selectedType)
+            onActivated: annotationDialog.selectedType = model[currentIndex]
+          }
+        }
+
+        RowLayout {
+          Layout.fillWidth: true
+          spacing: 8
+
+          Text {
+            text: "Color"
+            color: theme.textMuted
+            font.pixelSize: 12
+            font.family: root.uiFont
+            Layout.preferredWidth: 60
+          }
+
+          Repeater {
+            model: ["#ffb347", "#7bdff2", "#c3f584", "#f4a7d3", "#f07167", "#ffd166", "#bdb2ff"]
+            delegate: Rectangle {
+              width: 26
+              height: 26
+              radius: 13
+              color: modelData
+              border.width: annotationDialog.selectedColor === modelData ? 2 : 1
+              border.color: annotationDialog.selectedColor === modelData ? "#f1f1f1" : "#2a3242"
+
+              MouseArea {
+                anchors.fill: parent
+                onClicked: annotationDialog.selectedColor = modelData
+              }
+            }
+          }
         }
 
         TextArea {
@@ -209,6 +302,84 @@ ApplicationWindow {
           font.family: root.uiFont
         }
       }
+    }
+
+    function openForEdit(item) {
+      if (!item) return
+      editing = true
+      editId = item.id
+      errorText = ""
+      locatorField.text = item.locator
+      noteField.text = item.text
+      selectedType = item.type
+      selectedColor = item.color
+      open()
+    }
+  }
+
+  Dialog {
+    id: deleteAnnotationDialog
+    title: "Delete annotation?"
+    modal: true
+    standardButtons: Dialog.Ok | Dialog.Cancel
+    width: 420
+    height: 200
+
+    property int annotationId: 0
+    property string annotationLocator: ""
+    property string annotationPreview: ""
+
+    onAccepted: {
+      if (annotationId > 0) {
+        annotationModel.deleteAnnotation(annotationId)
+      }
+      annotationId = 0
+      annotationLocator = ""
+      annotationPreview = ""
+    }
+
+    contentItem: Rectangle {
+      color: theme.panel
+      radius: 12
+
+      ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 16
+        spacing: 10
+
+        Text {
+          text: "This will permanently remove the annotation."
+          color: theme.textPrimary
+          font.pixelSize: 13
+          font.family: root.uiFont
+          wrapMode: Text.WordWrap
+        }
+
+        Text {
+          text: deleteAnnotationDialog.annotationLocator
+          color: theme.textMuted
+          font.pixelSize: 12
+          font.family: root.uiFont
+          elide: Text.ElideRight
+        }
+
+        Text {
+          text: deleteAnnotationDialog.annotationPreview
+          color: theme.textMuted
+          font.pixelSize: 12
+          font.family: root.uiFont
+          wrapMode: Text.WordWrap
+          elide: Text.ElideRight
+        }
+      }
+    }
+
+    function openForAnnotation(item) {
+      if (!item) return
+      annotationId = item.id
+      annotationLocator = item.locator
+      annotationPreview = item.text
+      open()
     }
   }
 
@@ -1209,7 +1380,7 @@ ApplicationWindow {
                       model: annotationModel
                       delegate: Rectangle {
                         width: parent.width
-                        height: 70
+                        height: 110
                         radius: 8
                         color: index % 2 === 0 ? theme.panel : theme.panelHighlight
 
@@ -1234,12 +1405,57 @@ ApplicationWindow {
                             wrapMode: Text.WordWrap
                             elide: Text.ElideRight
                           }
+
+                          Text {
+                            text: model.createdAt
+                            color: theme.textMuted
+                            font.pixelSize: 10
+                            font.family: root.uiFont
+                          }
                         }
 
                         MouseArea {
                           anchors.fill: parent
                           onClicked: reader.jumpToLocator(model.locator)
-                          onPressAndHold: annotationModel.deleteAnnotation(model.id)
+                        }
+
+                        Rectangle {
+                          width: 10
+                          height: 10
+                          radius: 5
+                          color: model.color
+                          anchors.right: parent.right
+                          anchors.top: parent.top
+                          anchors.margins: 8
+                        }
+
+                        Row {
+                          anchors.right: parent.right
+                          anchors.bottom: parent.bottom
+                          anchors.margins: 6
+                          spacing: 6
+
+                          Button {
+                            text: "Edit"
+                            font.family: root.uiFont
+                            onClicked: annotationDialog.openForEdit({
+                              id: model.id,
+                              locator: model.locator,
+                              type: model.type,
+                              text: model.text,
+                              color: model.color
+                            })
+                          }
+
+                          Button {
+                            text: "Delete"
+                            font.family: root.uiFont
+                            onClicked: deleteAnnotationDialog.openForAnnotation({
+                              id: model.id,
+                              locator: model.locator,
+                              text: model.text
+                            })
+                          }
                         }
                       }
                     }

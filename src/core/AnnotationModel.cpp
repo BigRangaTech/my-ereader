@@ -23,6 +23,14 @@ AnnotationModel::AnnotationModel(QObject *parent) : QAbstractListModel(parent) {
               setLastError("");
             }
           });
+  connect(worker, &DbWorker::updateAnnotationFinished, this,
+          [this](bool ok, const QString &error) {
+            if (!ok) {
+              setLastError(error);
+            } else {
+              setLastError("");
+            }
+          });
   connect(worker, &DbWorker::deleteAnnotationFinished, this,
           [this](bool ok, const QString &error) {
             if (!ok) {
@@ -96,6 +104,29 @@ bool AnnotationModel::addAnnotation(const QString &locator,
     return false;
   }
   QMetaObject::invokeMethod(dbWorker(), "addAnnotation", Qt::QueuedConnection,
+                            Q_ARG(int, m_libraryItemId),
+                            Q_ARG(QString, locator),
+                            Q_ARG(QString, type),
+                            Q_ARG(QString, text),
+                            Q_ARG(QString, color));
+  return true;
+}
+
+bool AnnotationModel::updateAnnotation(int id,
+                                       const QString &locator,
+                                       const QString &type,
+                                       const QString &text,
+                                       const QString &color) {
+  if (m_libraryItemId <= 0) {
+    setLastError("No book selected");
+    return false;
+  }
+  if (id <= 0) {
+    setLastError("No annotation selected");
+    return false;
+  }
+  QMetaObject::invokeMethod(dbWorker(), "updateAnnotation", Qt::QueuedConnection,
+                            Q_ARG(int, id),
                             Q_ARG(int, m_libraryItemId),
                             Q_ARG(QString, locator),
                             Q_ARG(QString, type),

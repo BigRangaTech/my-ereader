@@ -1,6 +1,7 @@
 #include "include/ReaderController.h"
 
 #include <QFileInfo>
+#include <QRegularExpression>
 #include <QDebug>
 #include <QMetaObject>
 #include <QPointer>
@@ -267,43 +268,73 @@ void ReaderController::setBusy(bool busy) {
 }
 
 bool ReaderController::jumpToLocator(const QString &locator) {
-  if (m_chapterTexts.isEmpty()) {
-    setLastError("No chapter navigation available");
+  QString trimmed = locator.trimmed();
+  if (trimmed.isEmpty()) {
+    setLastError("Locator not found");
     return false;
   }
-  QString trimmed = locator.trimmed();
-  bool ok = false;
-  int index = trimmed.toInt(&ok);
-  if (ok) {
-    index -= 1; // user-friendly 1-based
-    if (index < 0 || index >= m_chapterTexts.size()) {
-      setLastError("Chapter index out of range");
-      return false;
+  auto parseIndex = [&trimmed](int *outIndex) -> bool {
+    bool ok = false;
+    int index = trimmed.toInt(&ok);
+    if (ok) {
+      *outIndex = index;
+      return true;
     }
-    m_currentChapterIndex = index;
-    m_currentText = m_chapterTexts.at(index);
-    if (index < m_chapterPlainTexts.size()) {
-      m_currentPlainText = m_chapterPlainTexts.at(index);
-    } else {
-      m_currentPlainText = m_document ? m_document->readAllPlainText() : m_currentText;
+    const QRegularExpression re("(\\d+)");
+    const auto match = re.match(trimmed);
+    if (match.hasMatch()) {
+      *outIndex = match.captured(1).toInt(&ok);
+      return ok;
     }
-    emit currentChanged();
-    return true;
-  }
-  // Try match by title (case-insensitive contains)
-  for (int i = 0; i < m_chapterTitles.size(); ++i) {
-    if (m_chapterTitles.at(i).contains(trimmed, Qt::CaseInsensitive)) {
-      m_currentChapterIndex = i;
-      m_currentText = m_chapterTexts.at(i);
-      if (i < m_chapterPlainTexts.size()) {
-        m_currentPlainText = m_chapterPlainTexts.at(i);
+    return false;
+  };
+
+  if (!m_chapterTexts.isEmpty()) {
+    int index = 0;
+    if (parseIndex(&index)) {
+      index -= 1; // user-friendly 1-based
+      if (index < 0 || index >= m_chapterTexts.size()) {
+        setLastError("Chapter index out of range");
+        return false;
+      }
+      m_currentChapterIndex = index;
+      m_currentText = m_chapterTexts.at(index);
+      if (index < m_chapterPlainTexts.size()) {
+        m_currentPlainText = m_chapterPlainTexts.at(index);
       } else {
         m_currentPlainText = m_document ? m_document->readAllPlainText() : m_currentText;
       }
       emit currentChanged();
       return true;
     }
+    // Try match by title (case-insensitive contains)
+    for (int i = 0; i < m_chapterTitles.size(); ++i) {
+      if (m_chapterTitles.at(i).contains(trimmed, Qt::CaseInsensitive)) {
+        m_currentChapterIndex = i;
+        m_currentText = m_chapterTexts.at(i);
+        if (i < m_chapterPlainTexts.size()) {
+          m_currentPlainText = m_chapterPlainTexts.at(i);
+        } else {
+          m_currentPlainText = m_document ? m_document->readAllPlainText() : m_currentText;
+        }
+        emit currentChanged();
+        return true;
+      }
+    }
   }
+
+  if (!m_imagePaths.isEmpty()) {
+    int index = 0;
+    if (parseIndex(&index)) {
+      index -= 1;
+      if (index < 0 || index >= m_imagePaths.size()) {
+        setLastError("Page index out of range");
+        return false;
+      }
+      return goToImage(index);
+    }
+  }
+
   setLastError("Locator not found");
   return false;
 }

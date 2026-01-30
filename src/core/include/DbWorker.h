@@ -26,6 +26,12 @@ public slots:
                      const QString &type,
                      const QString &text,
                      const QString &color);
+  void updateAnnotation(int annotationId,
+                        int libraryItemId,
+                        const QString &locator,
+                        const QString &type,
+                        const QString &text,
+                        const QString &color);
   void deleteAnnotation(int annotationId, int libraryItemId);
 
 signals:
@@ -35,6 +41,7 @@ signals:
   void annotationsLoaded(int libraryItemId, const QVector<AnnotationItem> &items);
   void addBookFinished(bool ok, const QString &error);
   void addAnnotationFinished(bool ok, const QString &error);
+  void updateAnnotationFinished(bool ok, const QString &error);
   void deleteAnnotationFinished(bool ok, const QString &error);
 
 private:
