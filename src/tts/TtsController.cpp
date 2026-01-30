@@ -5,6 +5,7 @@
 #include <QVoice>
 #endif
 #include <QtGlobal>
+#include <QDebug>
 
 #ifdef HAVE_QT_TTS
 namespace {
@@ -26,6 +27,7 @@ TtsController::TtsController(QObject *parent) : QObject(parent) {
   m_pitch = m_tts->pitch();
   m_volume = m_tts->volume();
   refreshVoices();
+  qInfo() << "TtsController: available" << m_available << "voices" << m_voiceKeys.size();
   connect(m_tts, &QTextToSpeech::stateChanged, this, [this](QTextToSpeech::State state) {
     const bool nowSpeaking = state == QTextToSpeech::Speaking;
     if (m_speaking != nowSpeaking) {
@@ -222,6 +224,9 @@ void TtsController::refreshVoices() {
   if (m_voiceKey != currentKey) {
     m_voiceKey = currentKey;
     emit voiceKeyChanged();
+  }
+  if (m_voiceKeys.isEmpty()) {
+    qWarning() << "TtsController: no voices available";
   }
   emit voicesChanged();
 #endif

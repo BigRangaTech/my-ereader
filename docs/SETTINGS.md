@@ -9,6 +9,18 @@ Settings live under `config/` at the repo root.
 - `reading/font_size` (default: 20)
 - `reading/line_height` (default: 1.4)
 - `reader/sidebar/<sha1>` (default: `toc`) — remembers TOC vs annotations per book
+- `tts/rate` (default: 0.0) — range `-1.0` to `1.0`
+- `tts/pitch` (default: 0.0) — range `-1.0` to `1.0`
+- `tts/volume` (default: 1.0) — range `0.0` to `1.0`
+- `tts/voice_key` (default: empty) — `VoiceName|locale` when set
+
+## Sync (`config/sync.ini`)
+- `sync/enabled` (default: false)
+- `device/name` (default: hostname)
+- `device/id` (default: generated UUID)
+- `device/pin` (default: random 4-digit PIN)
+- `network/discovery_port` (default: 45454)
+- `network/listen_port` (default: 45455)
 
 ## EPUB (`config/epub.ini`)
 - `reading/font_size` (default: 20)

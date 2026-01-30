@@ -3,6 +3,7 @@ import QtQuick.Controls 2.15
 import QtQuick.Dialogs 6.2
 import QtQuick.Layouts 1.15
 import QtQuick 2.15 as QQ
+import QtTextToSpeech 6.2
 
 import Ereader 1.0
 
@@ -273,7 +274,151 @@ ApplicationWindow {
   }
 
   TtsController {
+    id: ttsBackend
+  }
+
+  TextToSpeech {
+    id: qmlTts
+    rate: settings.ttsRate
+    pitch: settings.ttsPitch
+    volume: settings.ttsVolume
+    onStateChanged: {
+      if (tts.useQml && state === TextToSpeech.Ready) {
+        tts._speakNext()
+      }
+    }
+    Component.onCompleted: {
+      if (tts.useQml) {
+        tts.refreshQmlVoices()
+      }
+    }
+  }
+
+  QtObject {
     id: tts
+    readonly property bool useQml: !ttsBackend.available
+    readonly property bool available: useQml ? (qmlTts.state !== TextToSpeech.Error) : ttsBackend.available
+    readonly property bool speaking: useQml ? (qmlTts.state === TextToSpeech.Speaking) : ttsBackend.speaking
+    property var qmlQueue: []
+    property var qmlVoiceKeys: [""]
+    property var qmlVoiceLabels: ["System default"]
+    property var qmlVoices: [null]
+    property string qmlVoiceKey: ""
+    readonly property int queueLength: useQml ? qmlQueue.length : ttsBackend.queueLength
+    readonly property var voiceKeys: useQml ? qmlVoiceKeys : ttsBackend.voiceKeys
+    readonly property var voiceLabels: useQml ? qmlVoiceLabels : ttsBackend.voiceLabels
+    readonly property string voiceKey: useQml ? qmlVoiceKey : ttsBackend.voiceKey
+
+    function refreshQmlVoices() {
+      var voices = []
+      if (qmlTts.availableVoices !== undefined) {
+        if (typeof qmlTts.availableVoices === "function") {
+          voices = qmlTts.availableVoices()
+        } else {
+          voices = qmlTts.availableVoices
+        }
+      } else if (qmlTts.voices !== undefined) {
+        if (typeof qmlTts.voices === "function") {
+          voices = qmlTts.voices()
+        } else {
+          voices = qmlTts.voices
+        }
+      }
+      var keys = [""]
+      var labels = ["System default"]
+      var voiceObjs = [null]
+      for (var i = 0; i < voices.length; ++i) {
+        var v = voices[i]
+        var name = v.name || ""
+        var localeName = ""
+        if (v.locale !== undefined) {
+          if (typeof v.locale === "string") {
+            localeName = v.locale
+          } else if (v.locale && v.locale.name) {
+            localeName = v.locale.name
+          } else if (v.locale && v.locale.toString) {
+            localeName = v.locale.toString()
+          }
+        }
+        var key = name + "|" + localeName
+        var label = localeName.length > 0 ? (name + " (" + localeName + ")") : name
+        keys.push(key)
+        labels.push(label.length > 0 ? label : "Voice " + (i + 1))
+        voiceObjs.push(v)
+      }
+      qmlVoiceKeys = keys
+      qmlVoiceLabels = labels
+      qmlVoices = voiceObjs
+      if (settings.ttsVoiceKey && settings.ttsVoiceKey.length > 0) {
+        setQmlVoiceKey(settings.ttsVoiceKey)
+      }
+    }
+
+    function setQmlVoiceKey(key) {
+      qmlVoiceKey = key || ""
+      if (!key || key.length === 0) {
+        return
+      }
+      for (var i = 0; i < qmlVoiceKeys.length; ++i) {
+        if (qmlVoiceKeys[i] === key) {
+          var voice = qmlVoices[i]
+          if (voice) {
+            qmlTts.voice = voice
+          }
+          return
+        }
+      }
+    }
+
+    function speak(text) {
+      if (!text || text.trim().length === 0) return false
+      if (useQml) {
+        qmlQueue = []
+        qmlTts.stop()
+        qmlTts.speak(text)
+        return true
+      }
+      return ttsBackend.speak(text)
+    }
+
+    function enqueue(text) {
+      if (!text || text.trim().length === 0) return
+      if (useQml) {
+        var next = qmlQueue.slice()
+        next.push(text)
+        qmlQueue = next
+        if (qmlTts.state === TextToSpeech.Ready) {
+          _speakNext()
+        }
+        return
+      }
+      ttsBackend.enqueue(text)
+    }
+
+    function stop() {
+      if (useQml) {
+        qmlQueue = []
+        qmlTts.stop()
+        return
+      }
+      ttsBackend.stop()
+    }
+
+    function clearQueue() {
+      if (useQml) {
+        qmlQueue = []
+        return
+      }
+      ttsBackend.clearQueue()
+    }
+
+    function _speakNext() {
+      if (!useQml || qmlQueue.length === 0) return
+      var next = qmlQueue.slice()
+      var text = next.shift()
+      qmlQueue = next
+      qmlTts.speak(text)
+    }
   }
 
   LicenseManager {
@@ -289,22 +434,45 @@ ApplicationWindow {
 
   Component.onCompleted: {
     vault.initialize()
-    tts.rate = settings.ttsRate
-    tts.pitch = settings.ttsPitch
-    tts.volume = settings.ttsVolume
+    ttsBackend.rate = settings.ttsRate
+    ttsBackend.pitch = settings.ttsPitch
+    ttsBackend.volume = settings.ttsVolume
     if (settings.ttsVoiceKey.length > 0) {
-      tts.voiceKey = settings.ttsVoiceKey
+      ttsBackend.voiceKey = settings.ttsVoiceKey
+    }
+    if (tts.useQml) {
+      tts.refreshQmlVoices()
+      if (settings.ttsVoiceKey.length > 0) {
+        tts.setQmlVoiceKey(settings.ttsVoiceKey)
+      }
     }
   }
 
   Connections {
     target: settings
-    function onTtsRateChanged() { tts.rate = settings.ttsRate }
-    function onTtsPitchChanged() { tts.pitch = settings.ttsPitch }
-    function onTtsVolumeChanged() { tts.volume = settings.ttsVolume }
+    function onTtsRateChanged() { ttsBackend.rate = settings.ttsRate }
+    function onTtsPitchChanged() { ttsBackend.pitch = settings.ttsPitch }
+    function onTtsVolumeChanged() { ttsBackend.volume = settings.ttsVolume }
     function onTtsVoiceKeyChanged() {
       if (settings.ttsVoiceKey.length > 0) {
-        tts.voiceKey = settings.ttsVoiceKey
+        ttsBackend.voiceKey = settings.ttsVoiceKey
+      }
+      if (tts.useQml) {
+        tts.setQmlVoiceKey(settings.ttsVoiceKey)
+      }
+    }
+  }
+
+  Connections {
+    target: qmlTts
+    function onAvailableVoicesChanged() {
+      if (tts.useQml) {
+        tts.refreshQmlVoices()
+      }
+    }
+    function onVoicesChanged() {
+      if (tts.useQml) {
+        tts.refreshQmlVoices()
       }
     }
   }
@@ -962,8 +1130,8 @@ ApplicationWindow {
     property var bookIds: []
 
     onAccepted: {
-      if (bookIds && bookIds.length > 0) {
-        libraryModel.removeBooks(bookIds)
+      if (deleteBooksDialog.bookIds && deleteBooksDialog.bookIds.length > 0) {
+        libraryModel.removeBooks(deleteBooksDialog.bookIds)
       }
       bookIds = []
     }
@@ -978,7 +1146,8 @@ ApplicationWindow {
         spacing: 10
 
         Text {
-          text: qsTr("This will remove %1 book(s) from your library.").arg(bookIds.length)
+          text: qsTr("This will remove %1 book(s) from your library.")
+                .arg(deleteBooksDialog.bookIds.length)
           color: theme.textPrimary
           font.pixelSize: 13
           font.family: root.uiFont
@@ -2579,6 +2748,164 @@ ApplicationWindow {
         ColumnLayout {
           width: parent.width
           spacing: 18
+
+          Text {
+            text: "Sync"
+            color: theme.textPrimary
+            font.pixelSize: 20
+            font.family: root.uiFont
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Enable sync"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            CheckBox {
+              checked: syncManager.enabled
+              onToggled: syncManager.enabled = checked
+            }
+
+            Text {
+              text: syncManager.status
+              color: theme.textMuted
+              font.pixelSize: 12
+              font.family: root.uiFont
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Device name"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            TextField {
+              Layout.fillWidth: true
+              text: syncManager.deviceName
+              enabled: syncManager.enabled
+              onTextChanged: syncManager.deviceName = text
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Pairing PIN"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            TextField {
+              Layout.preferredWidth: 140
+              echoMode: TextInput.Password
+              text: syncManager.pin
+              enabled: syncManager.enabled
+              inputMethodHints: Qt.ImhDigitsOnly
+              onTextChanged: syncManager.pin = text
+            }
+
+            Button {
+              text: syncManager.discovering ? "Stop" : "Discover"
+              font.family: root.uiFont
+              enabled: syncManager.enabled
+              onClicked: {
+                if (syncManager.discovering) {
+                  syncManager.stopDiscovery()
+                } else {
+                  syncManager.startDiscovery()
+                }
+              }
+            }
+          }
+
+          Rectangle {
+            Layout.fillWidth: true
+            height: 1
+            color: theme.panelHighlight
+          }
+
+          Text {
+            text: "Devices"
+            color: theme.textPrimary
+            font.pixelSize: 16
+            font.family: root.uiFont
+          }
+
+          ListView {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 160
+            clip: true
+            model: syncManager.devices
+            delegate: Rectangle {
+              width: ListView.view ? ListView.view.width : 0
+              height: 56
+              radius: 8
+              color: index % 2 === 0 ? theme.panelHighlight : theme.panel
+
+              RowLayout {
+                anchors.fill: parent
+                anchors.margins: 8
+                spacing: 10
+
+                ColumnLayout {
+                  Layout.fillWidth: true
+                  spacing: 2
+
+                  Text {
+                    text: modelData.name + (modelData.paired ? " • paired" : "")
+                    color: theme.textPrimary
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    elide: Text.ElideRight
+                  }
+
+                  Text {
+                    text: modelData.address + ":" + modelData.port
+                    color: theme.textMuted
+                    font.pixelSize: 11
+                    font.family: root.uiFont
+                  }
+                }
+
+                Button {
+                  text: modelData.paired ? "Unpair" : "Pair"
+                  font.family: root.uiFont
+                  enabled: syncManager.enabled
+                  onClicked: {
+                    if (modelData.paired) {
+                      syncManager.unpair(modelData.id)
+                    } else {
+                      syncManager.requestPairing(modelData.id)
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          Rectangle {
+            Layout.fillWidth: true
+            height: 1
+            color: theme.panelHighlight
+          }
 
           Text {
             text: "Text To Speech"
