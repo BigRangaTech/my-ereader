@@ -65,12 +65,199 @@ ApplicationWindow {
     property color panelHighlight: "#2a3242"
   }
 
+  property bool pickAnnotationAnchor: false
+  property var pendingAnnotationDraft: null
+  property int textSelectionStart: -1
+  property int textSelectionEnd: -1
+  property string textSelectionText: ""
+
+  function selectionRange() {
+    if (textSelectionStart < 0 || textSelectionEnd < 0 || textSelectionStart === textSelectionEnd) {
+      return null
+    }
+    const start = Math.min(textSelectionStart, textSelectionEnd)
+    const end = Math.max(textSelectionStart, textSelectionEnd)
+    return { start: start, end: end }
+  }
+
+  function makeHighlightLocator(start, end) {
+    const chapterIndex = Math.max(0, reader.currentChapterIndex)
+    return "hl:c=" + (chapterIndex + 1) + ";s=" + start + ";e=" + end
+  }
+
+  function makeAnchorLocator(pageIndex, x, y, w, h) {
+    var locator = "pos:p=" + (pageIndex + 1)
+    locator += ";x=" + x.toFixed(4) + ";y=" + y.toFixed(4)
+    if (w !== undefined && h !== undefined) {
+      locator += ";w=" + w.toFixed(4) + ";h=" + h.toFixed(4)
+    }
+    return locator
+  }
+
+  function pinStyleForType(type) {
+    if (type === "bookmark") return { radius: 0, rotation: 45 }
+    if (type === "highlight") return { radius: 2, rotation: 0 }
+    return { radius: 6, rotation: 0 }
+  }
+
+  function pinLabelForType(type) {
+    if (type === "bookmark") return "Bookmark"
+    if (type === "highlight") return "Highlight"
+    return "Note"
+  }
+
+  function escapeHtml(text) {
+    return text.replace(/&/g, "&amp;")
+               .replace(/</g, "&lt;")
+               .replace(/>/g, "&gt;")
+  }
+
+  function toHtmlFromPlain(text) {
+    return escapeHtml(text).replace(/\\n/g, "<br/>")
+  }
+
+  function wrapHtmlWithLineHeight(html) {
+    var lh = textLineHeightFor(reader.currentFormat)
+    if (!lh || lh <= 0) {
+      return html
+    }
+    return "<div style=\"line-height:" + lh + ";\">" + html + "</div>"
+  }
+
+  function applyHighlightsToHtml(html, ranges) {
+    if (!ranges || ranges.length === 0) return html
+    var sorted = ranges.slice().sort(function(a, b) { return a.start - b.start })
+    var out = ""
+    var pos = 0
+    var rangeIndex = 0
+    var current = sorted[rangeIndex]
+    var inSpan = false
+    function closeSpan() {
+      if (inSpan) {
+        out += "</span>"
+        inSpan = false
+      }
+    }
+    function openSpan(color) {
+      out += "<span style=\"background-color:" + color + ";\">"
+      inSpan = true
+    }
+    function updateSpan() {
+      while (current && pos >= current.end) {
+        closeSpan()
+        rangeIndex++
+        current = sorted[rangeIndex]
+      }
+      if (current && pos === current.start && !inSpan) {
+        openSpan(current.color || "#ffb347")
+      }
+    }
+    for (var i = 0; i < html.length; ) {
+      var ch = html[i]
+      if (ch === "<") {
+        var endTag = html.indexOf(">", i)
+        if (endTag === -1) {
+          out += html.slice(i)
+          break
+        }
+        out += html.slice(i, endTag + 1)
+        i = endTag + 1
+        continue
+      }
+      if (ch === "&") {
+        var endEntity = html.indexOf(";", i)
+        var entity = endEntity === -1 ? ch : html.slice(i, endEntity + 1)
+        updateSpan()
+        out += entity
+        pos += 1
+        i = endEntity === -1 ? i + 1 : endEntity + 1
+        continue
+      }
+      updateSpan()
+      out += ch
+      pos += 1
+      i += 1
+    }
+    closeSpan()
+    return out
+  }
+
+  function currentHighlightRanges() {
+    var _rev = annotationModel.revision
+    return annotationModel.highlightRangesForChapter(reader.currentChapterIndex)
+  }
+
+  function anchorsForCurrentPage() {
+    var _rev = annotationModel.revision
+    return annotationModel.anchorsForPage(reader.currentImageIndex)
+  }
+
+  function displayTextForReader() {
+    var ranges = currentHighlightRanges()
+    var base = reader.currentTextIsRich ? reader.currentText : toHtmlFromPlain(reader.currentText)
+    if (ranges && ranges.length > 0) {
+      base = applyHighlightsToHtml(base, ranges)
+    }
+    return wrapHtmlWithLineHeight(base)
+  }
+
+  function locatorDisplay(locator) {
+    if (!locator) return ""
+    var m = locator.match(/^hl:c=(\\d+);s=(\\d+);e=(\\d+)/)
+    if (m) {
+      return "Chapter " + m[1] + " (" + m[2] + "-" + m[3] + ")"
+    }
+    m = locator.match(/^pos:p=(\\d+);x=([0-9.]+);y=([0-9.]+)/)
+    if (m) {
+      return "Page " + m[1] + " @ " + Math.round(parseFloat(m[2]) * 100) + "%, " +
+             Math.round(parseFloat(m[3]) * 100) + "%"
+    }
+    return locator
+  }
+
   LibraryModel {
     id: libraryModel
   }
 
   AnnotationModel {
     id: annotationModel
+  }
+
+  ListModel {
+    id: filteredAnnotations
+  }
+
+  property string annotationFilterText: ""
+  property string annotationFilterType: "all"
+  property string annotationFilterColor: "all"
+
+  function rebuildAnnotationFilter() {
+    filteredAnnotations.clear()
+    const textQuery = annotationFilterText.trim().toLowerCase()
+    for (var i = 0; i < annotationModel.count; ++i) {
+      const item = annotationModel.get(i)
+      if (!item) continue
+      if (annotationFilterType !== "all" && item.type !== annotationFilterType) {
+        continue
+      }
+      if (annotationFilterColor !== "all" && item.color !== annotationFilterColor) {
+        continue
+      }
+      if (textQuery.length > 0) {
+        const hay = (item.text + " " + item.locator).toLowerCase()
+        if (hay.indexOf(textQuery) === -1) {
+          continue
+        }
+      }
+      filteredAnnotations.append(item)
+    }
+  }
+
+  Connections {
+    target: annotationModel
+    function onRevisionChanged() {
+      rebuildAnnotationFilter()
+    }
   }
 
   ReaderController {
@@ -102,6 +289,24 @@ ApplicationWindow {
 
   Component.onCompleted: {
     vault.initialize()
+    tts.rate = settings.ttsRate
+    tts.pitch = settings.ttsPitch
+    tts.volume = settings.ttsVolume
+    if (settings.ttsVoiceKey.length > 0) {
+      tts.voiceKey = settings.ttsVoiceKey
+    }
+  }
+
+  Connections {
+    target: settings
+    function onTtsRateChanged() { tts.rate = settings.ttsRate }
+    function onTtsPitchChanged() { tts.pitch = settings.ttsPitch }
+    function onTtsVolumeChanged() { tts.volume = settings.ttsVolume }
+    function onTtsVoiceKeyChanged() {
+      if (settings.ttsVoiceKey.length > 0) {
+        tts.voiceKey = settings.ttsVoiceKey
+      }
+    }
   }
 
   Connections {
@@ -144,6 +349,25 @@ ApplicationWindow {
       if (path.length > 0) {
         const ext = path.split(".").pop().toLowerCase()
         libraryModel.addBook(path)
+      }
+    }
+  }
+
+  FileDialog {
+    id: exportAnnotationsDialog
+    title: "Export annotations"
+    fileMode: FileDialog.SaveFile
+    nameFilters: ["JSON (*.json)", "CSV (*.csv)", "Markdown (*.md)"]
+    onAccepted: {
+      var path = ""
+      if (selectedFile && selectedFile.toLocalFile) {
+        path = selectedFile.toLocalFile()
+      } else if (selectedFile) {
+        path = selectedFile.toString().replace("file://", "")
+        path = decodeURIComponent(path)
+      }
+      if (path.length > 0) {
+        annotationModel.exportAnnotations(path)
       }
     }
   }
@@ -239,6 +463,36 @@ ApplicationWindow {
 
         RowLayout {
           Layout.fillWidth: true
+          spacing: 8
+
+          Button {
+            text: "Use Selection"
+            enabled: selectionRange() !== null && !reader.hasImages
+            visible: !reader.hasImages
+            onClicked: {
+              const range = selectionRange()
+              if (!range) return
+              selectedType = "highlight"
+              selectedColor = selectedColor || "#ffb347"
+              if (noteField.text.trim().length === 0) {
+                noteField.text = textSelectionText
+              }
+              locatorField.text = makeHighlightLocator(range.start, range.end)
+            }
+            font.family: root.uiFont
+          }
+
+          Button {
+            text: "Pick on page"
+            enabled: reader.hasImages
+            visible: reader.hasImages
+            onClicked: annotationDialog.startPickOnPage()
+            font.family: root.uiFont
+          }
+        }
+
+        RowLayout {
+          Layout.fillWidth: true
           spacing: 12
 
           Text {
@@ -315,6 +569,36 @@ ApplicationWindow {
       selectedColor = item.color
       open()
     }
+
+    function startPickOnPage() {
+      pendingAnnotationDraft = {
+        id: editId,
+        locator: locatorField.text,
+        text: noteField.text,
+        type: selectedType,
+        color: selectedColor
+      }
+      pickAnnotationAnchor = true
+      close()
+    }
+
+    function openForAnchor(locator) {
+      if (pendingAnnotationDraft) {
+        editId = pendingAnnotationDraft.id || 0
+        selectedType = pendingAnnotationDraft.type || "note"
+        selectedColor = pendingAnnotationDraft.color || "#ffb347"
+        noteField.text = pendingAnnotationDraft.text || ""
+      } else {
+        editId = 0
+        selectedType = "note"
+        selectedColor = "#ffb347"
+        noteField.text = ""
+      }
+      locatorField.text = locator
+      errorText = ""
+      open()
+      pendingAnnotationDraft = null
+    }
   }
 
   Dialog {
@@ -379,6 +663,339 @@ ApplicationWindow {
       annotationId = item.id
       annotationLocator = item.locator
       annotationPreview = item.text
+      open()
+    }
+  }
+
+  Dialog {
+    id: editBookDialog
+    title: "Edit metadata"
+    modal: true
+    standardButtons: Dialog.Ok | Dialog.Cancel
+    width: 520
+    height: 360
+
+    property int bookId: 0
+    property string bookPath: ""
+    property string errorText: ""
+
+    onOpened: {
+      errorText = ""
+    }
+
+    onAccepted: {
+      if (bookId <= 0) {
+        errorText = "Invalid book selection"
+        return
+      }
+      if (!libraryModel.updateMetadata(bookId,
+                                       titleField.text,
+                                       authorField.text,
+                                       seriesField.text,
+                                       publisherField.text,
+                                       descriptionField.text,
+                                       tagsField.text,
+                                       collectionField.text)) {
+        errorText = libraryModel.lastError
+        return
+      }
+      editBookDialog.close()
+    }
+
+    contentItem: Rectangle {
+      color: theme.panel
+      radius: 12
+
+      ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 16
+        spacing: 10
+
+        Text {
+          text: editBookDialog.bookPath
+          color: theme.textMuted
+          font.pixelSize: 11
+          font.family: root.uiFont
+          elide: Text.ElideRight
+        }
+
+        TextField {
+          id: titleField
+          placeholderText: "Title"
+        }
+
+        TextField {
+          id: authorField
+          placeholderText: "Author(s)"
+        }
+
+        TextField {
+          id: seriesField
+          placeholderText: "Series"
+        }
+
+        TextField {
+          id: publisherField
+          placeholderText: "Publisher"
+        }
+
+        TextField {
+          id: collectionField
+          placeholderText: "Collection"
+        }
+
+        TextField {
+          id: tagsField
+          placeholderText: "Tags (comma-separated)"
+        }
+
+        TextArea {
+          id: descriptionField
+          placeholderText: "Description"
+          wrapMode: TextArea.Wrap
+          Layout.fillWidth: true
+          Layout.fillHeight: true
+        }
+
+        Text {
+          text: editBookDialog.errorText
+          color: theme.accent
+          font.pixelSize: 12
+          font.family: root.uiFont
+        }
+      }
+    }
+
+    function openForBook(item) {
+      if (!item) return
+      bookId = item.id
+      bookPath = item.path
+      titleField.text = item.title
+      authorField.text = item.authors
+      seriesField.text = item.series
+      publisherField.text = item.publisher
+      collectionField.text = item.collection || ""
+      tagsField.text = item.tags || ""
+      descriptionField.text = item.description
+      errorText = ""
+      open()
+    }
+  }
+
+  Dialog {
+    id: deleteBookDialog
+    title: "Remove book?"
+    modal: true
+    standardButtons: Dialog.Ok | Dialog.Cancel
+    width: 420
+    height: 200
+
+    property int bookId: 0
+    property string bookTitle: ""
+    property string bookPath: ""
+
+    onAccepted: {
+      if (bookId > 0) {
+        libraryModel.removeBook(bookId)
+      }
+      bookId = 0
+      bookTitle = ""
+      bookPath = ""
+    }
+
+    contentItem: Rectangle {
+      color: theme.panel
+      radius: 12
+
+      ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 16
+        spacing: 10
+
+        Text {
+          text: "This will remove the book from your library."
+          color: theme.textPrimary
+          font.pixelSize: 13
+          font.family: root.uiFont
+          wrapMode: Text.WordWrap
+        }
+
+        Text {
+          text: deleteBookDialog.bookTitle
+          color: theme.textMuted
+          font.pixelSize: 12
+          font.family: root.uiFont
+          elide: Text.ElideRight
+        }
+
+        Text {
+          text: deleteBookDialog.bookPath
+          color: theme.textMuted
+          font.pixelSize: 11
+          font.family: root.uiFont
+          elide: Text.ElideRight
+        }
+      }
+    }
+
+    function openForBook(item) {
+      if (!item) return
+      bookId = item.id
+      bookTitle = item.title
+      bookPath = item.path
+      open()
+    }
+  }
+
+  Dialog {
+    id: bulkTagsDialog
+    title: "Bulk edit tags/collection"
+    modal: true
+    standardButtons: Dialog.Ok | Dialog.Cancel
+    width: 520
+    height: 320
+
+    property var bookIds: []
+    property string errorText: ""
+
+    onOpened: {
+      errorText = ""
+      updateTagsCheck.checked = false
+      updateCollectionCheck.checked = false
+      bulkTagsField.text = ""
+      bulkCollectionField.text = ""
+    }
+
+    onAccepted: {
+      if (!bookIds || bookIds.length === 0) {
+        errorText = "No items selected"
+        return
+      }
+      if (!updateTagsCheck.checked && !updateCollectionCheck.checked) {
+        errorText = "Select what to update"
+        return
+      }
+      if (!libraryModel.updateTagsCollection(bookIds,
+                                             bulkTagsField.text,
+                                             bulkCollectionField.text,
+                                             updateTagsCheck.checked,
+                                             updateCollectionCheck.checked)) {
+        errorText = libraryModel.lastError
+        return
+      }
+      bulkTagsDialog.close()
+    }
+
+    contentItem: Rectangle {
+      color: theme.panel
+      radius: 12
+
+      ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 16
+        spacing: 10
+
+        Text {
+          text: qsTr("Selected books: %1").arg(bulkTagsDialog.bookIds.length)
+          color: theme.textMuted
+          font.pixelSize: 12
+          font.family: root.uiFont
+        }
+
+        RowLayout {
+          Layout.fillWidth: true
+          spacing: 8
+
+          CheckBox {
+            id: updateCollectionCheck
+            text: "Update collection"
+          }
+
+          TextField {
+            id: bulkCollectionField
+            Layout.fillWidth: true
+            placeholderText: "Collection"
+            enabled: updateCollectionCheck.checked
+          }
+        }
+
+        RowLayout {
+          Layout.fillWidth: true
+          spacing: 8
+
+          CheckBox {
+            id: updateTagsCheck
+            text: "Update tags"
+          }
+
+          TextField {
+            id: bulkTagsField
+            Layout.fillWidth: true
+            placeholderText: "Tags (comma-separated)"
+            enabled: updateTagsCheck.checked
+          }
+        }
+
+        Text {
+          text: bulkTagsDialog.errorText
+          color: theme.accent
+          font.pixelSize: 12
+          font.family: root.uiFont
+        }
+      }
+    }
+
+    function openForIds(ids) {
+      bookIds = ids || []
+      open()
+    }
+  }
+
+  Dialog {
+    id: deleteBooksDialog
+    title: "Remove selected books?"
+    modal: true
+    standardButtons: Dialog.Ok | Dialog.Cancel
+    width: 420
+    height: 200
+
+    property var bookIds: []
+
+    onAccepted: {
+      if (bookIds && bookIds.length > 0) {
+        libraryModel.removeBooks(bookIds)
+      }
+      bookIds = []
+    }
+
+    contentItem: Rectangle {
+      color: theme.panel
+      radius: 12
+
+      ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 16
+        spacing: 10
+
+        Text {
+          text: qsTr("This will remove %1 book(s) from your library.").arg(bookIds.length)
+          color: theme.textPrimary
+          font.pixelSize: 13
+          font.family: root.uiFont
+          wrapMode: Text.WordWrap
+        }
+
+        Text {
+          text: "Files on disk are not deleted."
+          color: theme.textMuted
+          font.pixelSize: 12
+          font.family: root.uiFont
+        }
+      }
+    }
+
+    function openForIds(ids) {
+      bookIds = ids || []
       open()
     }
   }
@@ -696,17 +1313,25 @@ ApplicationWindow {
           contentHeight: textBlock.height
           clip: true
 
-          Text {
+          TextEdit {
             id: textBlock
             width: textScroll.width
-            text: reader.currentText
+            height: contentHeight
+            readOnly: true
+            selectByMouse: true
+            text: root.displayTextForReader()
             color: theme.textPrimary
             font.pixelSize: root.textFontSizeFor(reader.currentFormat)
             font.family: root.textFontFamilyFor(reader.currentFormat)
-            wrapMode: Text.WordWrap
-            lineHeight: root.textLineHeightFor(reader.currentFormat)
-            lineHeightMode: Text.ProportionalHeight
-            textFormat: reader.currentTextIsRich ? Text.RichText : Text.PlainText
+            wrapMode: TextEdit.Wrap
+            textFormat: TextEdit.RichText
+            onSelectionStartChanged: {
+              root.textSelectionStart = selectionStart
+            }
+            onSelectionEndChanged: {
+              root.textSelectionEnd = selectionEnd
+              root.textSelectionText = selectedText
+            }
             clip: true
           }
         }
@@ -894,6 +1519,25 @@ ApplicationWindow {
             }
           }
 
+          MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.LeftButton
+            onClicked: {
+              if (!root.pickAnnotationAnchor || reader.currentImageIndex < 0) {
+                return
+              }
+              const local = imageItem.mapFromItem(imageFlick, mouse.x, mouse.y)
+              if (local.x < 0 || local.y < 0 || local.x > imageItem.width || local.y > imageItem.height) {
+                return
+              }
+              const nx = local.x / imageItem.width
+              const ny = local.y / imageItem.height
+              const locator = root.makeAnchorLocator(reader.currentImageIndex, nx, ny)
+              root.pickAnnotationAnchor = false
+              annotationDialog.openForAnchor(locator)
+            }
+          }
+
           Image {
             id: imageItem
             source: reader.currentImageUrl.toString().length > 0
@@ -913,6 +1557,33 @@ ApplicationWindow {
               } else if (status === Image.Ready) {
                 console.info("Image loaded", source, sourceSize.width, sourceSize.height)
                 recomputeBase()
+              }
+            }
+          }
+
+          Repeater {
+            model: root.anchorsForCurrentPage()
+            delegate: Rectangle {
+              readonly property var pinStyle: root.pinStyleForType(modelData.type)
+              width: 12
+              height: 12
+              radius: pinStyle.radius
+              color: modelData.color || "#ffb347"
+              rotation: pinStyle.rotation
+              transformOrigin: Item.Center
+              x: imageItem.x + modelData.x * imageItem.width - width / 2
+              y: imageItem.y + modelData.y * imageItem.height - height / 2
+              visible: imageItem.width > 0 && imageItem.height > 0
+
+              MouseArea {
+                anchors.fill: parent
+                onClicked: annotationDialog.openForEdit({
+                  id: modelData.id,
+                  locator: modelData.locator,
+                  type: modelData.type,
+                  text: modelData.text,
+                  color: modelData.color
+                })
               }
             }
           }
@@ -942,6 +1613,75 @@ ApplicationWindow {
     Item {
       width: parent ? parent.width : 0
       height: parent ? parent.height : 0
+      property bool selectionMode: false
+      property var selectedIds: []
+      ListModel { id: collectionFilterModel }
+      ListModel { id: tagFilterModel }
+
+      function isSelected(id) {
+        return selectedIds.indexOf(id) !== -1
+      }
+
+      function toggleSelected(id) {
+        var idx = selectedIds.indexOf(id)
+        if (idx === -1) {
+          selectedIds = selectedIds.concat([id])
+        } else {
+          var copy = selectedIds.slice()
+          copy.splice(idx, 1)
+          selectedIds = copy
+        }
+      }
+
+      function clearSelection() {
+        selectedIds = []
+      }
+
+      function rebuildFilterOptions() {
+        collectionFilterModel.clear()
+        tagFilterModel.clear()
+        collectionFilterModel.append({ label: "All Collections", value: "__all__" })
+        collectionFilterModel.append({ label: "Unassigned", value: "__none__" })
+        tagFilterModel.append({ label: "All Tags", value: "__all__" })
+        tagFilterModel.append({ label: "Untagged", value: "__none__" })
+
+        var collectionSet = {}
+        var tagSet = {}
+        for (var i = 0; i < libraryModel.count; ++i) {
+          const item = libraryModel.get(i)
+          if (!item) continue
+          if (item.collection && item.collection.length > 0) {
+            collectionSet[item.collection] = true
+          }
+          if (item.tags && item.tags.length > 0) {
+            const parts = item.tags.split(",")
+            for (var p = 0; p < parts.length; ++p) {
+              const tag = parts[p].trim()
+              if (tag.length > 0) {
+                tagSet[tag] = true
+              }
+            }
+          }
+        }
+        const collections = Object.keys(collectionSet).sort()
+        for (var c = 0; c < collections.length; ++c) {
+          collectionFilterModel.append({ label: collections[c], value: collections[c] })
+        }
+        const tags = Object.keys(tagSet).sort()
+        for (var t = 0; t < tags.length; ++t) {
+          tagFilterModel.append({ label: tags[t], value: tags[t] })
+        }
+      }
+
+      Connections {
+        target: libraryModel
+        function onCountChanged() { rebuildFilterOptions() }
+        function onReadyChanged() { rebuildFilterOptions() }
+      }
+
+      Component.onCompleted: {
+        rebuildFilterOptions()
+      }
 
       Column {
         anchors.fill: parent
@@ -981,7 +1721,96 @@ ApplicationWindow {
               verticalAlignment: Text.AlignVCenter
             }
 
+            TextField {
+              id: librarySearch
+              Layout.preferredWidth: 220
+              placeholderText: "Search library"
+              text: libraryModel.searchQuery
+              onTextChanged: libraryModel.searchQuery = text
+            }
+
+            ComboBox {
+              id: collectionFilter
+              Layout.preferredWidth: 180
+              model: collectionFilterModel
+              textRole: "label"
+              currentIndex: {
+                for (var i = 0; i < model.count; ++i) {
+                  if (model.get(i).value === libraryModel.filterCollection) return i
+                }
+                return 0
+              }
+              onActivated: libraryModel.filterCollection = model.get(currentIndex).value
+            }
+
+            ComboBox {
+              id: tagFilter
+              Layout.preferredWidth: 160
+              model: tagFilterModel
+              textRole: "label"
+              currentIndex: {
+                for (var i = 0; i < model.count; ++i) {
+                  if (model.get(i).value === libraryModel.filterTag) return i
+                }
+                return 0
+              }
+              onActivated: libraryModel.filterTag = model.get(currentIndex).value
+            }
+
+            ComboBox {
+              id: sortCombo
+              Layout.preferredWidth: 150
+              model: [
+                { label: "Title", key: "title" },
+                { label: "Author", key: "authors" },
+                { label: "Series", key: "series" },
+                { label: "Publisher", key: "publisher" },
+                { label: "Collection", key: "collection" },
+                { label: "Format", key: "format" },
+                { label: "Added", key: "added" }
+              ]
+              textRole: "label"
+              currentIndex: {
+                for (var i = 0; i < model.length; ++i) {
+                  if (model[i].key === libraryModel.sortKey) return i
+                }
+                return 0
+              }
+              onActivated: libraryModel.sortKey = model[currentIndex].key
+            }
+
+            Button {
+              text: libraryModel.sortDescending ? "↓" : "↑"
+              font.family: root.uiFont
+              onClicked: libraryModel.sortDescending = !libraryModel.sortDescending
+            }
+
             Item { Layout.fillWidth: true }
+
+            Button {
+              text: selectionMode ? "Cancel" : "Select"
+              font.family: root.uiFont
+              onClicked: {
+                selectionMode = !selectionMode
+                if (!selectionMode) {
+                  clearSelection()
+                }
+              }
+            }
+
+            Button {
+              text: "Edit tags"
+              font.family: root.uiFont
+              visible: selectionMode && selectedIds.length > 0
+              onClicked: bulkTagsDialog.openForIds(selectedIds)
+            }
+
+            Button {
+              text: "Remove selected"
+              font.family: root.uiFont
+              visible: selectionMode && selectedIds.length > 0
+              onClicked: deleteBooksDialog.openForIds(selectedIds)
+            }
 
             Button {
               text: "Add"
@@ -1039,74 +1868,167 @@ ApplicationWindow {
               height: 106
               width: listView.width
               color: index % 2 === 0 ? theme.panelHighlight : theme.panel
+              border.width: isSelected(model.id) ? 2 : 0
+              border.color: theme.accent
 
-              MouseArea {
-                anchors.fill: parent
-                onClicked: {
-                  reader.close()
-                  const ext = model.path.split(".").pop().toLowerCase()
-                  reader.openFileAsync(model.path)
-                  annotationModel.libraryItemId = model.id
-                  stack.push(readerPage)
-                }
-              }
-
-              Row {
+              RowLayout {
                 anchors.fill: parent
                 anchors.margins: 14
                 spacing: 16
 
-                Rectangle {
-                  width: 52
-                  height: 56
-                  radius: 8
-                  color: theme.accentAlt
+                Item {
+                  id: libraryContent
+                  Layout.fillWidth: true
+                  Layout.fillHeight: true
 
-                  Text {
-                    anchors.centerIn: parent
-                    text: model.format.toUpperCase()
-                    color: "#0f141a"
-                    font.pixelSize: 12
-                    font.family: root.uiFont
+                  MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                      if (selectionMode) {
+                        toggleSelected(model.id)
+                        return
+                      }
+                      reader.close()
+                      reader.openFileAsync(model.path)
+                      annotationModel.libraryItemId = model.id
+                      stack.push(readerPage)
+                    }
+                  }
+
+                  Row {
+                    anchors.fill: parent
+                    spacing: 16
+
+                    Rectangle {
+                      width: selectionMode ? 22 : 0
+                      height: selectionMode ? 22 : 0
+                      radius: 4
+                      color: isSelected(model.id) ? theme.accent : "transparent"
+                      border.width: selectionMode ? 1 : 0
+                      border.color: theme.textMuted
+                      visible: selectionMode
+                      anchors.verticalCenter: parent.verticalCenter
+
+                      Text {
+                        anchors.centerIn: parent
+                        text: isSelected(model.id) ? "✓" : ""
+                        color: "#0f141a"
+                        font.pixelSize: 12
+                        font.family: root.uiFont
+                      }
+
+                      MouseArea {
+                        anchors.fill: parent
+                        onClicked: toggleSelected(model.id)
+                      }
+                    }
+
+                    Rectangle {
+                      width: 52
+                      height: 56
+                      radius: 8
+                      color: theme.accentAlt
+
+                      Text {
+                        anchors.centerIn: parent
+                        text: model.format.toUpperCase()
+                        color: "#0f141a"
+                        font.pixelSize: 12
+                        font.family: root.uiFont
+                      }
+                    }
+
+                    Column {
+                      spacing: 4
+                      anchors.verticalCenter: parent.verticalCenter
+
+                      Text {
+                        text: model.title
+                        color: theme.textPrimary
+                        font.pixelSize: 18
+                        font.family: root.uiFont
+                        elide: Text.ElideRight
+                        width: libraryContent.width - 180
+                      }
+
+                      Text {
+                        text: {
+                          var parts = [];
+                          if (model.authors && model.authors.length > 0) parts.push(model.authors);
+                          if (model.series && model.series.length > 0) parts.push(model.series);
+                          if (model.publisher && model.publisher.length > 0) parts.push(model.publisher);
+                          if (model.collection && model.collection.length > 0) parts.push(model.collection);
+                          if (model.tags && model.tags.length > 0) parts.push(model.tags);
+                          return parts.length > 0 ? parts.join(" • ") : ""
+                        }
+                        color: theme.textMuted
+                        font.pixelSize: 12
+                        font.family: root.uiFont
+                        elide: Text.ElideRight
+                        width: libraryContent.width - 180
+                        visible: text.length > 0
+                      }
+
+                      Text {
+                        text: (model.description && model.description.length > 0) ? model.description : model.path
+                        color: theme.textMuted
+                        font.pixelSize: 12
+                        font.family: root.uiFont
+                        elide: Text.ElideRight
+                        width: libraryContent.width - 180
+                      }
+                    }
+                  }
+
+                  Rectangle {
+                    visible: model.annotationCount > 0
+                    radius: 12
+                    height: 24
+                    width: Math.max(32, badgeText.implicitWidth + 16)
+                    color: theme.accent
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.rightMargin: 12
+
+                    Text {
+                      id: badgeText
+                      anchors.centerIn: parent
+                      text: model.annotationCount
+                      color: "#0f141a"
+                      font.pixelSize: 12
+                      font.family: root.uiFont
+                    }
                   }
                 }
 
-                Column {
-                  spacing: 4
-                  anchors.verticalCenter: parent.verticalCenter
+                ColumnLayout {
+                  Layout.alignment: Qt.AlignVCenter
+                  spacing: 6
 
-                  Text {
-                    text: model.title
-                    color: theme.textPrimary
-                    font.pixelSize: 18
+                  Button {
+                    text: "Edit"
                     font.family: root.uiFont
-                    elide: Text.ElideRight
-                    width: listView.width - 180
+                    onClicked: editBookDialog.openForBook({
+                      id: model.id,
+                      title: model.title,
+                      authors: model.authors,
+                      series: model.series,
+                      publisher: model.publisher,
+                      collection: model.collection,
+                      tags: model.tags,
+                      description: model.description,
+                      path: model.path
+                    })
                   }
 
-                  Text {
-                    text: {
-                      var parts = [];
-                      if (model.authors && model.authors.length > 0) parts.push(model.authors);
-                      if (model.series && model.series.length > 0) parts.push(model.series);
-                      if (model.publisher && model.publisher.length > 0) parts.push(model.publisher);
-                      return parts.length > 0 ? parts.join(" • ") : ""
-                    }
-                    color: theme.textMuted
-                    font.pixelSize: 12
+                  Button {
+                    text: "Remove"
                     font.family: root.uiFont
-                    elide: Text.ElideRight
-                    width: listView.width - 180
-                    visible: text.length > 0
-                  }
-
-                  Text {
-                    text: (model.description && model.description.length > 0) ? model.description : model.path
-                    color: theme.textMuted
-                    font.pixelSize: 12
-                    font.family: root.uiFont
-                    elide: Text.ElideRight
-                    width: listView.width - 180
+                    onClicked: deleteBookDialog.openForBook({
+                      id: model.id,
+                      title: model.title,
+                      path: model.path
+                    })
                   }
                 }
               }
@@ -1210,6 +2132,20 @@ ApplicationWindow {
                   tts.speak(reader.currentPlainText)
                 }
               }
+            }
+
+            Button {
+              text: "Queue"
+              font.family: root.uiFont
+              enabled: tts.available
+              onClicked: tts.enqueue(reader.currentPlainText)
+            }
+
+            Text {
+              text: tts.queueLength > 0 ? qsTr("Queue %1").arg(tts.queueLength) : ""
+              color: theme.textMuted
+              font.pixelSize: 12
+              font.family: root.uiFont
             }
 
             Button {
@@ -1373,88 +2309,200 @@ ApplicationWindow {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
 
-                    ListView {
-                      id: annotationList
+                    ColumnLayout {
                       anchors.fill: parent
-                      clip: true
-                      model: annotationModel
-                      delegate: Rectangle {
-                        width: parent.width
-                        height: 110
+                      spacing: 8
+
+                      TextField {
+                        Layout.fillWidth: true
+                        placeholderText: "Search annotations"
+                        text: annotationFilterText
+                        onTextChanged: {
+                          annotationFilterText = text
+                          rebuildAnnotationFilter()
+                        }
+                      }
+
+                      RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+
+                        ComboBox {
+                          Layout.fillWidth: true
+                          model: ["all", "note", "highlight", "bookmark"]
+                          currentIndex: Math.max(0, model.indexOf(annotationFilterType))
+                          onActivated: {
+                            annotationFilterType = model[currentIndex]
+                            rebuildAnnotationFilter()
+                          }
+                        }
+
+                        ComboBox {
+                          Layout.fillWidth: true
+                          model: ["all", "#ffb347", "#7bdff2", "#c3f584", "#f4a7d3", "#f07167", "#ffd166", "#bdb2ff"]
+                          currentIndex: Math.max(0, model.indexOf(annotationFilterColor))
+                          onActivated: {
+                            annotationFilterColor = model[currentIndex]
+                            rebuildAnnotationFilter()
+                          }
+                        }
+                      }
+
+                      RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+
+                        Button {
+                          text: "Export"
+                          font.family: root.uiFont
+                          onClicked: exportAnnotationsDialog.open()
+                        }
+
+                        Item { Layout.fillWidth: true }
+                      }
+
+                      Rectangle {
+                        Layout.fillWidth: true
                         radius: 8
-                        color: index % 2 === 0 ? theme.panel : theme.panelHighlight
+                        color: theme.panel
+                        border.color: "#2b3446"
+                        border.width: 1
 
                         Column {
                           anchors.fill: parent
                           anchors.margins: 8
-                          spacing: 4
+                          spacing: 6
 
                           Text {
-                            text: model.locator + " • " + model.type
-                            color: theme.textMuted
-                            font.pixelSize: 11
-                            font.family: root.uiFont
-                            elide: Text.ElideRight
-                          }
-
-                          Text {
-                            text: model.text
+                            text: "Pin legend"
                             color: theme.textPrimary
-                            font.pixelSize: 13
+                            font.pixelSize: 12
                             font.family: root.uiFont
-                            wrapMode: Text.WordWrap
-                            elide: Text.ElideRight
+                          }
+
+                          Flow {
+                            width: parent.width
+                            spacing: 12
+
+                            Repeater {
+                              model: ["note", "highlight", "bookmark"]
+                              delegate: Row {
+                                spacing: 6
+                                readonly property var pinStyle: root.pinStyleForType(modelData)
+
+                                Rectangle {
+                                  width: 10
+                                  height: 10
+                                  radius: pinStyle.radius
+                                  rotation: pinStyle.rotation
+                                  transformOrigin: Item.Center
+                                  color: theme.accent
+                                }
+
+                                Text {
+                                  text: root.pinLabelForType(modelData)
+                                  color: theme.textMuted
+                                  font.pixelSize: 11
+                                  font.family: root.uiFont
+                                }
+                              }
+                            }
                           }
 
                           Text {
-                            text: model.createdAt
+                            text: "Pins appear on image/PDF pages. Shape = type, color = annotation color."
                             color: theme.textMuted
                             font.pixelSize: 10
                             font.family: root.uiFont
+                            wrapMode: Text.WordWrap
                           }
                         }
+                      }
 
-                        MouseArea {
-                          anchors.fill: parent
-                          onClicked: reader.jumpToLocator(model.locator)
-                        }
+                      ListView {
+                        id: annotationList
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        clip: true
+                        model: filteredAnnotations
+                        delegate: Rectangle {
+                          width: parent.width
+                          height: 110
+                          radius: 8
+                          color: index % 2 === 0 ? theme.panel : theme.panelHighlight
 
-                        Rectangle {
-                          width: 10
-                          height: 10
-                          radius: 5
-                          color: model.color
-                          anchors.right: parent.right
-                          anchors.top: parent.top
-                          anchors.margins: 8
-                        }
+                          Column {
+                            anchors.fill: parent
+                            anchors.margins: 8
+                            spacing: 4
 
-                        Row {
-                          anchors.right: parent.right
-                          anchors.bottom: parent.bottom
-                          anchors.margins: 6
-                          spacing: 6
+                            Text {
+                              text: root.locatorDisplay(model.locator) + " • " + model.type
+                              color: theme.textMuted
+                              font.pixelSize: 11
+                              font.family: root.uiFont
+                              elide: Text.ElideRight
+                            }
 
-                          Button {
-                            text: "Edit"
-                            font.family: root.uiFont
-                            onClicked: annotationDialog.openForEdit({
-                              id: model.id,
-                              locator: model.locator,
-                              type: model.type,
-                              text: model.text,
-                              color: model.color
-                            })
-                          }
-
-                          Button {
-                            text: "Delete"
-                            font.family: root.uiFont
-                            onClicked: deleteAnnotationDialog.openForAnnotation({
-                              id: model.id,
-                              locator: model.locator,
+                            Text {
                               text: model.text
-                            })
+                              color: theme.textPrimary
+                              font.pixelSize: 13
+                              font.family: root.uiFont
+                              wrapMode: Text.WordWrap
+                              elide: Text.ElideRight
+                            }
+
+                            Text {
+                              text: model.createdAt
+                              color: theme.textMuted
+                              font.pixelSize: 10
+                              font.family: root.uiFont
+                            }
+                          }
+
+                          MouseArea {
+                            anchors.fill: parent
+                            onClicked: reader.jumpToLocator(model.locator)
+                          }
+
+                          Rectangle {
+                            width: 10
+                            height: 10
+                            radius: 5
+                            color: model.color
+                            anchors.right: parent.right
+                            anchors.top: parent.top
+                            anchors.margins: 8
+                          }
+
+                          Row {
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            anchors.margins: 6
+                            spacing: 6
+
+                            Button {
+                              text: "Edit"
+                              font.family: root.uiFont
+                              onClicked: annotationDialog.openForEdit({
+                                id: model.id,
+                                locator: model.locator,
+                                type: model.type,
+                                text: model.text,
+                                color: model.color
+                              })
+                            }
+
+                            Button {
+                              text: "Delete"
+                              font.family: root.uiFont
+                              onClicked: deleteAnnotationDialog.openForAnnotation({
+                                id: model.id,
+                                locator: model.locator,
+                                text: model.text
+                              })
+                            }
                           }
                         }
                       }
@@ -1531,6 +2579,144 @@ ApplicationWindow {
         ColumnLayout {
           width: parent.width
           spacing: 18
+
+          Text {
+            text: "Text To Speech"
+            color: theme.textPrimary
+            font.pixelSize: 20
+            font.family: root.uiFont
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Voice"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            ComboBox {
+              Layout.fillWidth: true
+              enabled: tts.available && tts.voiceLabels.length > 0
+              model: tts.voiceLabels
+              currentIndex: {
+                const keys = tts.voiceKeys
+                const selectedKey = settings.ttsVoiceKey.length > 0 ? settings.ttsVoiceKey : tts.voiceKey
+                for (var i = 0; i < keys.length; ++i) {
+                  if (keys[i] === selectedKey) return i
+                }
+                return 0
+              }
+              onActivated: {
+                if (currentIndex >= 0 && currentIndex < tts.voiceKeys.length) {
+                  settings.ttsVoiceKey = tts.voiceKeys[currentIndex]
+                }
+              }
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Rate"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: -1.0
+              to: 1.0
+              stepSize: 0.05
+              value: settings.ttsRate
+              enabled: tts.available
+              onMoved: settings.ttsRate = Math.round(value * 100) / 100
+            }
+
+            Text {
+              text: settings.ttsRate.toFixed(2)
+              color: theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 48
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Pitch"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: -1.0
+              to: 1.0
+              stepSize: 0.05
+              value: settings.ttsPitch
+              enabled: tts.available
+              onMoved: settings.ttsPitch = Math.round(value * 100) / 100
+            }
+
+            Text {
+              text: settings.ttsPitch.toFixed(2)
+              color: theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 48
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Volume"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 0.0
+              to: 1.0
+              stepSize: 0.05
+              value: settings.ttsVolume
+              enabled: tts.available
+              onMoved: settings.ttsVolume = Math.round(value * 100) / 100
+            }
+
+            Text {
+              text: settings.ttsVolume.toFixed(2)
+              color: theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 48
+            }
+          }
+
+          Rectangle {
+            Layout.fillWidth: true
+            height: 1
+            color: theme.panelHighlight
+          }
 
           Text {
             text: "EPUB"

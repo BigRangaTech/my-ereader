@@ -11,10 +11,13 @@ struct LibraryItem {
   QString series;
   QString publisher;
   QString description;
+  QString tags;
+  QString collection;
   QString path;
   QString format;
   QString fileHash;
   QString addedAt;
+  int annotationCount = 0;
 };
 
 Q_DECLARE_METATYPE(LibraryItem)

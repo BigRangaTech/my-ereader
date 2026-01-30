@@ -7,6 +7,10 @@ class SettingsManager : public QObject {
   Q_OBJECT
   Q_PROPERTY(int readingFontSize READ readingFontSize WRITE setReadingFontSize NOTIFY readingFontSizeChanged)
   Q_PROPERTY(double readingLineHeight READ readingLineHeight WRITE setReadingLineHeight NOTIFY readingLineHeightChanged)
+  Q_PROPERTY(double ttsRate READ ttsRate WRITE setTtsRate NOTIFY ttsRateChanged)
+  Q_PROPERTY(double ttsPitch READ ttsPitch WRITE setTtsPitch NOTIFY ttsPitchChanged)
+  Q_PROPERTY(double ttsVolume READ ttsVolume WRITE setTtsVolume NOTIFY ttsVolumeChanged)
+  Q_PROPERTY(QString ttsVoiceKey READ ttsVoiceKey WRITE setTtsVoiceKey NOTIFY ttsVoiceKeyChanged)
   Q_PROPERTY(int epubFontSize READ epubFontSize WRITE setEpubFontSize NOTIFY epubFontSizeChanged)
   Q_PROPERTY(double epubLineHeight READ epubLineHeight WRITE setEpubLineHeight NOTIFY epubLineHeightChanged)
   Q_PROPERTY(bool epubShowImages READ epubShowImages WRITE setEpubShowImages NOTIFY epubShowImagesChanged)
@@ -74,6 +78,10 @@ public:
 
   int readingFontSize() const;
   double readingLineHeight() const;
+  double ttsRate() const;
+  double ttsPitch() const;
+  double ttsVolume() const;
+  QString ttsVoiceKey() const;
   int epubFontSize() const;
   double epubLineHeight() const;
   bool epubShowImages() const;
@@ -139,6 +147,10 @@ public:
 
   void setReadingFontSize(int value);
   void setReadingLineHeight(double value);
+  void setTtsRate(double value);
+  void setTtsPitch(double value);
+  void setTtsVolume(double value);
+  void setTtsVoiceKey(const QString &value);
   void setEpubFontSize(int value);
   void setEpubLineHeight(double value);
   void setEpubShowImages(bool value);
@@ -214,6 +226,10 @@ public:
 signals:
   void readingFontSizeChanged();
   void readingLineHeightChanged();
+  void ttsRateChanged();
+  void ttsPitchChanged();
+  void ttsVolumeChanged();
+  void ttsVoiceKeyChanged();
   void epubFontSizeChanged();
   void epubLineHeightChanged();
   void epubShowImagesChanged();
@@ -288,6 +304,10 @@ private:
   QSettings m_settings;
   int m_readingFontSize = 20;
   double m_readingLineHeight = 1.4;
+  double m_ttsRate = 0.0;
+  double m_ttsPitch = 0.0;
+  double m_ttsVolume = 1.0;
+  QString m_ttsVoiceKey;
   int m_epubFontSize = 20;
   double m_epubLineHeight = 1.4;
   bool m_epubShowImages = true;

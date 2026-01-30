@@ -74,6 +74,10 @@ QString SettingsManager::iconPath() const {
 
 int SettingsManager::readingFontSize() const { return m_readingFontSize; }
 double SettingsManager::readingLineHeight() const { return m_readingLineHeight; }
+double SettingsManager::ttsRate() const { return m_ttsRate; }
+double SettingsManager::ttsPitch() const { return m_ttsPitch; }
+double SettingsManager::ttsVolume() const { return m_ttsVolume; }
+QString SettingsManager::ttsVoiceKey() const { return m_ttsVoiceKey; }
 int SettingsManager::epubFontSize() const { return m_epubFontSize; }
 double SettingsManager::epubLineHeight() const { return m_epubLineHeight; }
 bool SettingsManager::epubShowImages() const { return m_epubShowImages; }
@@ -156,6 +160,45 @@ void SettingsManager::setReadingLineHeight(double value) {
   m_readingLineHeight = value;
   saveValue("reading/line_height", value);
   emit readingLineHeightChanged();
+}
+
+void SettingsManager::setTtsRate(double value) {
+  value = clampDouble(value, -1.0, 1.0);
+  if (qFuzzyCompare(m_ttsRate, value)) {
+    return;
+  }
+  m_ttsRate = value;
+  saveValue("tts/rate", value);
+  emit ttsRateChanged();
+}
+
+void SettingsManager::setTtsPitch(double value) {
+  value = clampDouble(value, -1.0, 1.0);
+  if (qFuzzyCompare(m_ttsPitch, value)) {
+    return;
+  }
+  m_ttsPitch = value;
+  saveValue("tts/pitch", value);
+  emit ttsPitchChanged();
+}
+
+void SettingsManager::setTtsVolume(double value) {
+  value = clampDouble(value, 0.0, 1.0);
+  if (qFuzzyCompare(m_ttsVolume, value)) {
+    return;
+  }
+  m_ttsVolume = value;
+  saveValue("tts/volume", value);
+  emit ttsVolumeChanged();
+}
+
+void SettingsManager::setTtsVoiceKey(const QString &value) {
+  if (m_ttsVoiceKey == value) {
+    return;
+  }
+  m_ttsVoiceKey = value;
+  saveValue("tts/voice_key", value);
+  emit ttsVoiceKeyChanged();
 }
 
 void SettingsManager::setEpubFontSize(int value) {
@@ -779,6 +822,10 @@ void SettingsManager::setComicSortDescending(bool value) {
 void SettingsManager::resetDefaults() {
   setReadingFontSize(20);
   setReadingLineHeight(1.4);
+  setTtsRate(0.0);
+  setTtsPitch(0.0);
+  setTtsVolume(1.0);
+  setTtsVoiceKey("");
   setEpubFontSize(20);
   setEpubLineHeight(1.4);
   setEpubShowImages(true);
@@ -927,6 +974,10 @@ void SettingsManager::reload() {
 void SettingsManager::loadFromSettings() {
   m_readingFontSize = clampInt(m_settings.value("reading/font_size", 20).toInt(), 12, 36);
   m_readingLineHeight = clampDouble(m_settings.value("reading/line_height", 1.4).toDouble(), 1.0, 2.0);
+  m_ttsRate = clampDouble(m_settings.value("tts/rate", 0.0).toDouble(), -1.0, 1.0);
+  m_ttsPitch = clampDouble(m_settings.value("tts/pitch", 0.0).toDouble(), -1.0, 1.0);
+  m_ttsVolume = clampDouble(m_settings.value("tts/volume", 1.0).toDouble(), 0.0, 1.0);
+  m_ttsVoiceKey = m_settings.value("tts/voice_key", "").toString();
 
   m_epubFontSize = clampInt(readFormatValue("epub", "reading/font_size", m_readingFontSize).toInt(), 12, 36);
   m_epubLineHeight =

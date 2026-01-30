@@ -37,6 +37,25 @@ LibraryModel::LibraryModel(QObject *parent) : QAbstractListModel(parent) {
               setLastError("");
             }
           });
+  connect(worker, &DbWorker::updateBookFinished, this,
+          [this](bool ok, const QString &error) {
+            if (!ok) {
+              setLastError(error);
+            } else {
+              setLastError("");
+            }
+          });
+  connect(worker, &DbWorker::deleteBookFinished, this,
+          [this](bool ok, const QString &error) {
+            if (!ok) {
+              setLastError(error);
+            } else {
+              setLastError("");
+            }
+          });
+  connect(worker, &DbWorker::annotationsChanged, this, [this]() {
+    QMetaObject::invokeMethod(dbWorker(), "loadLibrary", Qt::QueuedConnection);
+  });
 }
 
 LibraryModel::~LibraryModel() {
@@ -68,12 +87,18 @@ QVariant LibraryModel::data(const QModelIndex &index, int role) const {
     return item.publisher;
   case DescriptionRole:
     return item.description;
+  case TagsRole:
+    return item.tags;
+  case CollectionRole:
+    return item.collection;
   case PathRole:
     return item.path;
   case FormatRole:
     return item.format;
   case AddedAtRole:
     return item.addedAt;
+  case AnnotationCountRole:
+    return item.annotationCount;
   default:
     return {};
   }
@@ -84,8 +109,9 @@ QHash<int, QByteArray> LibraryModel::roleNames() const {
       {IdRole, "id"},           {TitleRole, "title"},
       {AuthorsRole, "authors"}, {SeriesRole, "series"},
       {PublisherRole, "publisher"}, {DescriptionRole, "description"},
+      {TagsRole, "tags"},       {CollectionRole, "collection"},
       {PathRole, "path"},       {FormatRole, "format"},
-      {AddedAtRole, "addedAt"}};
+      {AddedAtRole, "addedAt"}, {AnnotationCountRole, "annotationCount"}};
 }
 
 bool LibraryModel::openDefault() {
@@ -207,16 +233,205 @@ bool LibraryModel::addBook(const QString &filePath) {
   return true;
 }
 
+bool LibraryModel::updateMetadata(int id,
+                                  const QString &title,
+                                  const QString &authors,
+                                  const QString &series,
+                                  const QString &publisher,
+                                  const QString &description,
+                                  const QString &tags,
+                                  const QString &collection) {
+  if (!m_ready) {
+    setLastError("Library database not ready");
+    return false;
+  }
+  if (id <= 0) {
+    setLastError("Invalid library item");
+    return false;
+  }
+  setLastError("");
+  QMetaObject::invokeMethod(dbWorker(), "updateLibraryItem", Qt::QueuedConnection,
+                            Q_ARG(int, id),
+                            Q_ARG(QString, title),
+                            Q_ARG(QString, authors),
+                            Q_ARG(QString, series),
+                            Q_ARG(QString, publisher),
+                            Q_ARG(QString, description),
+                            Q_ARG(QString, tags),
+                            Q_ARG(QString, collection));
+  return true;
+}
+
+bool LibraryModel::removeBook(int id) {
+  if (!m_ready) {
+    setLastError("Library database not ready");
+    return false;
+  }
+  if (id <= 0) {
+    setLastError("Invalid library item");
+    return false;
+  }
+  setLastError("");
+  QMetaObject::invokeMethod(dbWorker(), "deleteLibraryItem", Qt::QueuedConnection,
+                            Q_ARG(int, id));
+  return true;
+}
+
+bool LibraryModel::updateTagsCollection(const QVariantList &ids,
+                                        const QString &tags,
+                                        const QString &collection,
+                                        bool updateTags,
+                                        bool updateCollection) {
+  if (!m_ready) {
+    setLastError("Library database not ready");
+    return false;
+  }
+  if (ids.isEmpty()) {
+    setLastError("No items selected");
+    return false;
+  }
+  QVector<int> converted;
+  converted.reserve(ids.size());
+  for (const auto &value : ids) {
+    bool ok = false;
+    const int id = value.toInt(&ok);
+    if (ok && id > 0) {
+      converted.push_back(id);
+    }
+  }
+  if (converted.isEmpty()) {
+    setLastError("Invalid library items");
+    return false;
+  }
+  setLastError("");
+  QMetaObject::invokeMethod(dbWorker(), "bulkUpdateTagsCollection", Qt::QueuedConnection,
+                            Q_ARG(QVector<int>, converted),
+                            Q_ARG(QString, tags),
+                            Q_ARG(QString, collection),
+                            Q_ARG(bool, updateTags),
+                            Q_ARG(bool, updateCollection));
+  return true;
+}
+
+bool LibraryModel::removeBooks(const QVariantList &ids) {
+  if (!m_ready) {
+    setLastError("Library database not ready");
+    return false;
+  }
+  if (ids.isEmpty()) {
+    setLastError("No items selected");
+    return false;
+  }
+  QVector<int> converted;
+  converted.reserve(ids.size());
+  for (const auto &value : ids) {
+    bool ok = false;
+    const int id = value.toInt(&ok);
+    if (ok && id > 0) {
+      converted.push_back(id);
+    }
+  }
+  if (converted.isEmpty()) {
+    setLastError("Invalid library items");
+    return false;
+  }
+  setLastError("");
+  QMetaObject::invokeMethod(dbWorker(), "deleteLibraryItems", Qt::QueuedConnection,
+                            Q_ARG(QVector<int>, converted));
+  return true;
+}
+
+QVariantMap LibraryModel::get(int index) const {
+  QVariantMap map;
+  if (index < 0 || index >= m_items.size()) {
+    return map;
+  }
+  const auto &item = m_items.at(index);
+  map.insert("id", item.id);
+  map.insert("title", item.title);
+  map.insert("authors", item.authors);
+  map.insert("series", item.series);
+  map.insert("publisher", item.publisher);
+  map.insert("description", item.description);
+  map.insert("tags", item.tags);
+  map.insert("collection", item.collection);
+  map.insert("path", item.path);
+  map.insert("format", item.format);
+  map.insert("addedAt", item.addedAt);
+  map.insert("annotationCount", item.annotationCount);
+  return map;
+}
+
 bool LibraryModel::ready() const { return m_ready; }
 
 int LibraryModel::count() const { return m_items.size(); }
 
 QString LibraryModel::lastError() const { return m_lastError; }
 
+QString LibraryModel::searchQuery() const { return m_searchQuery; }
+
+QString LibraryModel::sortKey() const { return m_sortKey; }
+
+bool LibraryModel::sortDescending() const { return m_sortDescending; }
+
+QString LibraryModel::filterTag() const { return m_filterTag; }
+
+QString LibraryModel::filterCollection() const { return m_filterCollection; }
+
+void LibraryModel::setSearchQuery(const QString &query) {
+  if (m_searchQuery == query) {
+    return;
+  }
+  m_searchQuery = query;
+  emit searchQueryChanged();
+  reload();
+}
+
+void LibraryModel::setSortKey(const QString &key) {
+  if (m_sortKey == key) {
+    return;
+  }
+  m_sortKey = key;
+  emit sortKeyChanged();
+  reload();
+}
+
+void LibraryModel::setSortDescending(bool descending) {
+  if (m_sortDescending == descending) {
+    return;
+  }
+  m_sortDescending = descending;
+  emit sortDescendingChanged();
+  reload();
+}
+
+void LibraryModel::setFilterTag(const QString &tag) {
+  if (m_filterTag == tag) {
+    return;
+  }
+  m_filterTag = tag;
+  emit filterTagChanged();
+  reload();
+}
+
+void LibraryModel::setFilterCollection(const QString &collection) {
+  if (m_filterCollection == collection) {
+    return;
+  }
+  m_filterCollection = collection;
+  emit filterCollectionChanged();
+  reload();
+}
+
 QString LibraryModel::connectionName() const { return QString(); }
 
 void LibraryModel::reload() {
-  QMetaObject::invokeMethod(dbWorker(), "loadLibrary", Qt::QueuedConnection);
+  QMetaObject::invokeMethod(dbWorker(), "loadLibraryFiltered", Qt::QueuedConnection,
+                            Q_ARG(QString, m_searchQuery),
+                            Q_ARG(QString, m_sortKey),
+                            Q_ARG(bool, m_sortDescending),
+                            Q_ARG(QString, m_filterTag),
+                            Q_ARG(QString, m_filterCollection));
 }
 
 void LibraryModel::close() {
