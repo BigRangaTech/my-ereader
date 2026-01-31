@@ -17,3 +17,5 @@
 /third_party/install/
 /third_party/libarchive/_deps/
 /testbooks/
+/flatpak/build/
+/flatpak/repo/

@@ -33,6 +33,14 @@ void UpdateManager::checkForUpdates() {
   if (m_state == State::Checking) {
     return;
   }
+  const QString flatpakId = QProcessEnvironment::systemEnvironment().value("FLATPAK_ID").trimmed();
+  if (!flatpakId.isEmpty()) {
+    setState(State::Unavailable);
+    setStatus("Updates are handled by Flatpak");
+    setSummary({});
+    setDetails({});
+    return;
+  }
   const QString git = QStandardPaths::findExecutable("git");
   if (git.isEmpty()) {
     setState(State::Unavailable);

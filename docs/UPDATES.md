@@ -11,6 +11,12 @@ If you're running a packaged build from this repo, update with `scripts/update.s
 and relaunch via `dist/current/ereader.sh` to pick up the latest packaged binary.
 Packaged builds keep settings under `dist/config` so they persist across updates.
 
+## Flatpak
+When running the Flatpak build, updates are handled by Flatpak itself:
+```bash
+flatpak update
+```
+
 ## Android
 Update path to be defined later. We will not ship background updaters.
 

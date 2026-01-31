@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=My Ereader
+Exec=ereader
+Icon=com.bigrangatech.MyEreader
+Categories=Office;Viewer;
+Keywords=ebook;reader;epub;pdf;cbz;cbr;fb2;djvu;mobi;
+Terminal=false

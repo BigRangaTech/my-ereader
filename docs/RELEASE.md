@@ -31,3 +31,20 @@ Copy required libarchive shared libraries next to the app binary.
 
 The package script creates a versioned folder under `dist/` plus a
 `dist/current` symlink and `ereader.sh` launcher.
+
+## Flatpak
+```bash
+./scripts/build_flatpak.sh
+```
+
+This builds a Flatpak repo under `flatpak/repo` and vendors Poppler,
+libarchive, DjVuLibre, plus bundled TTS backends (speech-dispatcher + espeak-ng)
+as modules.
+
+## Flatpak offline bundles
+```bash
+./scripts/export_flatpak_bundle.sh
+```
+
+This exports an app bundle into `dist/` and (when supported) creates an
+offline Flatpak repo under `dist/flatpak-offline` that includes the runtime.

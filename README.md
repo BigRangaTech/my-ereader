@@ -59,6 +59,20 @@ Launch the packaged app with:
 Packaged builds use a shared config folder at `dist/config` so settings
 persist across updates.
 
+## Flatpak (recommended for releases)
+```bash
+./scripts/build_flatpak.sh
+```
+
+This produces a local Flatpak repo under `flatpak/repo`.
+The Flatpak manifest vendors Poppler, libarchive, DjVuLibre, and the
+speech-dispatcher + espeak-ng TTS stack so the app is self-contained.
+
+To export an offline bundle:
+```bash
+./scripts/export_flatpak_bundle.sh
+```
+
 ### DjVuLibre (optional vendor)
 DJVU rendering uses DjVuLibre CLI tools (`ddjvu`, `djvused`, `djvutxt`). You can install them
 system-wide or vendor them under `third_party/install/djvulibre/bin` using:

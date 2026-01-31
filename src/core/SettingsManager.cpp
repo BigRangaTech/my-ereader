@@ -5,6 +5,7 @@
 #include <QCryptographicHash>
 #include <QDir>
 #include <QFileInfo>
+#include <QStandardPaths>
 
 namespace {
 int clampInt(int value, int minValue, int maxValue) {
@@ -49,6 +50,13 @@ QString SettingsManager::iconPath() const {
   const QString path = QDir(root).filePath("icon/icon.png");
   if (QFileInfo::exists(path)) {
     return path;
+  }
+  const QString genericPath =
+      QStandardPaths::locate(QStandardPaths::GenericDataLocation,
+                             "my-ereader/icon/icon.png",
+                             QStandardPaths::LocateFile);
+  if (!genericPath.isEmpty()) {
+    return genericPath;
   }
   return {};
 }
