@@ -94,6 +94,7 @@ modules:
       - -DBUILD_QT6_TESTS=OFF
       - -DBUILD_QT5_TESTS=OFF
       - -DBUILD_GTK_TESTS=OFF
+      - -DCMAKE_INSTALL_PREFIX=/app
     sources:
       - type: git
         url: https://github.com/BigRangaTech/my-poppler.git
@@ -103,14 +104,18 @@ modules:
     buildsystem: simple
     build-commands:
       - rm -rf build _flatpak_build
-      - cmake -S . -B _flatpak_build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/app -DUSE_BUNDLED_POPPLER=OFF -DUSE_BUNDLED_LIBARCHIVE=OFF
+      - PKG_CONFIG_PATH=/app/lib/pkgconfig:/app/lib64/pkgconfig cmake -S . -B _flatpak_build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/app -DUSE_BUNDLED_POPPLER=OFF -DUSE_BUNDLED_LIBARCHIVE=OFF
       - cmake --build _flatpak_build
       - install -Dm755 _flatpak_build/src/app/ereader /app/bin/ereader
+      - install -Dm644 _flatpak_build/src/app/Ereader/qmldir /app/lib/qml/Ereader/qmldir
+      - install -Dm644 _flatpak_build/src/app/Ereader/ereader.qmltypes /app/lib/qml/Ereader/ereader.qmltypes
+      - install -Dm644 _flatpak_build/src/app/Ereader/qml/Main.qml /app/lib/qml/Ereader/qml/Main.qml
+      - install -Dm644 _flatpak_build/src/app/Ereader/qml/Theme.qml /app/lib/qml/Ereader/qml/Theme.qml
       - install -Dm644 README.md /app/share/my-ereader/README.md
       - install -Dm644 icon/icon.png /app/share/my-ereader/icon/icon.png
       - install -Dm644 flatpak/com.bigrangatech.MyEreader.desktop /app/share/applications/com.bigrangatech.MyEreader.desktop
       - install -Dm644 flatpak/com.bigrangatech.MyEreader.metainfo.xml /app/share/metainfo/com.bigrangatech.MyEreader.metainfo.xml
-      - install -Dm644 icon/icon.png /app/share/icons/hicolor/256x256/apps/com.bigrangatech.MyEreader.png
+      - install -Dm644 icon/icon512.png /app/share/icons/hicolor/512x512/apps/com.bigrangatech.MyEreader.png
     sources:
       - type: dir
         path: ..
