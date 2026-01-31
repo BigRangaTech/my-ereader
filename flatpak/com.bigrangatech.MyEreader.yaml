@@ -97,13 +97,13 @@ modules:
     sources:
       - type: git
         url: https://github.com/BigRangaTech/my-poppler.git
-        branch: master
+        tag: "v001"
 
   - name: my-ereader
     buildsystem: simple
     build-commands:
       - rm -rf build _flatpak_build
-      - cmake -S . -B _flatpak_build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/app
+      - cmake -S . -B _flatpak_build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/app -DUSE_BUNDLED_POPPLER=OFF -DUSE_BUNDLED_LIBARCHIVE=OFF
       - cmake --build _flatpak_build
       - install -Dm755 _flatpak_build/src/app/ereader /app/bin/ereader
       - install -Dm644 README.md /app/share/my-ereader/README.md
