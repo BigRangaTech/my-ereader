@@ -37,10 +37,17 @@ modules:
     config-opts:
       - --disable-static
       - --enable-shared
+    post-install:
+      - ./dotconf.post-install.sh
     sources:
       - type: git
         url: https://github.com/williamh/dotconf.git
         branch: master
+      - type: file
+        path: ../flatpak/dotconf-autogen.sh
+        dest-filename: autogen.sh
+      - type: file
+        path: ../flatpak/dotconf.post-install.sh
 
   - name: espeak-ng
     buildsystem: autotools
@@ -55,9 +62,16 @@ modules:
 
   - name: speech-dispatcher
     buildsystem: autotools
+    build-options:
+      env:
+        PKG_CONFIG_PATH: /app/lib/pkgconfig:/app/lib64/pkgconfig
+        HELP2MAN: "true"
     config-opts:
       - --disable-static
       - --enable-shared
+      - --disable-python
+      - --disable-python2
+      - --disable-doc
     sources:
       - type: git
         url: https://github.com/brailcom/speechd.git
@@ -88,9 +102,10 @@ modules:
   - name: my-ereader
     buildsystem: simple
     build-commands:
-      - cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/app
-      - cmake --build build
-      - install -Dm755 build/src/app/ereader /app/bin/ereader
+      - rm -rf build _flatpak_build
+      - cmake -S . -B _flatpak_build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/app
+      - cmake --build _flatpak_build
+      - install -Dm755 _flatpak_build/src/app/ereader /app/bin/ereader
       - install -Dm644 README.md /app/share/my-ereader/README.md
       - install -Dm644 icon/icon.png /app/share/my-ereader/icon/icon.png
       - install -Dm644 flatpak/com.bigrangatech.MyEreader.desktop /app/share/applications/com.bigrangatech.MyEreader.desktop

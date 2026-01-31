@@ -91,7 +91,7 @@ DecodedText decodeText(const QByteArray &data, const TxtSettings &settings) {
   }
 
   auto decodeWith = [&](const QString &name, const QByteArray &payload) -> DecodedText {
-    QStringDecoder decoder(name);
+    QStringDecoder decoder(name.toUtf8());
     if (!decoder.isValid()) {
       QStringDecoder fallback(QStringDecoder::Utf8);
       const QString fallbackText = fallback.decode(payload);
