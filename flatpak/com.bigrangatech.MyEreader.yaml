@@ -32,6 +32,16 @@ modules:
       - type: dir
         path: ../third_party/djvulibre
 
+  - name: dotconf
+    buildsystem: autotools
+    config-opts:
+      - --disable-static
+      - --enable-shared
+    sources:
+      - type: git
+        url: https://github.com/williamh/dotconf.git
+        branch: master
+
   - name: espeak-ng
     buildsystem: autotools
     config-opts:
