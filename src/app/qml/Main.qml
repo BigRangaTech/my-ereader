@@ -375,8 +375,7 @@ ApplicationWindow {
       if (useQml) {
         qmlQueue = []
         qmlTts.stop()
-        qmlTts.speak(text)
-        return true
+        return _qmlSpeak(text)
       }
       return ttsBackend.speak(text)
     }
@@ -417,7 +416,19 @@ ApplicationWindow {
       var next = qmlQueue.slice()
       var text = next.shift()
       qmlQueue = next
-      qmlTts.speak(text)
+      _qmlSpeak(text)
+    }
+
+    function _qmlSpeak(text) {
+      if (typeof qmlTts.say === "function") {
+        qmlTts.say(text)
+        return true
+      }
+      if (typeof qmlTts.speak === "function") {
+        qmlTts.speak(text)
+        return true
+      }
+      return false
     }
   }
 
@@ -465,6 +476,7 @@ ApplicationWindow {
 
   Connections {
     target: qmlTts
+    ignoreUnknownSignals: true
     function onAvailableVoicesChanged() {
       if (tts.useQml) {
         tts.refreshQmlVoices()

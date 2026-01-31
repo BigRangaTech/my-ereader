@@ -1,9 +1,11 @@
 #pragma once
 
+#include <QByteArray>
+#include <QHash>
+#include <QHostAddress>
 #include <QObject>
 #include <QString>
 #include <QVariantList>
-#include <QHash>
 
 class SyncManager : public QObject {
   Q_OBJECT

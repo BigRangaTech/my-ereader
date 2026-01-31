@@ -1,5 +1,8 @@
 #include "include/CryptoBackend.h"
 
+std::unique_ptr<CryptoBackend> createMonocypherBackend();
+std::unique_ptr<CryptoBackend> createSodiumBackend();
+
 class CryptoBackendNull final : public CryptoBackend {
 public:
   QString name() const override { return "none"; }
