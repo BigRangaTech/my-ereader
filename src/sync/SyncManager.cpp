@@ -1,5 +1,5 @@
 #include "include/SyncManager.h"
-#include "include/AppPaths.h"
+#include "../core/include/AppPaths.h"
 
 #include <QCryptographicHash>
 #include <QDateTime>

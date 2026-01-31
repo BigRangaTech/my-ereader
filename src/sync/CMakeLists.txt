@@ -3,6 +3,6 @@ add_library(sync STATIC
   include/SyncManager.h
 )
 
-target_include_directories(sync PUBLIC include)
+target_include_directories(sync PUBLIC include ../core/include)
 
 target_link_libraries(sync PUBLIC Qt6::Core Qt6::Network)

@@ -4,6 +4,10 @@
 #include <QString>
 #include <QStringList>
 
+#ifdef HAVE_QT_TTS
+class QTextToSpeech;
+#endif
+
 class TtsController : public QObject {
   Q_OBJECT
   Q_PROPERTY(bool available READ available NOTIFY availabilityChanged)
@@ -65,7 +69,6 @@ private:
   QStringList m_queue;
 
 #ifdef HAVE_QT_TTS
-  class QTextToSpeech;
   QTextToSpeech *m_tts = nullptr;
 #endif
 };

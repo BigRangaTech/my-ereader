@@ -43,9 +43,7 @@ TtsController::TtsController(QObject *parent) : QObject(parent) {
       sayNext();
     }
   });
-  connect(m_tts, &QTextToSpeech::voicesChanged, this, [this]() {
-    refreshVoices();
-  });
+  // Some Qt builds don't expose a voicesChanged signal on QTextToSpeech.
 #else
   m_available = false;
 #endif
