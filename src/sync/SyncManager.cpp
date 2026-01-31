@@ -1,6 +1,6 @@
 #include "include/SyncManager.h"
+#include "include/AppPaths.h"
 
-#include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDateTime>
 #include <QDir>
@@ -18,26 +18,8 @@
 #include <QUuid>
 
 namespace {
-QString findRepoRoot() {
-  QDir dir(QCoreApplication::applicationDirPath());
-  for (int i = 0; i < 6; ++i) {
-    if (QFileInfo::exists(dir.filePath("README.md"))) {
-      return dir.absolutePath();
-    }
-    if (!dir.cdUp()) {
-      break;
-    }
-  }
-  return QCoreApplication::applicationDirPath();
-}
-
 QString resolveSyncSettingsPath() {
-  const QString root = findRepoRoot();
-  QDir dir(root);
-  if (!dir.exists("config")) {
-    dir.mkpath("config");
-  }
-  return dir.filePath("config/sync.ini");
+  return AppPaths::configFile("sync.ini");
 }
 
 QString randomPin() {

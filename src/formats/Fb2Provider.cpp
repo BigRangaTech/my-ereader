@@ -1,7 +1,7 @@
 #include "Fb2Provider.h"
+#include "../core/include/AppPaths.h"
 
 #include <QByteArray>
-#include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
@@ -151,16 +151,7 @@ QString tempDirFor(const QFileInfo &info) {
 }
 
 QString formatSettingsPath() {
-  QDir dir(QCoreApplication::applicationDirPath());
-  for (int i = 0; i < 6; ++i) {
-    if (QFileInfo::exists(dir.filePath("README.md"))) {
-      return dir.filePath("config/fb2.ini");
-    }
-    if (!dir.cdUp()) {
-      break;
-    }
-  }
-  return QDir(QCoreApplication::applicationDirPath()).filePath("fb2.ini");
+  return AppPaths::configFile("fb2.ini");
 }
 
 int clampInt(int value, int minValue, int maxValue) {

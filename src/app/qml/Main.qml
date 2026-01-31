@@ -269,6 +269,10 @@ ApplicationWindow {
     id: settings
   }
 
+  UpdateManager {
+    id: updateManager
+  }
+
   SyncManager {
     id: syncManager
   }
@@ -2742,6 +2746,68 @@ ApplicationWindow {
   }
 
   Dialog {
+    id: updateDialog
+    title: "Updates"
+    modal: true
+    standardButtons: Dialog.Ok
+    width: Math.min(520, root.width - 80)
+
+    contentItem: Rectangle {
+      color: theme.panel
+      radius: 16
+
+      Column {
+        anchors.fill: parent
+        anchors.margins: 16
+        spacing: 12
+
+        Row {
+          spacing: 10
+          visible: updateManager.state === UpdateManager.Checking
+
+          BusyIndicator {
+            running: updateManager.state === UpdateManager.Checking
+            width: 20
+            height: 20
+          }
+
+          Text {
+            text: updateManager.status
+            color: theme.textPrimary
+            font.pixelSize: 14
+            font.family: root.uiFont
+          }
+        }
+
+        Text {
+          text: updateManager.state === UpdateManager.Checking ? "" : updateManager.status
+          color: theme.textPrimary
+          font.pixelSize: 14
+          font.family: root.uiFont
+          visible: updateManager.state !== UpdateManager.Checking
+        }
+
+        Text {
+          text: updateManager.summary
+          color: theme.textMuted
+          font.pixelSize: 12
+          font.family: root.uiFont
+          visible: updateManager.summary.length > 0
+        }
+
+        TextArea {
+          readOnly: true
+          text: updateManager.details
+          visible: updateManager.details.length > 0
+          wrapMode: TextEdit.Wrap
+          color: theme.textPrimary
+          background: Rectangle { color: "transparent" }
+        }
+      }
+    }
+  }
+
+  Dialog {
     id: settingsDialog
     title: "Settings"
     modal: true
@@ -2760,6 +2826,48 @@ ApplicationWindow {
         ColumnLayout {
           width: parent.width
           spacing: 18
+
+          Text {
+            text: "Updates"
+            color: theme.textPrimary
+            font.pixelSize: 20
+            font.family: root.uiFont
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Check for updates"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 160
+            }
+
+            Button {
+              text: "Check"
+              font.family: root.uiFont
+              onClicked: {
+                updateDialog.open()
+                updateManager.checkForUpdates()
+              }
+            }
+
+            Text {
+              text: updateManager.status
+              color: theme.textMuted
+              font.pixelSize: 12
+              font.family: root.uiFont
+            }
+          }
+
+          Rectangle {
+            Layout.fillWidth: true
+            height: 1
+            color: theme.panelHighlight
+          }
 
           Text {
             text: "Sync"

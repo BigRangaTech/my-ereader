@@ -1,25 +1,12 @@
 #include "include/SettingsManager.h"
+#include "include/AppPaths.h"
 
 #include <algorithm>
-#include <QCoreApplication>
-#include <QDir>
 #include <QCryptographicHash>
+#include <QDir>
 #include <QFileInfo>
 
 namespace {
-QString findRepoRoot() {
-  QDir dir(QCoreApplication::applicationDirPath());
-  for (int i = 0; i < 6; ++i) {
-    if (QFileInfo::exists(dir.filePath("README.md"))) {
-      return dir.absolutePath();
-    }
-    if (!dir.cdUp()) {
-      break;
-    }
-  }
-  return QCoreApplication::applicationDirPath();
-}
-
 int clampInt(int value, int minValue, int maxValue) {
   return std::max(minValue, std::min(maxValue, value));
 }
@@ -45,18 +32,12 @@ SettingsManager::SettingsManager(QObject *parent)
 }
 
 QString SettingsManager::resolveSettingsPath() {
-  const QString root = findRepoRoot();
-  QDir dir(root);
-  dir.mkpath("config");
-  return dir.filePath("config/settings.ini");
+  return AppPaths::configFile("settings.ini");
 }
 
 QString SettingsManager::resolveFormatSettingsPath(const QString &format) {
-  const QString root = findRepoRoot();
-  QDir dir(root);
-  dir.mkpath("config");
   const QString key = normalizeFormatKey(format);
-  return dir.filePath(QString("config/%1.ini").arg(key));
+  return AppPaths::configFile(QString("%1.ini").arg(key));
 }
 
 QString SettingsManager::settingsPath() const {
@@ -64,7 +45,7 @@ QString SettingsManager::settingsPath() const {
 }
 
 QString SettingsManager::iconPath() const {
-  const QString root = findRepoRoot();
+  const QString root = AppPaths::repoRoot();
   const QString path = QDir(root).filePath("icon/icon.png");
   if (QFileInfo::exists(path)) {
     return path;

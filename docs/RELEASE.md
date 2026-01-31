@@ -28,3 +28,6 @@ Copy required libarchive shared libraries next to the app binary.
 ```bash
 ./scripts/package_linux.sh
 ```
+
+The package script creates a versioned folder under `dist/` plus a
+`dist/current` symlink and `ereader.sh` launcher.

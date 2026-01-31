@@ -1,6 +1,6 @@
 #include "EpubProvider.h"
+#include "../core/include/AppPaths.h"
 
-#include <QCoreApplication>
 #include <QFileInfo>
 #include <QDebug>
 #include <QDir>
@@ -17,16 +17,7 @@
 
 namespace {
 QString formatSettingsPath() {
-  QDir dir(QCoreApplication::applicationDirPath());
-  for (int i = 0; i < 6; ++i) {
-    if (QFileInfo::exists(dir.filePath("README.md"))) {
-      return dir.filePath("config/epub.ini");
-    }
-    if (!dir.cdUp()) {
-      break;
-    }
-  }
-  return QDir(QCoreApplication::applicationDirPath()).filePath("epub.ini");
+  return AppPaths::configFile("epub.ini");
 }
 
 int clampInt(int value, int minValue, int maxValue) {

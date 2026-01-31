@@ -32,6 +32,9 @@ A fast, secure, offline-first ebook reader for Linux and Android built with Qt 6
 - Desktop: git pull updates (fast-forward only)
 - Android: update path to be defined later
 
+For packaged binaries, run the update script and launch via `dist/current/ereader.sh`
+so you always use the latest packaged build from the repo.
+
 ## Non-goals (for now)
 - Cloud sync or account systems
 - DRM breaking or DRM bypass
@@ -41,6 +44,20 @@ A fast, secure, offline-first ebook reader for Linux and Android built with Qt 6
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ```
+
+## Packaging (Linux)
+```bash
+./scripts/package_linux.sh
+```
+
+This creates a versioned folder under `dist/` and a `dist/current` symlink.
+Launch the packaged app with:
+```bash
+./dist/current/ereader.sh
+```
+
+Packaged builds use a shared config folder at `dist/config` so settings
+persist across updates.
 
 ### DjVuLibre (optional vendor)
 DJVU rendering uses DjVuLibre CLI tools (`ddjvu`, `djvused`, `djvutxt`). You can install them

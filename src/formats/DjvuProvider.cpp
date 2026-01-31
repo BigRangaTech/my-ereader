@@ -1,6 +1,6 @@
 #include "DjvuProvider.h"
+#include "../core/include/AppPaths.h"
 
-#include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
@@ -23,16 +23,7 @@
 
 namespace {
 QString formatSettingsPath() {
-  QDir dir(QCoreApplication::applicationDirPath());
-  for (int i = 0; i < 6; ++i) {
-    if (QFileInfo::exists(dir.filePath("README.md"))) {
-      return dir.filePath("config/djvu.ini");
-    }
-    if (!dir.cdUp()) {
-      break;
-    }
-  }
-  return QDir(QCoreApplication::applicationDirPath()).filePath("djvu.ini");
+  return AppPaths::configFile("djvu.ini");
 }
 
 QString repoRoot() {

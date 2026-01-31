@@ -1,6 +1,6 @@
 #include "TxtProvider.h"
+#include "../core/include/AppPaths.h"
 
-#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -13,16 +13,7 @@
 
 namespace {
 QString formatSettingsPath() {
-  QDir dir(QCoreApplication::applicationDirPath());
-  for (int i = 0; i < 6; ++i) {
-    if (QFileInfo::exists(dir.filePath("README.md"))) {
-      return dir.filePath("config/txt.ini");
-    }
-    if (!dir.cdUp()) {
-      break;
-    }
-  }
-  return QDir(QCoreApplication::applicationDirPath()).filePath("txt.ini");
+  return AppPaths::configFile("txt.ini");
 }
 
 struct TxtSettings {

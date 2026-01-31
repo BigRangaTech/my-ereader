@@ -13,6 +13,7 @@
 #include "LicenseManager.h"
 #include "ReaderController.h"
 #include "SettingsManager.h"
+#include "UpdateManager.h"
 #include "SyncManager.h"
 #include "TtsController.h"
 #include "VaultController.h"
@@ -47,6 +48,7 @@ int main(int argc, char *argv[]) {
   qmlRegisterType<LicenseManager>("Ereader", 1, 0, "LicenseManager");
   qmlRegisterType<ReaderController>("Ereader", 1, 0, "ReaderController");
   qmlRegisterType<SettingsManager>("Ereader", 1, 0, "SettingsManager");
+  qmlRegisterType<UpdateManager>("Ereader", 1, 0, "UpdateManager");
   qmlRegisterType<SyncManager>("Ereader", 1, 0, "SyncManager");
   qmlRegisterType<TtsController>("Ereader", 1, 0, "TtsController");
   qmlRegisterType<VaultController>("Ereader", 1, 0, "VaultController");

@@ -1,4 +1,5 @@
 #include "PdfProvider.h"
+#include "../core/include/AppPaths.h"
 
 #ifdef HAVE_POPPLER_QT6
 #include <poppler-qt6.h>
@@ -9,7 +10,6 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QImage>
-#include <QCoreApplication>
 #include <QPainter>
 #include <QSettings>
 #include <QStandardPaths>
@@ -29,29 +29,11 @@
 
 namespace {
 QString settingsPath() {
-  QDir dir(QCoreApplication::applicationDirPath());
-  for (int i = 0; i < 6; ++i) {
-    if (QFileInfo::exists(dir.filePath("README.md"))) {
-      return dir.filePath("config/settings.ini");
-    }
-    if (!dir.cdUp()) {
-      break;
-    }
-  }
-  return QDir(QCoreApplication::applicationDirPath()).filePath("settings.ini");
+  return AppPaths::configFile("settings.ini");
 }
 
 QString formatSettingsPath() {
-  QDir dir(QCoreApplication::applicationDirPath());
-  for (int i = 0; i < 6; ++i) {
-    if (QFileInfo::exists(dir.filePath("README.md"))) {
-      return dir.filePath("config/pdf.ini");
-    }
-    if (!dir.cdUp()) {
-      break;
-    }
-  }
-  return QDir(QCoreApplication::applicationDirPath()).filePath("pdf.ini");
+  return AppPaths::configFile("pdf.ini");
 }
 
 int clampInt(int value, int minValue, int maxValue) {

@@ -1,6 +1,6 @@
 #include "MobiProvider.h"
+#include "../core/include/AppPaths.h"
 
-#include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDebug>
 #include <QDir>
@@ -236,16 +236,7 @@ QString normalizeHtmlFragment(const QString &html) {
 }
 
 QString formatSettingsPath(const QString &format) {
-  QDir dir(QCoreApplication::applicationDirPath());
-  for (int i = 0; i < 6; ++i) {
-    if (QFileInfo::exists(dir.filePath("README.md"))) {
-      return dir.filePath(QString("config/%1.ini").arg(format));
-    }
-    if (!dir.cdUp()) {
-      break;
-    }
-  }
-  return QDir(QCoreApplication::applicationDirPath()).filePath(QString("%1.ini").arg(format));
+  return AppPaths::configFile(QString("%1.ini").arg(format));
 }
 
 int clampInt(int value, int minValue, int maxValue) {
