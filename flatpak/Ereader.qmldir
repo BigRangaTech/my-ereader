@@ -1,0 +1,3 @@
+module Ereader
+Main 1.0 qml/Main.qml
+singleton Theme 1.0 qml/Theme.qml

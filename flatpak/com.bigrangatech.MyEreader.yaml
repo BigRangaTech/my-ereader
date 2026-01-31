@@ -13,6 +13,9 @@ finish-args:
   - --filesystem=xdg-download
   - --filesystem=xdg-pictures
   - --filesystem=xdg-public-share
+  - --env=QML2_IMPORT_PATH=/app/share/my-ereader/qml
+  - --env=QML_IMPORT_PATH=/app/share/my-ereader/qml
+  - --env=QT_PLUGIN_PATH=/app/plugins:/usr/plugins
 modules:
   - name: libarchive
     buildsystem: autotools
@@ -80,6 +83,21 @@ modules:
         path: ../flatpak/speechd-autogen.sh
         dest-filename: autogen.sh
 
+  - name: qtspeech
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_INSTALL_PREFIX=/app
+      - -DQT_BUILD_EXAMPLES=OFF
+      - -DQT_BUILD_TESTS=OFF
+      - -DQT_FEATURE_speechd=ON
+      - -DQT_INSTALL_QML=/app/lib/qml
+      - -DQT_INSTALL_PLUGINS=/app/plugins
+    sources:
+      - type: git
+        url: https://github.com/qt/qtspeech.git
+        branch: 6.7
+
   - name: poppler
     buildsystem: cmake-ninja
     config-opts:
@@ -107,10 +125,10 @@ modules:
       - PKG_CONFIG_PATH=/app/lib/pkgconfig:/app/lib64/pkgconfig cmake -S . -B _flatpak_build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/app -DUSE_BUNDLED_POPPLER=OFF -DUSE_BUNDLED_LIBARCHIVE=OFF
       - cmake --build _flatpak_build
       - install -Dm755 _flatpak_build/src/app/ereader /app/bin/ereader
-      - install -Dm644 _flatpak_build/src/app/Ereader/qmldir /app/lib/qml/Ereader/qmldir
-      - install -Dm644 _flatpak_build/src/app/Ereader/ereader.qmltypes /app/lib/qml/Ereader/ereader.qmltypes
-      - install -Dm644 _flatpak_build/src/app/Ereader/qml/Main.qml /app/lib/qml/Ereader/qml/Main.qml
-      - install -Dm644 _flatpak_build/src/app/Ereader/qml/Theme.qml /app/lib/qml/Ereader/qml/Theme.qml
+      - install -d /app/share/my-ereader/qml/Ereader/qml
+      - install -Dm644 flatpak/Ereader.qmldir /app/share/my-ereader/qml/Ereader/qmldir
+      - install -Dm644 src/app/qml/Main.qml /app/share/my-ereader/qml/Ereader/qml/Main.qml
+      - install -Dm644 src/app/qml/Theme.qml /app/share/my-ereader/qml/Ereader/qml/Theme.qml
       - install -Dm644 README.md /app/share/my-ereader/README.md
       - install -Dm644 icon/icon.png /app/share/my-ereader/icon/icon.png
       - install -Dm644 flatpak/com.bigrangatech.MyEreader.desktop /app/share/applications/com.bigrangatech.MyEreader.desktop

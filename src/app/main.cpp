@@ -5,6 +5,7 @@
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
 #include <QQmlContext>
+#include <QStandardPaths>
 
 #include "AppInfo.h"
 #include "AnnotationModel.h"
@@ -59,6 +60,17 @@ int main(int argc, char *argv[]) {
   }
 
   QQmlApplicationEngine engine;
+  const QString flatpakQmlPath = "/app/share/my-ereader/qml";
+  if (QFileInfo::exists(flatpakQmlPath)) {
+    engine.addImportPath(flatpakQmlPath);
+  }
+  const QStringList dataQmlPaths =
+      QStandardPaths::locateAll(QStandardPaths::GenericDataLocation,
+                                "my-ereader/qml",
+                                QStandardPaths::LocateDirectory);
+  for (const auto &path : dataQmlPaths) {
+    engine.addImportPath(path);
+  }
   QObject::connect(
       &engine, &QQmlApplicationEngine::objectCreated, &app,
       [](QObject *obj, const QUrl &) {
