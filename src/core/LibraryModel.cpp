@@ -2,9 +2,11 @@
 
 #include <QDebug>
 #include <QDir>
+#include <QDirIterator>
 #include <QFileInfo>
 #include <QEventLoop>
 #include <QMetaObject>
+#include <QSet>
 #include <QStandardPaths>
 
 #include "DbWorker.h"
@@ -234,6 +236,85 @@ bool LibraryModel::addBook(const QString &filePath) {
   setLastError("");
   QMetaObject::invokeMethod(dbWorker(), "addBook", Qt::QueuedConnection, Q_ARG(QString, filePath));
   return true;
+}
+
+bool LibraryModel::addBooks(const QStringList &filePaths) {
+  if (!m_ready) {
+    setLastError("Library database not ready");
+    return false;
+  }
+  if (filePaths.isEmpty()) {
+    setLastError("No files selected");
+    return false;
+  }
+
+  QSet<QString> uniquePaths;
+  int queued = 0;
+  for (const QString &path : filePaths) {
+    const QString trimmed = path.trimmed();
+    if (trimmed.isEmpty()) {
+      continue;
+    }
+    const QString absolute = QFileInfo(trimmed).absoluteFilePath();
+    if (uniquePaths.contains(absolute)) {
+      continue;
+    }
+    uniquePaths.insert(absolute);
+    if (!QFileInfo::exists(absolute)) {
+      qWarning() << "LibraryModel: file not found" << absolute;
+      continue;
+    }
+    QMetaObject::invokeMethod(dbWorker(), "addBook", Qt::QueuedConnection,
+                              Q_ARG(QString, absolute));
+    queued++;
+  }
+
+  if (queued == 0) {
+    setLastError("No valid files to add");
+    return false;
+  }
+  setLastError("");
+  qInfo() << "LibraryModel: queued" << queued << "book(s)";
+  return true;
+}
+
+bool LibraryModel::addFolder(const QString &folderPath, bool recursive) {
+  if (!m_ready) {
+    setLastError("Library database not ready");
+    return false;
+  }
+  const QString trimmed = folderPath.trimmed();
+  if (trimmed.isEmpty()) {
+    setLastError("Folder path is empty");
+    return false;
+  }
+  const QDir dir(trimmed);
+  if (!dir.exists()) {
+    setLastError("Folder does not exist");
+    return false;
+  }
+
+  const QStringList extensions = {
+      "epub", "pdf", "mobi", "azw", "azw3", "azw4", "prc",
+      "fb2", "cbz", "cbr", "djvu", "djv", "txt"
+  };
+  QStringList found;
+  QDirIterator it(trimmed,
+                  QDir::Files | QDir::NoDotAndDotDot,
+                  recursive ? QDirIterator::Subdirectories : QDirIterator::NoIteratorFlags);
+  while (it.hasNext()) {
+    const QString path = it.next();
+    const QString ext = QFileInfo(path).suffix().toLower();
+    if (extensions.contains(ext)) {
+      found.append(path);
+    }
+  }
+
+  if (found.isEmpty()) {
+    setLastError("No supported books found in folder");
+    return false;
+  }
+  return addBooks(found);
 }
 
 bool LibraryModel::updateMetadata(int id,

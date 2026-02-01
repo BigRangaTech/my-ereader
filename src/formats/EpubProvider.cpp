@@ -11,6 +11,7 @@
 #include <QCryptographicHash>
 #include <QSettings>
 #include <QRegularExpression>
+#include <QSet>
 #include <algorithm>
 
 #include "miniz.h"
@@ -80,6 +81,7 @@ public:
                QStringList chapters,
                QStringList sections,
                QStringList plainSections,
+               QStringList imagePaths,
                QString coverPath,
                QStringList tocTitles,
                QVector<int> tocChapterIndices,
@@ -94,6 +96,7 @@ public:
         m_chapters(std::move(chapters)),
         m_sections(std::move(sections)),
         m_plainSections(std::move(plainSections)),
+        m_imagePaths(std::move(imagePaths)),
         m_coverPath(std::move(coverPath)),
         m_tocTitles(std::move(tocTitles)),
         m_tocChapterIndices(std::move(tocChapterIndices)),
@@ -111,6 +114,7 @@ public:
   QStringList chaptersPlainText() const override {
     return m_plainSections.isEmpty() ? m_sections : m_plainSections;
   }
+  QStringList imagePaths() const override { return m_imagePaths; }
   QString coverPath() const override { return m_coverPath; }
   QStringList tocTitles() const override { return m_tocTitles; }
   QVector<int> tocChapterIndices() const override { return m_tocChapterIndices; }
@@ -127,6 +131,7 @@ private:
   QStringList m_chapters;
   QStringList m_sections;
   QStringList m_plainSections;
+  QStringList m_imagePaths;
   QString m_coverPath;
   QStringList m_tocTitles;
   QVector<int> m_tocChapterIndices;
@@ -879,6 +884,35 @@ QString extractFirstImageHref(const QByteArray &xhtml) {
   return {};
 }
 
+QStringList extractImageHrefs(const QByteArray &xhtml) {
+  QStringList hrefs;
+  QXmlStreamReader xml(xhtml);
+  while (!xml.atEnd()) {
+    xml.readNext();
+    if (!xml.isStartElement()) {
+      continue;
+    }
+    const QString name = xml.name().toString().toLower();
+    if (name == QLatin1String("img")) {
+      const QString src = xml.attributes().value(QLatin1String("src")).toString();
+      if (!src.isEmpty()) {
+        hrefs.append(src);
+      }
+      continue;
+    }
+    if (name == QLatin1String("image")) {
+      QString src = xml.attributes().value(QLatin1String("href")).toString();
+      if (src.isEmpty()) {
+        src = xml.attributes().value(QLatin1String("xlink:href")).toString();
+      }
+      if (!src.isEmpty()) {
+        hrefs.append(src);
+      }
+    }
+  }
+  return hrefs;
+}
+
 bool isImageMediaType(const QString &mediaType, const QString &href) {
   if (mediaType.startsWith("image/")) {
     return true;
@@ -1113,12 +1147,58 @@ std::unique_ptr<FormatDocument> EpubProvider::open(const QString &path, QString 
   const QString title = !opf.title.isEmpty() ? normalizeTitle(opf.title) : fallbackTitle;
   const QString fullText = sections.join("\n\n");
   const QString fullPlainText = plainSections.join("\n\n");
+  QStringList imagePaths;
   if (fullText.isEmpty()) {
-    if (error) {
-      *error = "No readable text in EPUB";
+    QSet<QString> seen;
+    auto collectImages = [&](bool includeNonLinear) {
+      for (const auto &item : opf.spine) {
+        if (!includeNonLinear && !item.linear) {
+          continue;
+        }
+        const QString href = opf.manifest.value(item.idref);
+        if (href.isEmpty()) {
+          continue;
+        }
+        const QString mediaType = opf.manifestTypes.value(item.idref);
+        if (!isXhtmlType(mediaType, href)) {
+          continue;
+        }
+        const QString itemPath = QDir::cleanPath(joinPath(baseDir, href));
+        const QByteArray xhtml = zip.readFile(itemPath);
+        if (xhtml.isEmpty()) {
+          continue;
+        }
+        const QStringList imgHrefs = extractImageHrefs(xhtml);
+        for (const QString &imgHref : imgHrefs) {
+          const QString resolved = resolveHref(itemPath, imgHref);
+          if (resolved.isEmpty()) {
+            continue;
+          }
+          const QByteArray imageData = zip.readFile(resolved);
+          if (imageData.isEmpty()) {
+            continue;
+          }
+          const QString outPath = writeAssetToTemp(info, resolved, imageData);
+          if (outPath.isEmpty() || seen.contains(outPath)) {
+            continue;
+          }
+          seen.insert(outPath);
+          imagePaths.append(outPath);
+        }
+      }
+    };
+    collectImages(false);
+    if (imagePaths.isEmpty()) {
+      collectImages(true);
     }
-    qWarning() << "EpubProvider: no readable text";
-    return nullptr;
+    if (imagePaths.isEmpty()) {
+      if (error) {
+        *error = "No readable text in EPUB";
+      }
+      qWarning() << "EpubProvider: no readable text";
+      return nullptr;
+    }
+    qInfo() << "EpubProvider: image-only EPUB with" << imagePaths.size() << "page(s)";
   }
 
   QStringList authorsList = opf.authors;
@@ -1152,6 +1232,7 @@ std::unique_ptr<FormatDocument> EpubProvider::open(const QString &path, QString 
                                         chapterTitles,
                                         sections,
                                         plainSections,
+                                        imagePaths,
                                         coverPath,
                                         tocTitles,
                                         tocIndices,

@@ -31,6 +31,7 @@ class ReaderController : public QObject {
   Q_PROPERTY(QUrl currentCoverUrl READ currentCoverUrl NOTIFY currentChanged)
   Q_PROPERTY(bool busy READ busy NOTIFY busyChanged)
   Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
+  Q_PROPERTY(bool ttsAllowed READ ttsAllowed NOTIFY currentChanged)
 
 public:
   explicit ReaderController(QObject *parent = nullptr);
@@ -70,6 +71,7 @@ public:
   QUrl currentCoverUrl() const;
   bool busy() const;
   QString lastError() const;
+  bool ttsAllowed() const;
 
 signals:
   void currentChanged();
@@ -102,6 +104,7 @@ private:
   int m_imageReloadToken = 0;
   QString m_coverPath;
   QString m_lastError;
+  bool m_ttsAllowed = true;
   bool m_isOpen = false;
   bool m_busy = false;
   int m_openRequestId = 0;

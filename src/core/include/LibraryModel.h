@@ -45,6 +45,8 @@ public:
   Q_INVOKABLE bool openDefault();
   Q_INVOKABLE bool openAt(const QString &dbPath);
   Q_INVOKABLE bool addBook(const QString &filePath);
+  Q_INVOKABLE bool addBooks(const QStringList &filePaths);
+  Q_INVOKABLE bool addFolder(const QString &folderPath, bool recursive);
   Q_INVOKABLE bool updateMetadata(int id,
                                   const QString &title,
                                   const QString &authors,

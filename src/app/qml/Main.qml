@@ -23,6 +23,16 @@ ApplicationWindow {
     if (path.startsWith("/")) return "file://" + path
     return path
   }
+  function localPathFromUrl(value) {
+    if (!value) return ""
+    if (value.toLocalFile) {
+      const local = value.toLocalFile()
+      if (local && local.length > 0) return local
+    }
+    const text = value.toString ? value.toString() : String(value)
+    if (text.startsWith("file://")) return decodeURIComponent(text.replace("file://", ""))
+    return decodeURIComponent(text)
+  }
 
   function textFontSizeFor(format) {
     const f = (format || "").toLowerCase()
@@ -528,17 +538,59 @@ ApplicationWindow {
     title: "Add book"
     nameFilters: ["Books (*.epub *.pdf *.mobi *.azw *.azw3 *.fb2 *.cbz *.cbr *.djvu *.djv *.txt)"]
     onAccepted: {
-      var path = ""
-      if (selectedFile && selectedFile.toLocalFile) {
-        path = selectedFile.toLocalFile()
-      } else if (selectedFile) {
-        path = selectedFile.toString().replace("file://", "")
-        path = decodeURIComponent(path)
-      }
+      const path = localPathFromUrl(selectedFile)
       if (path.length > 0) {
-        const ext = path.split(".").pop().toLowerCase()
         libraryModel.addBook(path)
       }
+    }
+  }
+
+  FileDialog {
+    id: bulkFileDialog
+    title: "Add books"
+    fileMode: FileDialog.OpenFiles
+    nameFilters: ["Books (*.epub *.pdf *.mobi *.azw *.azw3 *.fb2 *.cbz *.cbr *.djvu *.djv *.txt)"]
+    onAccepted: {
+      const paths = []
+      if (selectedFiles && selectedFiles.length > 0) {
+        for (let i = 0; i < selectedFiles.length; i++) {
+          const p = localPathFromUrl(selectedFiles[i])
+          if (p.length > 0) paths.push(p)
+        }
+      } else {
+        const single = localPathFromUrl(selectedFile)
+        if (single.length > 0) paths.push(single)
+      }
+      if (paths.length > 0) {
+        libraryModel.addBooks(paths)
+      }
+    }
+  }
+
+  FolderDialog {
+    id: folderDialog
+    title: "Add folder"
+    onAccepted: {
+      const folder = localPathFromUrl(selectedFolder)
+      if (folder.length > 0) {
+        libraryModel.addFolder(folder, true)
+      }
+    }
+  }
+
+  Menu {
+    id: addMenu
+    MenuItem {
+      text: "Add file"
+      onTriggered: fileDialog.open()
+    }
+    MenuItem {
+      text: "Add files (bulk)"
+      onTriggered: bulkFileDialog.open()
+    }
+    MenuItem {
+      text: "Add folder"
+      onTriggered: folderDialog.open()
     }
   }
 
@@ -2105,7 +2157,7 @@ ApplicationWindow {
 
             Button {
               text: "Add"
-              onClicked: fileDialog.open()
+              onClicked: addMenu.open()
               font.family: root.uiFont
               enabled: libraryModel.ready
             }
@@ -2427,9 +2479,8 @@ ApplicationWindow {
               model: libraryModel
               clip: true
               visible: viewMode === "grid"
-              cellWidth: 220
-              cellHeight: 260
-              spacing: 12
+              cellWidth: 232
+              cellHeight: 272
 
               delegate: Rectangle {
                 width: gridView.cellWidth
@@ -2616,7 +2667,7 @@ ApplicationWindow {
             Button {
               text: tts.speaking ? "Stop" : "Speak"
               font.family: root.uiFont
-              enabled: tts.available
+              enabled: tts.available && reader.ttsAllowed
               onClicked: {
                 if (tts.speaking) {
                   tts.stop()
@@ -2629,7 +2680,7 @@ ApplicationWindow {
             Button {
               text: "Queue"
               font.family: root.uiFont
-              enabled: tts.available
+              enabled: tts.available && reader.ttsAllowed
               onClicked: tts.enqueue(reader.currentPlainText)
             }
 

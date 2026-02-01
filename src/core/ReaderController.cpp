@@ -86,6 +86,7 @@ void ReaderController::close() {
   m_coverPath.clear();
   m_textIsRich = false;
   m_isOpen = false;
+  m_ttsAllowed = true;
   qInfo() << "ReaderController: closed";
   emit currentChanged();
 }
@@ -158,6 +159,7 @@ QUrl ReaderController::currentCoverUrl() const {
 }
 bool ReaderController::busy() const { return m_busy; }
 QString ReaderController::lastError() const { return m_lastError; }
+bool ReaderController::ttsAllowed() const { return m_ttsAllowed; }
 
 void ReaderController::setLastError(const QString &error) {
   if (m_lastError == error) {
@@ -206,6 +208,10 @@ bool ReaderController::applyDocument(std::unique_ptr<FormatDocument> document,
   m_imagePaths = m_document->imagePaths();
   m_coverPath = m_document->coverPath();
   m_textIsRich = m_document->isRichText();
+  m_ttsAllowed = !m_document->ttsDisabled();
+  if (!m_ttsAllowed) {
+    qInfo() << "ReaderController: TTS disabled for this book";
+  }
   if (isMobiFormat(m_currentFormat)) {
     m_imagePaths.clear();
   }

@@ -19,12 +19,12 @@
 - [x] CBZ/CBR provider
 - [x] FB2 provider
 - [x] DJVU provider
-- [ ] libmobi b01.1 adoption:
-  - [ ] RESC resource parsing for KF8 spine/TOC
-  - [ ] EXTH_TTSDISABLE -> disable TTS per book
-  - [ ] Prefer KF8 when hybrid (explicit flag/log)
-  - [ ] RESC/EXTH cover fallbacks (when cover offset missing)
-  - [ ] Extra EXTH metadata (language, page-dir, writing-mode, fixed-layout)
+- [x] libmobi b01.1 adoption:
+  - [x] RESC resource parsing for KF8 spine/TOC
+  - [x] EXTH_TTSDISABLE -> disable TTS per book
+  - [x] Prefer KF8 when hybrid (explicit flag/log)
+  - [x] RESC/EXTH cover fallbacks (when cover offset missing)
+  - [x] Extra EXTH metadata (language, page-dir, writing-mode, fixed-layout)
 
 ## Phase 3: Sync + TTS
 - [ ] LAN pairing

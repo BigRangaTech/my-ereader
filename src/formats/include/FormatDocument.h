@@ -24,6 +24,7 @@ public:
   virtual QStringList tocTitles() const { return {}; }
   virtual QVector<int> tocChapterIndices() const { return {}; }
   virtual bool isRichText() const { return false; }
+  virtual bool ttsDisabled() const { return false; }
   virtual bool ensureImage(int index) { Q_UNUSED(index) return true; }
   virtual void setImageReadyCallback(std::function<void(int)> callback) { Q_UNUSED(callback) }
 };

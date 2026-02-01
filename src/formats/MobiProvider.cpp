@@ -18,6 +18,7 @@
 #include <algorithm>
 
 extern "C" {
+#include "index.h"
 #include "mobi.h"
 }
 
@@ -35,7 +36,8 @@ public:
                QString series,
                QString publisher,
                QString description,
-               bool richText)
+               bool richText,
+               bool ttsDisabled)
       : m_title(std::move(title)),
         m_chapterTitles(std::move(chapterTitles)),
         m_chapterDisplayTexts(std::move(chapterDisplayTexts)),
@@ -46,7 +48,8 @@ public:
         m_series(std::move(series)),
         m_publisher(std::move(publisher)),
         m_description(std::move(description)),
-        m_isRichText(richText) {}
+        m_isRichText(richText),
+        m_ttsDisabled(ttsDisabled) {}
 
   QString title() const override { return m_title; }
   QStringList chapterTitles() const override { return m_chapterTitles; }
@@ -87,6 +90,7 @@ public:
   QString publisher() const override { return m_publisher; }
   QString description() const override { return m_description; }
   bool isRichText() const override { return m_isRichText; }
+  bool ttsDisabled() const override { return m_ttsDisabled; }
 
 private:
   QString m_title;
@@ -102,6 +106,7 @@ private:
   QString m_publisher;
   QString m_description;
   bool m_isRichText = false;
+  bool m_ttsDisabled = false;
 };
 
 QString stripXhtml(const QByteArray &xhtml) {
@@ -219,6 +224,123 @@ QString coverExtensionFromBytes(const unsigned char *data, size_t size);
 
 bool isImageType(MOBIFiletype type) {
   return type == T_JPG || type == T_GIF || type == T_PNG || type == T_BMP;
+}
+
+struct RescMetadata {
+  QString coverHref;
+  QString tocId;
+  QString language;
+  QString pageDirection;
+  QString writingMode;
+  QString fixedLayout;
+};
+
+bool rescPayloadFromPart(const MOBIPart *part, const unsigned char **payload, size_t *payloadSize) {
+  if (!part || !payload || !payloadSize) {
+    return false;
+  }
+  *payload = nullptr;
+  *payloadSize = 0;
+  if (!part->data || part->size < 16) {
+    return false;
+  }
+  if (memcmp(part->data, "RESC", 4) != 0) {
+    return false;
+  }
+  const uint32_t headerLen = (static_cast<uint32_t>(part->data[4]) << 24) |
+                             (static_cast<uint32_t>(part->data[5]) << 16) |
+                             (static_cast<uint32_t>(part->data[6]) << 8) |
+                             (static_cast<uint32_t>(part->data[7]));
+  const uint32_t infoLen = (static_cast<uint32_t>(part->data[12]) << 24) |
+                           (static_cast<uint32_t>(part->data[13]) << 16) |
+                           (static_cast<uint32_t>(part->data[14]) << 8) |
+                           (static_cast<uint32_t>(part->data[15]));
+  if (headerLen < 16 || headerLen > part->size) {
+    return false;
+  }
+  if (infoLen > part->size - static_cast<size_t>(headerLen)) {
+    return false;
+  }
+  const size_t offset = static_cast<size_t>(headerLen) + static_cast<size_t>(infoLen);
+  if (offset > part->size) {
+    return false;
+  }
+  size_t size = part->size - offset;
+  while (size > 0 && part->data[offset + size - 1] == '\0') {
+    size--;
+  }
+  *payload = part->data + offset;
+  *payloadSize = size;
+  return true;
+}
+
+RescMetadata extractRescMetadata(const MOBIRawml *rawml) {
+  RescMetadata meta;
+  if (!rawml || !rawml->resources) {
+    return meta;
+  }
+  for (MOBIPart *part = rawml->resources; part != nullptr; part = part->next) {
+    if (part->type != T_RESC) {
+      continue;
+    }
+    const unsigned char *payload = nullptr;
+    size_t payloadSize = 0;
+    if (!rescPayloadFromPart(part, &payload, &payloadSize) || payloadSize == 0) {
+      continue;
+    }
+    const QString xmlText =
+        QString::fromUtf8(reinterpret_cast<const char *>(payload), static_cast<int>(payloadSize));
+    QXmlStreamReader xml(xmlText);
+    while (!xml.atEnd()) {
+      xml.readNext();
+      if (!xml.isStartElement()) {
+        continue;
+      }
+      const QString localName = xml.name().toString().toLower();
+      if (localName == QLatin1String("spine")) {
+        const QString toc = xml.attributes().value("toc").toString();
+        if (!toc.isEmpty()) {
+          meta.tocId = toc;
+        }
+        continue;
+      }
+      if (localName == QLatin1String("meta")) {
+        QString key = xml.attributes().value("name").toString();
+        if (key.isEmpty()) {
+          key = xml.attributes().value("property").toString();
+        }
+        QString value = xml.attributes().value("content").toString();
+        if (value.isEmpty()) {
+          value = xml.readElementText().trimmed();
+        }
+        const QString k = key.trimmed().toLower();
+        if (value.isEmpty() || k.isEmpty()) {
+          continue;
+        }
+        if (k == QLatin1String("cover") || k == QLatin1String("opf:cover")) {
+          meta.coverHref = value;
+        } else if (k == QLatin1String("language") || k.endsWith(QLatin1String(":language"))) {
+          meta.language = value;
+        } else if (k == QLatin1String("page-progression-direction") ||
+                   k == QLatin1String("rendition:page-progression-direction") ||
+                   k == QLatin1String("page-dir")) {
+          meta.pageDirection = value;
+        } else if (k == QLatin1String("writing-mode") ||
+                   k == QLatin1String("rendition:writing-mode")) {
+          meta.writingMode = value;
+        } else if (k == QLatin1String("fixed-layout") ||
+                   k == QLatin1String("rendition:layout")) {
+          meta.fixedLayout = value;
+        }
+        continue;
+      }
+      if (localName.endsWith(QLatin1String("language")) && meta.language.isEmpty()) {
+        meta.language = xml.readElementText().trimmed();
+      }
+    }
+    break;
+  }
+  return meta;
 }
 
 QString normalizeHtmlFragment(const QString &html) {
@@ -482,6 +604,31 @@ QStringList extractNcxTitles(const MOBIRawml *rawml) {
   return titles;
 }
 
+QStringList extractGuideTitles(const MOBIRawml *rawml) {
+  QStringList titles;
+  if (!rawml || !rawml->guide || !rawml->guide->cncx_record) {
+    return titles;
+  }
+  const MOBIIndx *guide = rawml->guide;
+  for (size_t i = 0; i < guide->entries_count; ++i) {
+    const MOBIIndexEntry &entry = guide->entries[i];
+    uint32_t cncXOffset = 0;
+    if (mobi_get_indxentry_tagvalue(&cncXOffset, &entry, INDX_TAG_GUIDE_TITLE_CNCX) != MOBI_SUCCESS) {
+      continue;
+    }
+    char *title = mobi_get_cncx_string_utf8(guide->cncx_record, cncXOffset, guide->encoding);
+    if (!title) {
+      continue;
+    }
+    const QString label = QString::fromUtf8(title).trimmed();
+    free(title);
+    if (!label.isEmpty()) {
+      titles.append(label);
+    }
+  }
+  return titles;
+}
+
 QStringList decodeExthStrings(const MOBIData *data, MOBIExthTag tag) {
   QStringList out;
   if (!data) {
@@ -519,6 +666,32 @@ QString decodeFirstExthString(const MOBIData *data, MOBIExthTag tag) {
   const QString decoded = QString::fromUtf8(value).trimmed();
   free(value);
   return decoded;
+}
+
+std::optional<uint32_t> decodeExthNumeric(const MOBIData *data, MOBIExthTag tag) {
+  if (!data) {
+    return std::nullopt;
+  }
+  MOBIExthHeader *record = mobi_get_exthrecord_by_tag(data, tag);
+  if (!record || !record->data || record->size == 0) {
+    return std::nullopt;
+  }
+  const uint32_t value =
+      mobi_decode_exthvalue(static_cast<const unsigned char *>(record->data), record->size);
+  return value;
+}
+
+QString pageDirFromExth(const std::optional<uint32_t> &value) {
+  if (!value.has_value()) {
+    return {};
+  }
+  if (value.value() == 1) {
+    return "rtl";
+  }
+  if (value.value() == 0) {
+    return "ltr";
+  }
+  return QString::number(value.value());
 }
 
 struct OpfMetadata {
@@ -775,12 +948,19 @@ QString coverExtensionFromBytes(const unsigned char *data, size_t size) {
 QString extractCover(const MOBIData *data,
                      const MOBIRawml *rawml,
                      const QFileInfo &info,
+                     const RescMetadata &rescMeta,
                      const QHash<size_t, ImageAsset> &assets) {
   if (!data) {
     return {};
   }
   MOBIExthHeader *exth = mobi_get_exthrecord_by_tag(data, EXTH_COVEROFFSET);
   if (!exth) {
+    if (!rescMeta.coverHref.isEmpty()) {
+      const auto uid = resolveImageUidFromSrc(rescMeta.coverHref, rawml);
+      if (uid.has_value() && assets.contains(uid.value())) {
+        return assets.value(uid.value()).path;
+      }
+    }
     // Try KF8 cover uri
     const QString kf8Cover = decodeFirstExthString(data, EXTH_KF8COVERURI);
     if (!kf8Cover.isEmpty()) {
@@ -881,9 +1061,15 @@ std::unique_ptr<FormatDocument> MobiProvider::open(const QString &path, QString 
     return nullptr;
   }
 
-  if (mobi_is_hybrid(data)) {
+  const bool isHybrid = mobi_is_hybrid(data);
+  bool usingKf8 = false;
+  if (isHybrid) {
+    data->use_kf8 = true;
     MOBI_RET kf8ret = mobi_parse_kf8(data);
-    if (kf8ret != MOBI_SUCCESS) {
+    if (kf8ret == MOBI_SUCCESS) {
+      usingKf8 = true;
+    } else {
+      data->use_kf8 = false;
       MOBI_RET kf7ret = mobi_parse_kf7(data);
       if (kf7ret != MOBI_SUCCESS) {
         if (error) {
@@ -895,6 +1081,8 @@ std::unique_ptr<FormatDocument> MobiProvider::open(const QString &path, QString 
         return nullptr;
       }
     }
+  } else if (mobi_is_kf8(data)) {
+    usingKf8 = true;
   }
 
   MOBIRawml *rawml = mobi_init_rawml(data);
@@ -916,6 +1104,17 @@ std::unique_ptr<FormatDocument> MobiProvider::open(const QString &path, QString 
     mobi_free_rawml(rawml);
     mobi_free(data);
     return nullptr;
+  }
+
+  const bool rawmlKf8 = mobi_is_rawml_kf8(rawml);
+  const RescMetadata rescMeta = extractRescMetadata(rawml);
+  if (isHybrid) {
+    qInfo() << "MobiProvider:" << (usingKf8 ? "using KF8" : "using KF7") << "for hybrid file";
+  } else {
+    qInfo() << "MobiProvider:" << (rawmlKf8 ? "KF8" : "KF7") << "content detected";
+  }
+  if (!rescMeta.tocId.isEmpty()) {
+    qInfo() << "MobiProvider: RESC spine toc id" << rescMeta.tocId;
   }
 
   const OpfMetadata opfMeta = extractOpfMetadata(rawml);
@@ -959,13 +1158,40 @@ std::unique_ptr<FormatDocument> MobiProvider::open(const QString &path, QString 
   const MobiRenderSettings renderSettings = loadMobiSettings(formatKey);
 
   const auto assets = exportImageResources(rawml, info);
-  QString coverPath = extractCover(data, rawml, info, assets);
+  QString coverPath = extractCover(data, rawml, info, rescMeta, assets);
+
+  const auto ttsDisableVal = decodeExthNumeric(data, EXTH_TTSDISABLE);
+  const bool ttsDisabled = ttsDisableVal.has_value() && ttsDisableVal.value() != 0;
+
+  const QString exthLanguage = decodeFirstExthString(data, EXTH_LANGUAGE);
+  const QString pageDir = pageDirFromExth(decodeExthNumeric(data, EXTH_PAGEDIR));
+  const auto fixedLayoutVal = decodeExthNumeric(data, EXTH_FIXEDLAYOUT);
+  const QString fixedLayout = fixedLayoutVal.has_value()
+                                  ? (fixedLayoutVal.value() != 0 ? "true" : "false")
+                                  : rescMeta.fixedLayout;
+  const QString language = !exthLanguage.isEmpty() ? exthLanguage : rescMeta.language;
+  const QString writingMode = rescMeta.writingMode;
+  const QString pageDirection = !pageDir.isEmpty() ? pageDir : rescMeta.pageDirection;
+  if (!language.isEmpty() || !pageDirection.isEmpty() || !writingMode.isEmpty() ||
+      !fixedLayout.isEmpty()) {
+    qInfo() << "MobiProvider: EXTH/RESC metadata"
+            << "lang" << language
+            << "page-dir" << pageDirection
+            << "writing-mode" << writingMode
+            << "fixed-layout" << fixedLayout;
+  }
+  if (ttsDisabled) {
+    qInfo() << "MobiProvider: EXTH_TTSDISABLE set";
+  }
 
   ChapterPayload payload = extractMarkupContent(rawml, assets, true, renderSettings);
   QStringList chapterDisplay = payload.display;
   QStringList chapterPlain = payload.plain;
   QStringList chapterTitles;
   QStringList tocTitles = extractNcxTitles(rawml);
+  if (tocTitles.isEmpty()) {
+    tocTitles = extractGuideTitles(rawml);
+  }
   if (!tocTitles.isEmpty()) {
     chapterTitles = tocTitles;
   } else if (!payload.headings.isEmpty()) {
@@ -1028,5 +1254,6 @@ std::unique_ptr<FormatDocument> MobiProvider::open(const QString &path, QString 
                                         series,
                                         publisher,
                                         description,
-                                        richText);
+                                        richText,
+                                        ttsDisabled);
 }
