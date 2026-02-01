@@ -34,6 +34,7 @@ A fast, secure, offline-first ebook reader for Linux and Android built with Qt 6
 
 For packaged binaries, run the update script and launch via `dist/current/ereader.sh`
 so you always use the latest packaged build from the repo.
+You can also use the in-app Update button which runs the same fast-forward-only flow.
 
 ## Non-goals (for now)
 - Cloud sync or account systems
@@ -44,6 +45,7 @@ so you always use the latest packaged build from the repo.
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ```
+If you see missing `libxml/HTMLparser.h`, install `libxml2-dev`.
 
 ## Packaging (Linux)
 ```bash
@@ -67,10 +69,22 @@ persist across updates.
 This produces a local Flatpak repo under `flatpak/repo`.
 The Flatpak manifest vendors Poppler, libarchive, DjVuLibre, and the
 speech-dispatcher + espeak-ng TTS stack so the app is self-contained.
+libxml2 is also bundled to satisfy libmobi parsing.
 
 To export an offline bundle:
 ```bash
 ./scripts/export_flatpak_bundle.sh
+```
+
+### Flatpak repo updates
+If you publish the `flatpak/repo` directory (HTTP, LAN, or USB), users can add it once:
+```bash
+flatpak remote-add --user --if-not-exists myereader-origin https://bigrangatech.github.io/my-ereader-flatpak/
+```
+
+Then updates are simply:
+```bash
+flatpak update
 ```
 
 ### DjVuLibre (optional vendor)
@@ -109,6 +123,60 @@ Settings are stored under `config/` at the repo root.
 - docs/RELEASE.md
 - scripts/package_linux.sh
 - scripts/build_libarchive.sh
+
+## Developers
+### Local build
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+./build/src/app/ereader
+```
+
+### Vendored dependency refresh
+```bash
+./scripts/vendor_update.sh
+```
+
+### Tests
+```bash
+cmake --build build -j
+ctest --test-dir build --output-on-failure
+```
+
+### Release tagging (git)
+```bash
+git tag -s vX.Y.Z -m "Release vX.Y.Z"
+git push origin vX.Y.Z
+```
+
+### Logs
+- App logs: `logs/app.log`
+- Flatpak build logs: `.flatpak-builder/`
+
+### Release checklist (Flatpak)
+1) Build the Flatpak repo:
+```bash
+./scripts/build_flatpak.sh
+```
+
+2) Export a bundle:
+```bash
+./scripts/export_flatpak_bundle.sh
+```
+
+3) Publish `flatpak/repo` to your host (HTTP/LAN/USB).
+
+4) Verify update on a second machine:
+```bash
+flatpak remote-add --user --if-not-exists myereader-origin /path/to/flatpak/repo
+flatpak update
+flatpak run com.bigrangatech.MyEreader
+```
+
+### Publish to GitHub Pages (Flatpak repo)
+```bash
+PAGES_DIR=../my-ereader-flatpak ./scripts/publish_flatpak_pages.sh
+```
 
 ## License
 GPL-2.0-or-later

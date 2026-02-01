@@ -13,6 +13,7 @@ struct LibraryItem {
   QString description;
   QString tags;
   QString collection;
+  QString coverPath;
   QString path;
   QString format;
   QString fileHash;

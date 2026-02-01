@@ -24,13 +24,18 @@
 ## libarchive
 - Purpose: CBR extraction (RAR archives)
 - License: `third_party/libarchive/COPYING`
-- Source: `third_party/libarchive/`
+- Source: `third_party/libarchive/` (fork: https://github.com/BigRangaTech/libarchive tag `v001`)
 - Build: `scripts/build_libarchive.sh`
 
 ## libmobi
 - Purpose: MOBI/AZW3 parsing
 - License: `third_party/libmobi/COPYING`
 - Source: `third_party/libmobi/`
+
+## libxml2 (Flatpak)
+- Purpose: XML parsing for libmobi (Flatpak-bundled dependency)
+- License: see the libxml2 source tree
+- Source: `https://github.com/BigRangaTech/libxml2` (tag `v001`)
 
 ## DjVuLibre (tools)
 - Purpose: DJVU rendering via `ddjvu`, `djvused`, `djvutxt`

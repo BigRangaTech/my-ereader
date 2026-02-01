@@ -91,6 +91,8 @@ QVariant LibraryModel::data(const QModelIndex &index, int role) const {
     return item.tags;
   case CollectionRole:
     return item.collection;
+  case CoverPathRole:
+    return item.coverPath;
   case PathRole:
     return item.path;
   case FormatRole:
@@ -110,6 +112,7 @@ QHash<int, QByteArray> LibraryModel::roleNames() const {
       {AuthorsRole, "authors"}, {SeriesRole, "series"},
       {PublisherRole, "publisher"}, {DescriptionRole, "description"},
       {TagsRole, "tags"},       {CollectionRole, "collection"},
+      {CoverPathRole, "coverPath"},
       {PathRole, "path"},       {FormatRole, "format"},
       {AddedAtRole, "addedAt"}, {AnnotationCountRole, "annotationCount"}};
 }
@@ -355,6 +358,7 @@ QVariantMap LibraryModel::get(int index) const {
   map.insert("description", item.description);
   map.insert("tags", item.tags);
   map.insert("collection", item.collection);
+  map.insert("coverPath", item.coverPath);
   map.insert("path", item.path);
   map.insert("format", item.format);
   map.insert("addedAt", item.addedAt);

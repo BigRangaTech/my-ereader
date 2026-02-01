@@ -271,6 +271,11 @@ ApplicationWindow {
 
   UpdateManager {
     id: updateManager
+    onStatusChanged: {
+      if (status === "Update applied") {
+        restartDialog.open()
+      }
+    }
   }
 
   SyncManager {
@@ -856,8 +861,8 @@ ApplicationWindow {
     title: "Edit metadata"
     modal: true
     standardButtons: Dialog.Ok | Dialog.Cancel
-    width: 520
-    height: 360
+    width: 560
+    height: 460
 
     property int bookId: 0
     property string bookPath: ""
@@ -896,43 +901,42 @@ ApplicationWindow {
         spacing: 10
 
         Text {
-          text: editBookDialog.bookPath
+          text: "File path"
           color: theme.textMuted
           font.pixelSize: 11
           font.family: root.uiFont
-          elide: Text.ElideRight
         }
 
-        TextField {
-          id: titleField
-          placeholderText: "Title"
+        TextArea {
+          text: editBookDialog.bookPath
+          readOnly: true
+          wrapMode: TextArea.Wrap
+          selectByMouse: true
+          color: theme.textMuted
+          font.pixelSize: 11
+          font.family: root.uiFont
+          background: Rectangle { color: "transparent" }
         }
 
-        TextField {
-          id: authorField
-          placeholderText: "Author(s)"
-        }
+        Text { text: "Title"; color: theme.textMuted; font.pixelSize: 11; font.family: root.uiFont }
+        TextField { id: titleField; placeholderText: "Title" }
 
-        TextField {
-          id: seriesField
-          placeholderText: "Series"
-        }
+        Text { text: "Author(s)"; color: theme.textMuted; font.pixelSize: 11; font.family: root.uiFont }
+        TextField { id: authorField; placeholderText: "Author(s)" }
 
-        TextField {
-          id: publisherField
-          placeholderText: "Publisher"
-        }
+        Text { text: "Series"; color: theme.textMuted; font.pixelSize: 11; font.family: root.uiFont }
+        TextField { id: seriesField; placeholderText: "Series" }
 
-        TextField {
-          id: collectionField
-          placeholderText: "Collection"
-        }
+        Text { text: "Publisher"; color: theme.textMuted; font.pixelSize: 11; font.family: root.uiFont }
+        TextField { id: publisherField; placeholderText: "Publisher" }
 
-        TextField {
-          id: tagsField
-          placeholderText: "Tags (comma-separated)"
-        }
+        Text { text: "Collection"; color: theme.textMuted; font.pixelSize: 11; font.family: root.uiFont }
+        TextField { id: collectionField; placeholderText: "Collection" }
 
+        Text { text: "Tags (comma-separated)"; color: theme.textMuted; font.pixelSize: 11; font.family: root.uiFont }
+        TextField { id: tagsField; placeholderText: "Tags (comma-separated)" }
+
+        Text { text: "Description"; color: theme.textMuted; font.pixelSize: 11; font.family: root.uiFont }
         TextArea {
           id: descriptionField
           placeholderText: "Description"
@@ -1800,8 +1804,17 @@ ApplicationWindow {
       height: parent ? parent.height : 0
       property bool selectionMode: false
       property var selectedIds: []
+      property string viewMode: "list"
+      property string pendingSearch: ""
       ListModel { id: collectionFilterModel }
       ListModel { id: tagFilterModel }
+
+      Timer {
+        id: searchDebounce
+        interval: 250
+        repeat: false
+        onTriggered: libraryModel.searchQuery = libraryPage.pendingSearch
+      }
 
       function isSelected(id) {
         return selectedIds.indexOf(id) !== -1
@@ -1820,6 +1833,43 @@ ApplicationWindow {
 
       function clearSelection() {
         selectedIds = []
+      }
+
+      function selectAllVisible() {
+        var ids = []
+        for (var i = 0; i < libraryModel.count; ++i) {
+          const item = libraryModel.get(i)
+          if (item && item.id !== undefined) ids.push(item.id)
+        }
+        selectedIds = ids
+      }
+
+      function invertSelection() {
+        var ids = []
+        for (var i = 0; i < libraryModel.count; ++i) {
+          const item = libraryModel.get(i)
+          if (!item || item.id === undefined) continue
+          if (selectedIds.indexOf(item.id) === -1) {
+            ids.push(item.id)
+          }
+        }
+        selectedIds = ids
+      }
+
+      function clearFilters() {
+        libraryPage.pendingSearch = ""
+        librarySearch.text = ""
+        libraryModel.searchQuery = ""
+        libraryModel.filterCollection = "__all__"
+        libraryModel.filterTag = "__all__"
+        libraryModel.sortKey = "title"
+        libraryModel.sortDescending = false
+      }
+
+      function hasActiveFilters() {
+        return (libraryModel.searchQuery && libraryModel.searchQuery.length > 0)
+          || (libraryModel.filterCollection && libraryModel.filterCollection !== "__all__")
+          || (libraryModel.filterTag && libraryModel.filterTag !== "__all__")
       }
 
       function rebuildFilterOptions() {
@@ -1906,12 +1956,31 @@ ApplicationWindow {
               verticalAlignment: Text.AlignVCenter
             }
 
-            TextField {
-              id: librarySearch
-              Layout.preferredWidth: 220
-              placeholderText: "Search library"
-              text: libraryModel.searchQuery
-              onTextChanged: libraryModel.searchQuery = text
+            RowLayout {
+              spacing: 6
+              Layout.preferredWidth: 260
+
+              TextField {
+                id: librarySearch
+                Layout.fillWidth: true
+                placeholderText: "Search library"
+                text: libraryPage.pendingSearch
+                onTextChanged: {
+                  libraryPage.pendingSearch = text
+                  searchDebounce.restart()
+                }
+              }
+
+              Button {
+                text: "✕"
+                font.family: root.uiFont
+                enabled: libraryPage.pendingSearch.length > 0 || libraryModel.searchQuery.length > 0
+                onClicked: {
+                  libraryPage.pendingSearch = ""
+                  librarySearch.text = ""
+                  libraryModel.searchQuery = ""
+                }
+              }
             }
 
             ComboBox {
@@ -1970,7 +2039,20 @@ ApplicationWindow {
               onClicked: libraryModel.sortDescending = !libraryModel.sortDescending
             }
 
+            Button {
+              text: "Reset"
+              font.family: root.uiFont
+              enabled: hasActiveFilters() || libraryModel.sortKey !== "title" || libraryModel.sortDescending
+              onClicked: clearFilters()
+            }
+
             Item { Layout.fillWidth: true }
+
+            Button {
+              text: viewMode === "list" ? "Grid" : "List"
+              font.family: root.uiFont
+              onClicked: viewMode = viewMode === "list" ? "grid" : "list"
+            }
 
             Button {
               text: selectionMode ? "Cancel" : "Select"
@@ -1984,16 +2066,40 @@ ApplicationWindow {
             }
 
             Button {
-              text: "Edit tags"
+              text: "Select all"
               font.family: root.uiFont
-              visible: selectionMode && selectedIds.length > 0
+              visible: selectionMode
+              onClicked: selectAllVisible()
+            }
+
+            Button {
+              text: "Invert"
+              font.family: root.uiFont
+              visible: selectionMode
+              enabled: libraryModel.count > 0
+              onClicked: invertSelection()
+            }
+
+            Button {
+              text: "Clear"
+              font.family: root.uiFont
+              visible: selectionMode
+              onClicked: clearSelection()
+            }
+
+            Button {
+              text: qsTr("Edit tags (%1)").arg(selectedIds.length)
+              font.family: root.uiFont
+              visible: selectionMode
+              enabled: selectedIds.length > 0
               onClicked: bulkTagsDialog.openForIds(selectedIds)
             }
 
             Button {
-              text: "Remove selected"
+              text: qsTr("Remove (%1)").arg(selectedIds.length)
               font.family: root.uiFont
-              visible: selectionMode && selectedIds.length > 0
+              visible: selectionMode
+              enabled: selectedIds.length > 0
               onClicked: deleteBooksDialog.openForIds(selectedIds)
             }
 
@@ -2033,6 +2139,96 @@ ApplicationWindow {
         }
 
         Rectangle {
+          id: filterBar
+          radius: 14
+          color: theme.panelHighlight
+          width: parent.width
+          height: 54
+
+          RowLayout {
+            anchors.fill: parent
+            anchors.margins: 12
+            spacing: 14
+
+            Text {
+              text: "Collections"
+              color: theme.textMuted
+              font.pixelSize: 12
+              font.family: root.uiFont
+            }
+
+            Flow {
+              Layout.fillWidth: true
+              spacing: 6
+              Repeater {
+                model: collectionFilterModel
+                delegate: Rectangle {
+                  visible: index < 6
+                  radius: 10
+                  color: model.value === libraryModel.filterCollection ? theme.accent : theme.panel
+                  border.width: 1
+                  border.color: theme.panelHighlight
+                  height: 26
+                  width: label.implicitWidth + 18
+
+                  Text {
+                    id: label
+                    anchors.centerIn: parent
+                    text: model.label
+                    color: model.value === libraryModel.filterCollection ? "#0f141a" : theme.textPrimary
+                    font.pixelSize: 11
+                    font.family: root.uiFont
+                  }
+
+                  MouseArea {
+                    anchors.fill: parent
+                    onClicked: libraryModel.filterCollection = model.value
+                  }
+                }
+              }
+            }
+
+            Text {
+              text: "Tags"
+              color: theme.textMuted
+              font.pixelSize: 12
+              font.family: root.uiFont
+            }
+
+            Flow {
+              Layout.fillWidth: true
+              spacing: 6
+              Repeater {
+                model: tagFilterModel
+                delegate: Rectangle {
+                  visible: index < 6
+                  radius: 10
+                  color: model.value === libraryModel.filterTag ? theme.accent : theme.panel
+                  border.width: 1
+                  border.color: theme.panelHighlight
+                  height: 26
+                  width: tagLabel.implicitWidth + 18
+
+                  Text {
+                    id: tagLabel
+                    anchors.centerIn: parent
+                    text: model.label
+                    color: model.value === libraryModel.filterTag ? "#0f141a" : theme.textPrimary
+                    font.pixelSize: 11
+                    font.family: root.uiFont
+                  }
+
+                  MouseArea {
+                    anchors.fill: parent
+                    onClicked: libraryModel.filterTag = model.value
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        Rectangle {
           id: libraryPanel
           radius: 18
           color: theme.panel
@@ -2040,180 +2236,291 @@ ApplicationWindow {
           width: parent.width
           height: parent.height - header.height - 96
 
-          ListView {
-            id: listView
+          Item {
             anchors.fill: parent
-            anchors.margins: 12
-            model: libraryModel
-            clip: true
-            spacing: 8
 
-            delegate: Rectangle {
-              radius: 12
-              height: 106
-              width: listView.width
-              color: index % 2 === 0 ? theme.panelHighlight : theme.panel
-              border.width: isSelected(model.id) ? 2 : 0
-              border.color: theme.accent
+            ListView {
+              id: listView
+              anchors.fill: parent
+              anchors.margins: 12
+              model: libraryModel
+              clip: true
+              spacing: 8
+              visible: viewMode === "list"
 
-              RowLayout {
-                anchors.fill: parent
-                anchors.margins: 14
-                spacing: 16
+              delegate: Rectangle {
+                radius: 12
+                height: 106
+                width: listView.width
+                color: index % 2 === 0 ? theme.panelHighlight : theme.panel
+                border.width: isSelected(model.id) ? 2 : 0
+                border.color: theme.accent
 
-                Item {
-                  id: libraryContent
-                  Layout.fillWidth: true
-                  Layout.fillHeight: true
+                RowLayout {
+                  anchors.fill: parent
+                  anchors.margins: 14
+                  spacing: 16
 
-                  MouseArea {
-                    anchors.fill: parent
-                    onClicked: {
-                      if (selectionMode) {
-                        toggleSelected(model.id)
-                        return
-                      }
-                      reader.close()
-                      reader.openFileAsync(model.path)
-                      annotationModel.libraryItemId = model.id
-                      stack.push(readerPage)
-                    }
-                  }
+                  Item {
+                    id: libraryContent
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
 
-                  Row {
-                    anchors.fill: parent
-                    spacing: 16
-
-                    Rectangle {
-                      width: selectionMode ? 22 : 0
-                      height: selectionMode ? 22 : 0
-                      radius: 4
-                      color: isSelected(model.id) ? theme.accent : "transparent"
-                      border.width: selectionMode ? 1 : 0
-                      border.color: theme.textMuted
-                      visible: selectionMode
-                      anchors.verticalCenter: parent.verticalCenter
-
-                      Text {
-                        anchors.centerIn: parent
-                        text: isSelected(model.id) ? "✓" : ""
-                        color: "#0f141a"
-                        font.pixelSize: 12
-                        font.family: root.uiFont
-                      }
-
-                      MouseArea {
-                        anchors.fill: parent
-                        onClicked: toggleSelected(model.id)
-                      }
-                    }
-
-                    Rectangle {
-                      width: 52
-                      height: 56
-                      radius: 8
-                      color: theme.accentAlt
-
-                      Text {
-                        anchors.centerIn: parent
-                        text: model.format.toUpperCase()
-                        color: "#0f141a"
-                        font.pixelSize: 12
-                        font.family: root.uiFont
-                      }
-                    }
-
-                    Column {
-                      spacing: 4
-                      anchors.verticalCenter: parent.verticalCenter
-
-                      Text {
-                        text: model.title
-                        color: theme.textPrimary
-                        font.pixelSize: 18
-                        font.family: root.uiFont
-                        elide: Text.ElideRight
-                        width: libraryContent.width - 180
-                      }
-
-                      Text {
-                        text: {
-                          var parts = [];
-                          if (model.authors && model.authors.length > 0) parts.push(model.authors);
-                          if (model.series && model.series.length > 0) parts.push(model.series);
-                          if (model.publisher && model.publisher.length > 0) parts.push(model.publisher);
-                          if (model.collection && model.collection.length > 0) parts.push(model.collection);
-                          if (model.tags && model.tags.length > 0) parts.push(model.tags);
-                          return parts.length > 0 ? parts.join(" • ") : ""
+                    MouseArea {
+                      anchors.fill: parent
+                      onClicked: {
+                        if (selectionMode) {
+                          toggleSelected(model.id)
+                          return
                         }
-                        color: theme.textMuted
-                        font.pixelSize: 12
-                        font.family: root.uiFont
-                        elide: Text.ElideRight
-                        width: libraryContent.width - 180
-                        visible: text.length > 0
+                        reader.close()
+                        reader.openFileAsync(model.path)
+                        annotationModel.libraryItemId = model.id
+                        stack.push(readerPage)
+                      }
+                    }
+
+                    Row {
+                      anchors.fill: parent
+                      spacing: 16
+
+                      Rectangle {
+                        width: selectionMode ? 22 : 0
+                        height: selectionMode ? 22 : 0
+                        radius: 4
+                        color: isSelected(model.id) ? theme.accent : "transparent"
+                        border.width: selectionMode ? 1 : 0
+                        border.color: theme.textMuted
+                        visible: selectionMode
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        Text {
+                          anchors.centerIn: parent
+                          text: isSelected(model.id) ? "✓" : ""
+                          color: "#0f141a"
+                          font.pixelSize: 12
+                          font.family: root.uiFont
+                        }
+
+                        MouseArea {
+                          anchors.fill: parent
+                          onClicked: toggleSelected(model.id)
+                        }
                       }
 
+                      Rectangle {
+                        width: 52
+                        height: 56
+                        radius: 8
+                        color: theme.accentAlt
+
+                        Text {
+                          anchors.centerIn: parent
+                          text: model.format.toUpperCase()
+                          color: "#0f141a"
+                          font.pixelSize: 12
+                          font.family: root.uiFont
+                        }
+                      }
+
+                      Column {
+                        spacing: 4
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        Text {
+                          text: model.title
+                          color: theme.textPrimary
+                          font.pixelSize: 18
+                          font.family: root.uiFont
+                          elide: Text.ElideRight
+                          width: libraryContent.width - 180
+                        }
+
+                        Text {
+                          text: {
+                            var parts = [];
+                            if (model.authors && model.authors.length > 0) parts.push(model.authors);
+                            if (model.series && model.series.length > 0) parts.push(model.series);
+                            if (model.publisher && model.publisher.length > 0) parts.push(model.publisher);
+                            if (model.collection && model.collection.length > 0) parts.push(model.collection);
+                            if (model.tags && model.tags.length > 0) parts.push(model.tags);
+                            return parts.length > 0 ? parts.join(" • ") : ""
+                          }
+                          color: theme.textMuted
+                          font.pixelSize: 12
+                          font.family: root.uiFont
+                          elide: Text.ElideRight
+                          width: libraryContent.width - 180
+                          visible: text.length > 0
+                        }
+
+                        Text {
+                          text: (model.description && model.description.length > 0) ? model.description : model.path
+                          color: theme.textMuted
+                          font.pixelSize: 12
+                          font.family: root.uiFont
+                          elide: Text.ElideRight
+                          width: libraryContent.width - 180
+                        }
+                      }
+                    }
+
+                    Rectangle {
+                      visible: model.annotationCount > 0
+                      radius: 12
+                      height: 24
+                      width: Math.max(32, badgeText.implicitWidth + 16)
+                      color: theme.accent
+                      anchors.right: parent.right
+                      anchors.verticalCenter: parent.verticalCenter
+                      anchors.rightMargin: 12
+
                       Text {
-                        text: (model.description && model.description.length > 0) ? model.description : model.path
-                        color: theme.textMuted
+                        id: badgeText
+                        anchors.centerIn: parent
+                        text: model.annotationCount
+                        color: "#0f141a"
                         font.pixelSize: 12
                         font.family: root.uiFont
-                        elide: Text.ElideRight
-                        width: libraryContent.width - 180
                       }
                     }
                   }
 
-                  Rectangle {
-                    visible: model.annotationCount > 0
-                    radius: 12
-                    height: 24
-                    width: Math.max(32, badgeText.implicitWidth + 16)
-                    color: theme.accent
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    anchors.rightMargin: 12
+                  ColumnLayout {
+                    Layout.alignment: Qt.AlignVCenter
+                    spacing: 6
 
-                    Text {
-                      id: badgeText
-                      anchors.centerIn: parent
-                      text: model.annotationCount
-                      color: "#0f141a"
-                      font.pixelSize: 12
+                    Button {
+                      text: "Edit"
                       font.family: root.uiFont
+                      onClicked: editBookDialog.openForBook({
+                        id: model.id,
+                        title: model.title,
+                        authors: model.authors,
+                        series: model.series,
+                        publisher: model.publisher,
+                        collection: model.collection,
+                        tags: model.tags,
+                        description: model.description,
+                        path: model.path
+                      })
+                    }
+
+                    Button {
+                      text: "Remove"
+                      font.family: root.uiFont
+                      onClicked: deleteBookDialog.openForBook({
+                        id: model.id,
+                        title: model.title,
+                        path: model.path
+                      })
                     }
                   }
                 }
+              }
+            }
 
-                ColumnLayout {
-                  Layout.alignment: Qt.AlignVCenter
-                  spacing: 6
+            GridView {
+              id: gridView
+              anchors.fill: parent
+              anchors.margins: 12
+              model: libraryModel
+              clip: true
+              visible: viewMode === "grid"
+              cellWidth: 220
+              cellHeight: 260
+              spacing: 12
 
-                  Button {
-                    text: "Edit"
-                    font.family: root.uiFont
-                    onClicked: editBookDialog.openForBook({
-                      id: model.id,
-                      title: model.title,
-                      authors: model.authors,
-                      series: model.series,
-                      publisher: model.publisher,
-                      collection: model.collection,
-                      tags: model.tags,
-                      description: model.description,
-                      path: model.path
-                    })
+              delegate: Rectangle {
+                width: gridView.cellWidth
+                height: gridView.cellHeight
+                radius: 14
+                color: theme.panelHighlight
+                border.width: isSelected(model.id) ? 2 : 0
+                border.color: theme.accent
+
+                MouseArea {
+                  anchors.fill: parent
+                  onClicked: {
+                    if (selectionMode) {
+                      toggleSelected(model.id)
+                      return
+                    }
+                    reader.close()
+                    reader.openFileAsync(model.path)
+                    annotationModel.libraryItemId = model.id
+                    stack.push(readerPage)
+                  }
+                }
+
+                Column {
+                  anchors.fill: parent
+                  anchors.margins: 12
+                  spacing: 8
+
+                  Rectangle {
+                    width: parent.width
+                    height: 140
+                    radius: 10
+                    color: theme.panel
+                    Image {
+                      id: gridCover
+                      anchors.fill: parent
+                      source: model.coverPath && model.coverPath.length > 0
+                              ? root.fileUrl(model.coverPath)
+                              : root.fileUrl(settings.iconPath)
+                      fillMode: Image.PreserveAspectFit
+                      cache: false
+                    }
+
+                    Text {
+                      anchors.centerIn: parent
+                      text: model.format.toUpperCase()
+                      color: theme.textMuted
+                      font.pixelSize: 18
+                      font.family: root.uiFont
+                      visible: gridCover.status !== Image.Ready
+                    }
                   }
 
-                  Button {
-                    text: "Remove"
+                  Text {
+                    text: model.title
+                    color: theme.textPrimary
+                    font.pixelSize: 14
                     font.family: root.uiFont
-                    onClicked: deleteBookDialog.openForBook({
-                      id: model.id,
-                      title: model.title,
-                      path: model.path
-                    })
+                    elide: Text.ElideRight
+                    maximumLineCount: 2
+                    wrapMode: Text.Wrap
+                  }
+
+                  Text {
+                    text: model.authors
+                    color: theme.textMuted
+                    font.pixelSize: 12
+                    font.family: root.uiFont
+                    elide: Text.ElideRight
+                  }
+                }
+
+                Rectangle {
+                  visible: selectionMode
+                  width: 22
+                  height: 22
+                  radius: 4
+                  color: isSelected(model.id) ? theme.accent : "transparent"
+                  border.width: 1
+                  border.color: theme.textMuted
+                  anchors.right: parent.right
+                  anchors.top: parent.top
+                  anchors.rightMargin: 8
+                  anchors.topMargin: 8
+
+                  Text {
+                    anchors.centerIn: parent
+                    text: isSelected(model.id) ? "✓" : ""
+                    color: "#0f141a"
+                    font.pixelSize: 12
+                    font.family: root.uiFont
                   }
                 }
               }
@@ -2763,10 +3070,10 @@ ApplicationWindow {
 
         Row {
           spacing: 10
-          visible: updateManager.state === UpdateManager.Checking
+          visible: updateManager.state === UpdateManager.Checking || updateManager.state === UpdateManager.Applying
 
           BusyIndicator {
-            running: updateManager.state === UpdateManager.Checking
+            running: updateManager.state === UpdateManager.Checking || updateManager.state === UpdateManager.Applying
             width: 20
             height: 20
           }
@@ -2780,11 +3087,11 @@ ApplicationWindow {
         }
 
         Text {
-          text: updateManager.state === UpdateManager.Checking ? "" : updateManager.status
+          text: (updateManager.state === UpdateManager.Checking || updateManager.state === UpdateManager.Applying) ? "" : updateManager.status
           color: theme.textPrimary
           font.pixelSize: 14
           font.family: root.uiFont
-          visible: updateManager.state !== UpdateManager.Checking
+          visible: updateManager.state !== UpdateManager.Checking && updateManager.state !== UpdateManager.Applying
         }
 
         Text {
@@ -2795,6 +3102,13 @@ ApplicationWindow {
           visible: updateManager.summary.length > 0
         }
 
+        Text {
+          text: "Current version: " + Qt.application.version
+          color: theme.textMuted
+          font.pixelSize: 12
+          font.family: root.uiFont
+        }
+
         TextArea {
           readOnly: true
           text: updateManager.details
@@ -2803,7 +3117,47 @@ ApplicationWindow {
           color: theme.textPrimary
           background: Rectangle { color: "transparent" }
         }
+
+        Text {
+          text: "Restart the app to use the new version."
+          color: theme.textMuted
+          font.pixelSize: 12
+          font.family: root.uiFont
+          visible: updateManager.state === UpdateManager.UpToDate && updateManager.status === "Update applied"
+        }
       }
+    }
+  }
+
+  Dialog {
+    id: restartDialog
+    title: "Restart Required"
+    modal: true
+    standardButtons: Dialog.Ok | Dialog.Cancel
+    width: Math.min(420, root.width - 80)
+
+    contentItem: Rectangle {
+      color: theme.panel
+      radius: 16
+
+      Column {
+        anchors.fill: parent
+        anchors.margins: 16
+        spacing: 12
+
+        Text {
+          text: "Update applied. Restart now to use the new version?"
+          color: theme.textPrimary
+          font.pixelSize: 14
+          font.family: root.uiFont
+          wrapMode: Text.Wrap
+        }
+      }
+    }
+
+    onAccepted: {
+      updateManager.restartApp()
+      Qt.quit()
     }
   }
 
@@ -2849,9 +3203,20 @@ ApplicationWindow {
             Button {
               text: "Check"
               font.family: root.uiFont
+              enabled: updateManager.canUpdate
               onClicked: {
                 updateDialog.open()
                 updateManager.checkForUpdates()
+              }
+            }
+
+            Button {
+              text: "Apply"
+              font.family: root.uiFont
+              enabled: updateManager.canUpdate && updateManager.state === UpdateManager.UpdateAvailable
+              onClicked: {
+                updateDialog.open()
+                updateManager.applyUpdate()
               }
             }
 

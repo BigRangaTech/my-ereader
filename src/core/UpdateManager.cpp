@@ -22,40 +22,20 @@ UpdateManager::UpdateManager(QObject *parent) : QObject(parent) {
   m_process = new QProcess(this);
   connect(m_process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
           this, &UpdateManager::handleProcessFinished);
+  evaluateAvailability();
 }
 
 UpdateManager::State UpdateManager::state() const { return m_state; }
 QString UpdateManager::status() const { return m_status; }
 QString UpdateManager::summary() const { return m_summary; }
 QString UpdateManager::details() const { return m_details; }
+bool UpdateManager::canUpdate() const { return m_canUpdate; }
 
 void UpdateManager::checkForUpdates() {
   if (m_state == State::Checking) {
     return;
   }
-  const QString flatpakId = QProcessEnvironment::systemEnvironment().value("FLATPAK_ID").trimmed();
-  if (!flatpakId.isEmpty()) {
-    setState(State::Unavailable);
-    setStatus("Updates are handled by Flatpak");
-    setSummary({});
-    setDetails({});
-    return;
-  }
-  const QString git = QStandardPaths::findExecutable("git");
-  if (git.isEmpty()) {
-    setState(State::Unavailable);
-    setStatus("Updates require git (not installed)");
-    setSummary({});
-    setDetails({});
-    return;
-  }
-
-  m_gitRoot = findGitRoot();
-  if (m_gitRoot.isEmpty()) {
-    setState(State::Unavailable);
-    setStatus("Updates require a git checkout");
-    setSummary({});
-    setDetails({});
+  if (!evaluateAvailability()) {
     return;
   }
 
@@ -65,6 +45,28 @@ void UpdateManager::checkForUpdates() {
   setDetails({});
   m_step = Step::Fetch;
   runGit({"fetch", "--tags"});
+}
+
+void UpdateManager::applyUpdate() {
+  if (m_state == State::Checking || m_state == State::Applying) {
+    return;
+  }
+  if (!evaluateAvailability()) {
+    return;
+  }
+
+  setState(State::Applying);
+  setStatus("Applying update...");
+  setSummary({});
+  setDetails({});
+  m_step = Step::Status;
+  runGit({"status", "--porcelain"});
+}
+
+bool UpdateManager::restartApp() {
+  const QString appPath = QCoreApplication::applicationFilePath();
+  const QStringList args = QCoreApplication::arguments().mid(1);
+  return QProcess::startDetached(appPath, args);
 }
 
 void UpdateManager::setState(State state) {
@@ -97,6 +99,48 @@ void UpdateManager::setDetails(const QString &details) {
   }
   m_details = details;
   emit detailsChanged();
+}
+
+void UpdateManager::setCanUpdate(bool canUpdate) {
+  if (m_canUpdate == canUpdate) {
+    return;
+  }
+  m_canUpdate = canUpdate;
+  emit canUpdateChanged();
+}
+
+bool UpdateManager::evaluateAvailability() {
+  const QString flatpakId = QProcessEnvironment::systemEnvironment().value("FLATPAK_ID").trimmed();
+  if (!flatpakId.isEmpty()) {
+    setCanUpdate(false);
+    setState(State::Unavailable);
+    setStatus("Updates are handled by Flatpak");
+    setSummary({});
+    setDetails({});
+    return false;
+  }
+  const QString git = QStandardPaths::findExecutable("git");
+  if (git.isEmpty()) {
+    setCanUpdate(false);
+    setState(State::Unavailable);
+    setStatus("Updates require git (not installed)");
+    setSummary({});
+    setDetails({});
+    return false;
+  }
+
+  m_gitRoot = findGitRoot();
+  if (m_gitRoot.isEmpty()) {
+    setCanUpdate(false);
+    setState(State::Unavailable);
+    setStatus("Updates require a git checkout");
+    setSummary({});
+    setDetails({});
+    return false;
+  }
+
+  setCanUpdate(true);
+  return true;
 }
 
 QString UpdateManager::findGitRoot() const {
@@ -181,6 +225,29 @@ void UpdateManager::handleProcessFinished(int exitCode, QProcess::ExitStatus exi
     setState(State::UpdateAvailable);
     setStatus("Update found");
     setSummary(QString("%1 update(s) available").arg(m_aheadCount));
+    setDetails(output);
+    m_step = Step::None;
+    return;
+  }
+
+  if (m_step == Step::Status) {
+    if (!output.isEmpty()) {
+      setState(State::Error);
+      setStatus("Working tree is not clean");
+      setSummary("Commit or stash changes before updating");
+      setDetails(output);
+      m_step = Step::None;
+      return;
+    }
+    m_step = Step::Pull;
+    runGit({"pull", "--ff-only"});
+    return;
+  }
+
+  if (m_step == Step::Pull) {
+    setState(State::UpToDate);
+    setStatus("Update applied");
+    setSummary("Restart the app to use the new version");
     setDetails(output);
     m_step = Step::None;
     return;

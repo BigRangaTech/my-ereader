@@ -15,6 +15,7 @@
 #include <QStandardPaths>
 #include <QThread>
 #include <QVariant>
+#include <QUrl>
 
 #include <sqlite3.h>
 
@@ -44,6 +45,42 @@ QString defaultDbPath() {
     dir.mkpath(".");
   }
   return dir.filePath("library.db");
+}
+
+QString coverCacheDir() {
+  const QString base = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+  QDir dir(base);
+  if (!dir.exists()) {
+    dir.mkpath(".");
+  }
+  dir.mkpath("covers");
+  return dir.filePath("covers");
+}
+
+QString normalizeCoverSource(const QString &path) {
+  if (path.startsWith("file:")) {
+    return QUrl(path).toLocalFile();
+  }
+  return path;
+}
+
+QString cacheCoverImage(const QString &coverPath, const QString &fileHash) {
+  if (coverPath.isEmpty() || fileHash.isEmpty()) {
+    return "";
+  }
+  const QString sourcePath = normalizeCoverSource(coverPath);
+  if (sourcePath.isEmpty() || !QFileInfo::exists(sourcePath)) {
+    return "";
+  }
+  const QString ext = QFileInfo(sourcePath).suffix().isEmpty() ? "jpg" : QFileInfo(sourcePath).suffix();
+  const QString destPath = QDir(coverCacheDir()).filePath(fileHash + "." + ext);
+  if (QFileInfo::exists(destPath)) {
+    return destPath;
+  }
+  if (QFile::copy(sourcePath, destPath)) {
+    return destPath;
+  }
+  return "";
 }
 } // namespace
 
@@ -470,6 +507,7 @@ bool DbWorker::ensureSchema(QString *error) {
           "description TEXT,"
           "tags TEXT,"
           "collection TEXT,"
+          "cover_path TEXT,"
           "path TEXT UNIQUE,"
           "format TEXT,"
           "file_hash TEXT,"
@@ -509,6 +547,9 @@ bool DbWorker::ensureSchema(QString *error) {
     return false;
   }
   if (!ensureColumn("library_items", "collection", "TEXT", error)) {
+    return false;
+  }
+  if (!ensureColumn("library_items", "cover_path", "TEXT", error)) {
     return false;
   }
   return true;
@@ -576,7 +617,7 @@ QVector<LibraryItem> DbWorker::fetchLibraryFiltered(const QString &searchQuery,
        sortColumn == "publisher" || sortColumn == "format" || sortColumn == "collection");
 
   QString sql =
-      "SELECT id, title, authors, series, publisher, description, tags, collection, path, format, file_hash, added_at, "
+      "SELECT id, title, authors, series, publisher, description, tags, collection, cover_path, path, format, file_hash, added_at, "
       "(SELECT COUNT(*) FROM annotations WHERE library_item_id = library_items.id) "
       "FROM library_items";
 
@@ -646,11 +687,12 @@ QVector<LibraryItem> DbWorker::fetchLibraryFiltered(const QString &searchQuery,
       item.description = query.value(5).toString();
       item.tags = query.value(6).toString();
       item.collection = query.value(7).toString();
-      item.path = query.value(8).toString();
-      item.format = query.value(9).toString();
-      item.fileHash = query.value(10).toString();
-      item.addedAt = query.value(11).toString();
-      item.annotationCount = query.value(12).toInt();
+      item.coverPath = query.value(8).toString();
+      item.path = query.value(9).toString();
+      item.format = query.value(10).toString();
+      item.fileHash = query.value(11).toString();
+      item.addedAt = query.value(12).toString();
+      item.annotationCount = query.value(13).toInt();
       items.push_back(std::move(item));
     }
   } else if (error) {
@@ -696,8 +738,8 @@ bool DbWorker::insertLibraryItem(const LibraryItem &item, QString *error) {
   QSqlQuery query(m_db);
   query.prepare(
       "INSERT OR IGNORE INTO library_items "
-      "(title, authors, series, publisher, description, tags, collection, path, format, file_hash, added_at) "
-      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+      "(title, authors, series, publisher, description, tags, collection, cover_path, path, format, file_hash, added_at) "
+      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
   query.addBindValue(item.title);
   query.addBindValue(item.authors);
   query.addBindValue(item.series);
@@ -705,6 +747,7 @@ bool DbWorker::insertLibraryItem(const LibraryItem &item, QString *error) {
   query.addBindValue(item.description);
   query.addBindValue(item.tags);
   query.addBindValue(item.collection);
+  query.addBindValue(item.coverPath);
   query.addBindValue(item.path);
   query.addBindValue(item.format);
   query.addBindValue(item.fileHash);
@@ -728,6 +771,7 @@ LibraryItem DbWorker::makeItemFromFile(const QString &filePath) {
   item.description = "";
   item.tags = "";
   item.collection = "";
+  item.coverPath = "";
   item.path = info.absoluteFilePath();
   item.format = info.suffix().toLower();
   item.fileHash = computeFileHash(filePath);
@@ -735,7 +779,7 @@ LibraryItem DbWorker::makeItemFromFile(const QString &filePath) {
   const QString ext = item.format;
   const bool wantsMetadata =
       (ext == "mobi" || ext == "azw" || ext == "azw3" || ext == "azw4" || ext == "prc" ||
-       ext == "fb2");
+       ext == "fb2" || ext == "epub");
   if (wantsMetadata) {
     auto registry = FormatRegistry::createDefault();
     QString metaError;
@@ -749,6 +793,11 @@ LibraryItem DbWorker::makeItemFromFile(const QString &filePath) {
       item.series = doc->series().trimmed();
       item.publisher = doc->publisher().trimmed();
       item.description = doc->description().trimmed();
+      const QString coverPath = doc->coverPath();
+      const QString cachedCover = cacheCoverImage(coverPath, item.fileHash);
+      if (!cachedCover.isEmpty()) {
+        item.coverPath = cachedCover;
+      }
     }
   }
   return item;

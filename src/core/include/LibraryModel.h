@@ -28,6 +28,7 @@ public:
     DescriptionRole,
     TagsRole,
     CollectionRole,
+    CoverPathRole,
     PathRole,
     FormatRole,
     AddedAtRole,

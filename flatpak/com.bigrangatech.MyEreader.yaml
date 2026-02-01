@@ -18,24 +18,27 @@ finish-args:
   - --env=QT_PLUGIN_PATH=/app/plugins:/usr/plugins
 modules:
   - name: libxml2
-    buildsystem: meson
-    config-opts:
-      - -Dtests=false
-      - -Dpython=false
-      - -Dicu=false
+    buildsystem: simple
+    build-commands:
+      - ./autogen.sh --prefix=/app --without-python --without-icu
+      - make -j
+      - make install
     sources:
       - type: git
-        url: https://gitlab.gnome.org/GNOME/libxml2.git
-        tag: v2.12.5
+        url: https://github.com/BigRangaTech/libxml2.git
+        tag: v001
 
   - name: libarchive
-    buildsystem: autotools
-    config-opts:
-      - --disable-static
-      - --enable-shared
+    buildsystem: simple
+    build-commands:
+      - if [ -x ./autogen.sh ]; then ./autogen.sh; else autoreconf -fi; fi
+      - ./configure --prefix=/app --disable-static --enable-shared
+      - make -j
+      - make install
     sources:
-      - type: dir
-        path: ../third_party/libarchive
+      - type: git
+        url: https://github.com/BigRangaTech/libarchive.git
+        tag: v001
 
   - name: djvulibre
     buildsystem: autotools
