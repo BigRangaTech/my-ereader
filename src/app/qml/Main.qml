@@ -536,6 +536,7 @@ ApplicationWindow {
   FileDialog {
     id: fileDialog
     title: "Add book"
+    fileMode: FileDialog.OpenFile
     nameFilters: ["Books (*.epub *.pdf *.mobi *.azw *.azw3 *.fb2 *.cbz *.cbr *.djvu *.djv *.txt)"]
     onAccepted: {
       const path = localPathFromUrl(selectedFile)
@@ -567,11 +568,13 @@ ApplicationWindow {
     }
   }
 
-  FolderDialog {
+  FileDialog {
     id: folderDialog
     title: "Add folder"
+    fileMode: FileDialog.OpenFile
+    options: FileDialog.ShowDirsOnly
     onAccepted: {
-      const folder = localPathFromUrl(selectedFolder)
+      const folder = localPathFromUrl(selectedFile)
       if (folder.length > 0) {
         libraryModel.addFolder(folder, true)
       }
@@ -2186,6 +2189,38 @@ ApplicationWindow {
                   lockDialog.open()
                 }
               }
+            }
+          }
+        }
+
+        Rectangle {
+          id: bulkImportBar
+          visible: libraryModel.bulkImportActive
+          height: visible ? 44 : 0
+          radius: 12
+          color: theme.panel
+          width: parent.width
+
+          RowLayout {
+            anchors.fill: parent
+            anchors.margins: 14
+            spacing: 12
+
+            Text {
+              text: qsTr("Importing %1 / %2")
+                      .arg(libraryModel.bulkImportDone)
+                      .arg(libraryModel.bulkImportTotal)
+              color: theme.textMuted
+              font.pixelSize: 14
+              font.family: root.uiFont
+            }
+
+            ProgressBar {
+              id: bulkProgress
+              Layout.fillWidth: true
+              from: 0
+              to: Math.max(1, libraryModel.bulkImportTotal)
+              value: libraryModel.bulkImportDone
             }
           }
         }

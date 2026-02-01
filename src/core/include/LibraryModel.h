@@ -17,6 +17,9 @@ class LibraryModel : public QAbstractListModel {
   Q_PROPERTY(bool sortDescending READ sortDescending WRITE setSortDescending NOTIFY sortDescendingChanged)
   Q_PROPERTY(QString filterTag READ filterTag WRITE setFilterTag NOTIFY filterTagChanged)
   Q_PROPERTY(QString filterCollection READ filterCollection WRITE setFilterCollection NOTIFY filterCollectionChanged)
+  Q_PROPERTY(bool bulkImportActive READ bulkImportActive NOTIFY bulkImportChanged)
+  Q_PROPERTY(int bulkImportTotal READ bulkImportTotal NOTIFY bulkImportChanged)
+  Q_PROPERTY(int bulkImportDone READ bulkImportDone NOTIFY bulkImportChanged)
 
 public:
   enum Roles {
@@ -69,6 +72,9 @@ public:
   bool sortDescending() const;
   QString filterTag() const;
   QString filterCollection() const;
+  bool bulkImportActive() const;
+  int bulkImportTotal() const;
+  int bulkImportDone() const;
   void setSearchQuery(const QString &query);
   void setSortKey(const QString &key);
   void setSortDescending(bool descending);
@@ -92,6 +98,7 @@ signals:
   void sortDescendingChanged();
   void filterTagChanged();
   void filterCollectionChanged();
+  void bulkImportChanged();
 
 private:
   void reload();
@@ -104,5 +111,8 @@ private:
   bool m_sortDescending = false;
   QString m_filterTag;
   QString m_filterCollection;
+  bool m_bulkImportActive = false;
+  int m_bulkImportTotal = 0;
+  int m_bulkImportDone = 0;
   QVector<LibraryItem> m_items;
 };

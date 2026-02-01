@@ -38,6 +38,15 @@ LibraryModel::LibraryModel(QObject *parent) : QAbstractListModel(parent) {
             } else {
               setLastError("");
             }
+            if (m_bulkImportActive) {
+              m_bulkImportDone++;
+              if (m_bulkImportDone >= m_bulkImportTotal) {
+                m_bulkImportActive = false;
+                m_bulkImportTotal = 0;
+                m_bulkImportDone = 0;
+              }
+              emit bulkImportChanged();
+            }
           });
   connect(worker, &DbWorker::updateBookFinished, this,
           [this](bool ok, const QString &error) {
@@ -273,7 +282,14 @@ bool LibraryModel::addBooks(const QStringList &filePaths) {
     setLastError("No valid files to add");
     return false;
   }
+  if (!m_bulkImportActive) {
+    m_bulkImportDone = 0;
+    m_bulkImportTotal = 0;
+  }
+  m_bulkImportActive = true;
+  m_bulkImportTotal += queued;
   setLastError("");
+  emit bulkImportChanged();
   qInfo() << "LibraryModel: queued" << queued << "book(s)";
   return true;
 }
@@ -462,6 +478,9 @@ bool LibraryModel::sortDescending() const { return m_sortDescending; }
 QString LibraryModel::filterTag() const { return m_filterTag; }
 
 QString LibraryModel::filterCollection() const { return m_filterCollection; }
+bool LibraryModel::bulkImportActive() const { return m_bulkImportActive; }
+int LibraryModel::bulkImportTotal() const { return m_bulkImportTotal; }
+int LibraryModel::bulkImportDone() const { return m_bulkImportDone; }
 
 void LibraryModel::setSearchQuery(const QString &query) {
   if (m_searchQuery == query) {
