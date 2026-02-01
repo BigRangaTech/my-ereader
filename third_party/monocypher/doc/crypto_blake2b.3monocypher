@@ -59,7 +59,13 @@
 .Nm crypto_blake2b_init ,
 .Nm crypto_blake2b_keyed_init ,
 .Nm crypto_blake2b_update ,
-.Nm crypto_blake2b_final
+.Nm crypto_blake2b_final ,
+.Nm crypto_blake2b_checked ,
+.Nm crypto_blake2b_keyed_checked ,
+.Nm crypto_blake2b_init_checked ,
+.Nm crypto_blake2b_keyed_init_checked ,
+.Nm crypto_blake2b_update_checked ,
+.Nm crypto_blake2b_final_checked
 .Nd hashing, message authentication, and key derivation with BLAKE2b
 .Sh SYNOPSIS
 .In monocypher.h
@@ -98,6 +104,45 @@
 .Fc
 .Ft void
 .Fo crypto_blake2b_final
+.Fa "crypto_blake2b_ctx *ctx"
+.Fa "uint8_t *hash"
+.Fc
+.Ft int
+.Fo crypto_blake2b_checked
+.Fa "uint8_t *hash"
+.Fa "size_t hash_size"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft int
+.Fo crypto_blake2b_keyed_checked
+.Fa "uint8_t *hash"
+.Fa "size_t hash_size"
+.Fa "uint8_t *key"
+.Fa "size_t key_size"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft int
+.Fo crypto_blake2b_init_checked
+.Fa "crypto_blake2b_ctx *ctx"
+.Fa "size_t hash_size"
+.Fc
+.Ft int
+.Fo crypto_blake2b_keyed_init_checked
+.Fa "crypto_blake2b_ctx *ctx"
+.Fa "size_t hash_size"
+.Fa "uint8_t *key"
+.Fa "size_t key_size"
+.Fc
+.Ft int
+.Fo crypto_blake2b_update_checked
+.Fa "crypto_blake2b_ctx *ctx"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft int
+.Fo crypto_blake2b_final_checked
 .Fa "crypto_blake2b_ctx *ctx"
 .Fa "uint8_t *hash"
 .Fc
@@ -348,15 +393,34 @@ Calling
 is the same as calling
 .Fn crypto_blake2b_keyed
 with an empty key.
+.Pp
+For application code, prefer the checked variants:
+.Fn crypto_blake2b_checked ,
+.Fn crypto_blake2b_keyed_checked ,
+.Fn crypto_blake2b_init_checked ,
+.Fn crypto_blake2b_keyed_init_checked ,
+.Fn crypto_blake2b_update_checked ,
+and
+.Fn crypto_blake2b_final_checked .
+They validate sizes and pointers and return explicit error codes.
 .Sh RETURN VALUES
-These functions return nothing.
+The unchecked variants return nothing.
+The checked variants return:
+.Bl -tag -width Ds
+.It Dv CRYPTO_OK
+The operation completed successfully.
+.It Dv CRYPTO_ERR_NULL
+One or more pointers were
+.Dv NULL .
+.It Dv CRYPTO_ERR_SIZE
+The hash size is invalid (must be 1 to 64 bytes), the key is too large,
+or the context hash size is invalid.
+.El
 .Sh EXAMPLES
 The following examples assume the existence of
-.Fn arc4random_buf ,
+.Xr crypto_random 3monocypher ,
 which fills the given buffer with cryptographically secure random bytes.
-If
-.Fn arc4random_buf
-does not exist on your system, see
+If it does not exist on your system, see
 .Xr intro 3monocypher
 for advice about how to generate cryptographically secure random bytes.
 .Pp
@@ -364,7 +428,10 @@ Hashing a message all at once:
 .Bd -literal -offset indent
 uint8_t hash   [64]; /* Output hash (64 bytes)          */
 uint8_t message[12] = "Lorem ipsum"; /* Message to hash */
-crypto_blake2b(hash, sizeof(hash), message, sizeof(message));
+if (crypto_blake2b_checked(hash, sizeof(hash),
+                           message, sizeof(message)) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
 .Ed
 .Pp
 Computing a message authentication code all at once:
@@ -372,10 +439,12 @@ Computing a message authentication code all at once:
 uint8_t hash   [16];
 uint8_t key    [32];
 uint8_t message[11] = "Lorem ipsu"; /* Message to authenticate */
-arc4random_buf(key, sizeof(key));
-crypto_blake2b_keyed(hash   , sizeof(hash),
-                     key    , sizeof(key),
-                     message, sizeof(message));
+crypto_random(key, sizeof(key));
+if (crypto_blake2b_keyed_checked(hash   , sizeof(hash),
+                                 key    , sizeof(key),
+                                 message, sizeof(message)) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(message, sizeof(message));
 crypto_wipe(key,     sizeof(key));
@@ -386,11 +455,17 @@ Hashing a message incrementally (without a key):
 uint8_t hash   [ 64]; /* Output hash (64 bytes) */
 uint8_t message[500] = {1}; /* Message to hash  */
 crypto_blake2b_ctx ctx;
-crypto_blake2b_init(&ctx, sizeof(hash));
-for (size_t i = 0; i < 500; i += 100) {
-	crypto_blake2b_update(&ctx, message + i, 100);
+if (crypto_blake2b_init_checked(&ctx, sizeof(hash)) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
 }
-crypto_blake2b_final(&ctx, hash);
+for (size_t i = 0; i < 500; i += 100) {
+	if (crypto_blake2b_update_checked(&ctx, message + i, 100) != CRYPTO_OK) {
+		/* Abort on invalid inputs */
+	}
+}
+if (crypto_blake2b_final_checked(&ctx, hash) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
 .Ed
 .Pp
 Computing a message authentication code incrementally:
@@ -398,18 +473,25 @@ Computing a message authentication code incrementally:
 uint8_t hash   [ 16];
 uint8_t key    [ 32];
 uint8_t message[500] = {1}; /* Message to authenticate */
-arc4random_buf(key, sizeof(key));
+crypto_random(key, sizeof(key));
 crypto_blake2b_ctx ctx;
-crypto_blake2b_keyed_init(&ctx, sizeof(hash), key,
-                          sizeof(key));
+if (crypto_blake2b_keyed_init_checked(&ctx, sizeof(hash), key,
+                                      sizeof(key)) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
 /* Wipe the key */
 crypto_wipe(key, sizeof(key));
 for (size_t i = 0; i < 500; i += 100) {
-	crypto_blake2b_update(&ctx, message + i, 100);
+	if (crypto_blake2b_update_checked(&ctx, message + i, 100)
+	    != CRYPTO_OK) {
+		/* Abort on invalid inputs */
+	}
 	/* Wipe secrets if they are no longer needed */
 	crypto_wipe(message + i, 100);
 }
-crypto_blake2b_final(&ctx, hash);
+if (crypto_blake2b_final_checked(&ctx, hash) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
 .Ed
 .Pp
 Computing key derivation with BLAKE2b and ChaCha20:
@@ -421,11 +503,17 @@ void kdf(uint8_t *okm,  size_t okm_size,  /* unlimited   */
 {
 	/* Extract */
 	uint8_t prk[32];
-	crypto_blake2b_keyed(prk , sizeof(prk),
-	                     salt, salt_size,
-	                     ikm , ikm_size);
+	if (crypto_blake2b_keyed_checked(prk , sizeof(prk),
+	                                 salt, salt_size,
+	                                 ikm , ikm_size) != CRYPTO_OK) {
+		return;
+	}
 	/* Expand */
-	crypto_chacha20_djb(okm, NULL, okm_size, prk, info, 0);
+	uint64_t ctr_out = 0;
+	if (crypto_chacha20_djb_checked(okm, NULL, okm_size,
+	                                prk, info, 0, &ctr_out) != CRYPTO_OK) {
+		return;
+	}
 }
 .Ed
 .Pp
@@ -438,13 +526,22 @@ void xkdf(uint8_t *okm,  size_t okm_size,  /* unlimited   */
 {
 	/* Extract */
 	uint8_t prk[32];
-	crypto_blake2b_keyed(prk , sizeof(prk),
-	                     salt, salt_size,
-	                     ikm , ikm_size);
+	if (crypto_blake2b_keyed_checked(prk , sizeof(prk),
+	                                 salt, salt_size,
+	                                 ikm , ikm_size) != CRYPTO_OK) {
+		return;
+	}
 	/* Expand */
 	uint8_t nonce[24];
-	crypto_blake2b(nonce, sizeof(nonce), info, info_size);
-	crypto_chacha20_x(okm, NULL, okm_size, prk, nonce, 0);
+	if (crypto_blake2b_checked(nonce, sizeof(nonce),
+	                           info, info_size) != CRYPTO_OK) {
+		return;
+	}
+	uint64_t ctr_out = 0;
+	if (crypto_chacha20_x_checked(okm, NULL, okm_size,
+	                              prk, nonce, 0, &ctr_out) != CRYPTO_OK) {
+		return;
+	}
 }
 .Ed
 .Pp
@@ -460,18 +557,31 @@ void b2kdf(uint8_t *okm,  size_t okm_size,  /* unlimited   */
 {
 	/* Extract */
 	uint8_t prk[64];
-	crypto_blake2b_keyed(prk , sizeof(prk),
-	                     salt, salt_size,
-	                     ikm , ikm_size);
+	if (crypto_blake2b_keyed_checked(prk , sizeof(prk),
+	                                 salt, salt_size,
+	                                 ikm , ikm_size) != CRYPTO_OK) {
+		return;
+	}
 	/* Expand */
 	uint8_t ctr[8] = {0};
 	while(okm_size > 0) {
 		size_t size = MIN(okm_size, 64);
 		crypto_blake2b_ctx ctx;
-		crypto_blake2b_keyed_init(&ctx, size, prk, 64);
-		crypto_blake2b_update(&ctx, ctr, sizeof(ctr));
-		crypto_blake2b_update(&ctx, info, info_size);
-		crypto_blake2b_final(&ctx, okm);
+		if (crypto_blake2b_keyed_init_checked(&ctx, size, prk, 64)
+		    != CRYPTO_OK) {
+			return;
+		}
+		if (crypto_blake2b_update_checked(&ctx, ctr, sizeof(ctr))
+		    != CRYPTO_OK) {
+			return;
+		}
+		if (crypto_blake2b_update_checked(&ctx, info, info_size)
+		    != CRYPTO_OK) {
+			return;
+		}
+		if (crypto_blake2b_final_checked(&ctx, okm) != CRYPTO_OK) {
+			return;
+		}
 		okm      += size;
 		okm_size -= size;
 		/* increment ctr */
@@ -514,11 +624,11 @@ argument were added to
 and
 .Fn crypto_blake2b_init .
 .Sh CAVEATS
-Monocypher does not perform any input validation.
+The unchecked variants do not perform input validation.
 Any deviation from the specified input and output length ranges results
 in
 .Sy undefined behaviour .
-Make sure your inputs are correct.
+For safer application code, use the checked variants.
 .Sh SECURITY CONSIDERATIONS
 BLAKE2b is a general-purpose cryptographic hash function;
 this means that it is not suited for hashing passwords and deriving

@@ -62,7 +62,16 @@
 .Nm crypto_eddsa_reduce ,
 .Nm crypto_eddsa_mul_add ,
 .Nm crypto_eddsa_scalarbase ,
-.Nm crypto_eddsa_check_equation
+.Nm crypto_eddsa_check_equation ,
+.Nm crypto_eddsa_sign_checked ,
+.Nm crypto_eddsa_check_checked ,
+.Nm crypto_eddsa_key_pair_checked ,
+.Nm crypto_eddsa_to_x25519_checked ,
+.Nm crypto_eddsa_trim_scalar_checked ,
+.Nm crypto_eddsa_reduce_checked ,
+.Nm crypto_eddsa_mul_add_checked ,
+.Nm crypto_eddsa_scalarbase_checked ,
+.Nm crypto_eddsa_check_equation_checked
 .Nd public key signatures
 .Sh SYNOPSIS
 .In monocypher.h
@@ -115,6 +124,59 @@
 .Fc
 .Ft int
 .Fo crypto_eddsa_check_equation
+.Fa "const uint8_t Rs[64]"
+.Fa "const uint8_t A[32]"
+.Fa "const uint8_t h[32]"
+.Fc
+.Ft int
+.Fo crypto_eddsa_sign_checked
+.Fa "uint8_t signature[64]"
+.Fa "const uint8_t secret_key[64]"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft int
+.Fo crypto_eddsa_check_checked
+.Fa "const uint8_t signature[64]"
+.Fa "const uint8_t public_key[32]"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft int
+.Fo crypto_eddsa_key_pair_checked
+.Fa "uint8_t secret_key[64]"
+.Fa "uint8_t public_key[32]"
+.Fa "uint8_t seed[32]"
+.Fc
+.Ft int
+.Fo crypto_eddsa_to_x25519_checked
+.Fa "uint8_t x25519[32]"
+.Fa "const uint8_t eddsa[32]"
+.Fc
+.Ft int
+.Fo crypto_eddsa_trim_scalar_checked
+.Fa "uint8_t out[32]"
+.Fa "const uint8_t in[32]"
+.Fc
+.Ft int
+.Fo crypto_eddsa_reduce_checked
+.Fa "uint8_t reduced[32]"
+.Fa "const uint8_t expanded[64]"
+.Fc
+.Ft int
+.Fo crypto_eddsa_mul_add_checked
+.Fa "uint8_t r[32]"
+.Fa "const uint8_t a[32]"
+.Fa "const uint8_t b[32]"
+.Fa "const uint8_t c[32]"
+.Fc
+.Ft int
+.Fo crypto_eddsa_scalarbase_checked
+.Fa "uint8_t point[32]"
+.Fa "const uint8_t scalar[32]"
+.Fc
+.Ft int
+.Fo crypto_eddsa_check_equation_checked
 .Fa "const uint8_t Rs[64]"
 .Fa "const uint8_t A[32]"
 .Fa "const uint8_t h[32]"
@@ -281,9 +343,20 @@ return nothing.
 .Pp
 .Fn crypto_eddsa_check
 returns 0 for legitimate signatures and -1 for forgeries.
+.Pp
+For application code, prefer the checked variants:
+.Fn crypto_eddsa_key_pair_checked ,
+.Fn crypto_eddsa_sign_checked ,
+and
+.Fn crypto_eddsa_check_checked .
+They validate pointers and return explicit error codes.
 .Ss Conversion to X25519
 .Fn crypto_eddsa_to_x25519
 returns nothing.
+.Pp
+Use
+.Fn crypto_eddsa_to_x25519_checked
+to validate inputs.
 .Ss Low-level building blocks
 .Fn crypto_eddsa_trim_scalar ,
 .Fn crypto_eddsa_reduce ,
@@ -294,13 +367,25 @@ return nothing.
 .Pp
 .Fn crypto_eddsa_check_equation
 returns 0 for legitimate signatures and -1 for forgeries.
+.Pp
+The checked variants return:
+.Bl -tag -width Ds
+.It Dv CRYPTO_OK
+The operation completed successfully.
+.It Dv CRYPTO_ERR_NULL
+One or more pointers were
+.Dv NULL .
+.It Dv CRYPTO_ERR_AUTH
+Signature verification failed (applies to
+.Fn crypto_eddsa_check_checked
+and
+.Fn crypto_eddsa_check_equation_checked ) .
+.El
 .Sh EXAMPLES
 The following examples assume the existence of
-.Fn arc4random_buf ,
+.Xr crypto_random 3monocypher ,
 which fills the given buffer with cryptographically secure random bytes.
-If
-.Fn arc4random_buf
-does not exist on your system, see
+If it does not exist on your system, see
 .Xr intro 3monocypher
 for advice about how to generate cryptographically secure random bytes.
 .Pp
@@ -309,8 +394,10 @@ Generate a key pair:
 uint8_t seed[32]; /* Random seed         */
 uint8_t sk  [64]; /* secret key          */
 uint8_t pk  [32]; /* Matching public key */
-arc4random_buf(seed, 32);
-crypto_eddsa_key_pair(sk, pk, seed);
+crypto_random(seed, 32);
+if (crypto_eddsa_key_pair_checked(sk, pk, seed) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
 /* Wipe the secret key if it is no longer needed */
 /* The seed is wiped automatically               */
 crypto_wipe(sk, 32);
@@ -321,7 +408,9 @@ Sign a message:
 uint8_t       sk       [64]; /* Secret key from above          */
 const uint8_t message  [11] = "Lorem ipsu"; /* Message to sign */
 uint8_t       signature[64];
-crypto_eddsa_sign(signature, sk, message, 10);
+if (crypto_eddsa_sign_checked(signature, sk, message, 10) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
 /* Wipe the secret key if it is no longer needed */
 crypto_wipe(sk, 32);
 .Ed
@@ -331,7 +420,7 @@ Check the above:
 const uint8_t pk       [32]; /* Their public key              */
 const uint8_t message  [11] = "Lorem ipsu"; /* Signed message */
 const uint8_t signature[64]; /* Signature to check            */
-if (crypto_eddsa_check(signature, pk, message, 10)) {
+if (crypto_eddsa_check_checked(signature, pk, message, 10) != CRYPTO_OK) {
 	/* Message is corrupted, do not trust it */
 } else {
 	/* Message is genuine */
@@ -368,13 +457,20 @@ void xed25519_sign(uint8_t signature[64],
 	/* Key pair (a, A) */
 	uint8_t A[32];  /* XEdDSA public key  */
 	uint8_t a[32];  /* XEdDSA private key */
-	crypto_eddsa_trim_scalar(a, secret_key);
-	crypto_eddsa_scalarbase(A, a);
+	if (crypto_eddsa_trim_scalar_checked(a, secret_key) != CRYPTO_OK) {
+		return;
+	}
+	if (crypto_eddsa_scalarbase_checked(A, a) != CRYPTO_OK) {
+		return;
+	}
 	int is_negative = A[31] & 0x80; /* Retrieve sign bit */
 	A[31] &= 0x7f;                  /* Clear sign bit    */
 	if (is_negative) {
 		/* a = -a */
-		crypto_eddsa_mul_add(a, a, minus_1, zero);
+		if (crypto_eddsa_mul_add_checked(a, a, minus_1, zero)
+		    != CRYPTO_OK) {
+			return;
+		}
 	}
 
 	/* Secret nonce r */
@@ -386,11 +482,15 @@ void xed25519_sign(uint8_t signature[64],
 	crypto_sha512_update(&ctx, message, message_size);
 	crypto_sha512_update(&ctx, random , 64);
 	crypto_sha512_final (&ctx, r);
-	crypto_eddsa_reduce(r, r);
+	if (crypto_eddsa_reduce_checked(r, r) != CRYPTO_OK) {
+		return;
+	}
 
 	/* First half of the signature R */
 	uint8_t R[32];
-	crypto_eddsa_scalarbase(R, r);
+	if (crypto_eddsa_scalarbase_checked(R, r) != CRYPTO_OK) {
+		return;
+	}
 
 	/* hash(R || A || M) */
 	uint8_t H[64];
@@ -399,11 +499,16 @@ void xed25519_sign(uint8_t signature[64],
 	crypto_sha512_update(&ctx, A      , 32);
 	crypto_sha512_update(&ctx, message, message_size);
 	crypto_sha512_final (&ctx, H);
-	crypto_eddsa_reduce(H, H);
+	if (crypto_eddsa_reduce_checked(H, H) != CRYPTO_OK) {
+		return;
+	}
 
 	/* Signature */
 	memcpy(signature, R, 32);
-	crypto_eddsa_mul_add(signature + 32, a, H, r);
+	if (crypto_eddsa_mul_add_checked(signature + 32, a, H, r)
+	    != CRYPTO_OK) {
+		return;
+	}
 
 	/* Wipe secrets (A, R, and H are not secret) */
 	crypto_wipe(a, 32);
@@ -416,7 +521,9 @@ int xed25519_verify(const uint8_t signature[64],
 {
 	/* Convert X25519 key to EdDSA */
 	uint8_t A[32];
-	crypto_x25519_to_eddsa(A, public_key);
+	if (crypto_x25519_to_eddsa_checked(A, public_key) != CRYPTO_OK) {
+		return -1;
+	}
 
 	/* hash(R || A || M) */
 	uint8_t H[64];
@@ -426,10 +533,13 @@ int xed25519_verify(const uint8_t signature[64],
 	crypto_sha512_update(&ctx, A        , 32);
 	crypto_sha512_update(&ctx, message  , message_size);
 	crypto_sha512_final (&ctx, H);
-	crypto_eddsa_reduce(H, H);
+	if (crypto_eddsa_reduce_checked(H, H) != CRYPTO_OK) {
+		return -1;
+	}
 
 	/* Check signature */
-	return crypto_eddsa_check_equation(signature, A, H);
+	return crypto_eddsa_check_equation_checked(signature, A, H) == CRYPTO_OK
+	       ? 0 : -1;
 }
 .Ed
 .Sh SEE ALSO
@@ -488,11 +598,11 @@ and
 replaced
 .Fn crypto_sign_public_key .
 .Sh CAVEATS
-Monocypher does not perform any input validation.
+The unchecked variants do not perform input validation.
 Any deviation from the specified input and output length ranges results
 in
 .Sy undefined behaviour .
-Make sure your inputs are correct.
+For safer application code, use the checked variants.
 .Sh SECURITY CONSIDERATIONS
 .Ss Signature malleability
 Signature malleability is the ability of an attacker to produce a valid

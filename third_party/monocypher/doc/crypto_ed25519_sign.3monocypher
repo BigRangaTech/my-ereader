@@ -49,7 +49,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd March 01, 2022
+.Dd February 01, 2026
 .Dt CRYPTO_ED25519_SIGN 3MONOCYPHER
 .Os
 .Sh NAME
@@ -57,7 +57,12 @@
 .Nm crypto_ed25519_check ,
 .Nm crypto_ed25519_key_pair ,
 .Nm crypto_ed25519_ph_sign ,
-.Nm crypto_ed25519_ph_check
+.Nm crypto_ed25519_ph_check ,
+.Nm crypto_ed25519_sign_checked ,
+.Nm crypto_ed25519_check_checked ,
+.Nm crypto_ed25519_key_pair_checked ,
+.Nm crypto_ed25519_ph_sign_checked ,
+.Nm crypto_ed25519_ph_check_checked
 .Nd public key signatures
 .Sh SYNOPSIS
 .In monocypher-ed25519.h
@@ -93,6 +98,38 @@
 .Fa "const uint8_t public_key[32]"
 .Fa "const uint8_t message_hash[64]"
 .Fc
+.Ft int
+.Fo crypto_ed25519_sign_checked
+.Fa "uint8_t signature[64]"
+.Fa "const uint8_t secret_key[64]"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft int
+.Fo crypto_ed25519_check_checked
+.Fa "const uint8_t signature[64]"
+.Fa "const uint8_t public_key[32]"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft int
+.Fo crypto_ed25519_key_pair_checked
+.Fa "uint8_t secret_key[64]"
+.Fa "uint8_t public_key[32]"
+.Fa "uint8_t seed[32]"
+.Fc
+.Ft int
+.Fo crypto_ed25519_ph_sign_checked
+.Fa "uint8_t signature[64]"
+.Fa "const uint8_t secret_key[64]"
+.Fa "const uint8_t message_hash[64]"
+.Fc
+.Ft int
+.Fo crypto_ed25519_ph_check_checked
+.Fa "const uint8_t signature[64]"
+.Fa "const uint8_t public_key[32]"
+.Fa "const uint8_t message_hash[64]"
+.Fc
 .Sh DESCRIPTION
 The
 .Fn crypto_ed25519_sign
@@ -107,6 +144,15 @@ If you have no interoperability requirements, prefer
 The arguments and security considerations are the same as those
 described in
 .Xr crypto_eddsa_sign 3monocypher .
+.Pp
+For application code, prefer the checked variants:
+.Fn crypto_ed25519_sign_checked ,
+.Fn crypto_ed25519_check_checked ,
+.Fn crypto_ed25519_key_pair_checked ,
+.Fn crypto_ed25519_ph_sign_checked ,
+and
+.Fn crypto_ed25519_ph_check_checked .
+They validate pointers and return explicit error codes.
 .Pp
 .Fn crypto_ed25519_ph_sign
 and
@@ -128,6 +174,21 @@ return nothing.
 and
 .Fn crypto_ed25519_ph_check
 returns 0 for legitimate messages and -1 for forgeries.
+.Pp
+The checked variants return:
+.Bl -tag -width Ds
+.It Dv CRYPTO_OK
+The operation completed successfully.
+.It Dv CRYPTO_ERR_NULL
+One or more pointers were
+.Dv NULL .
+.It Dv CRYPTO_ERR_AUTH
+Signature verification failed
+(applies to
+.Fn crypto_ed25519_check_checked
+and
+.Fn crypto_ed25519_ph_check_checked ) .
+.El
 .Sh SEE ALSO
 .Xr crypto_eddsa_sign 3monocypher ,
 .Xr crypto_x25519 3monocypher ,
@@ -155,11 +216,12 @@ and
 replaced
 .Fn crypto_ed25519_public_key .
 .Sh CAVEATS
-Monocypher does not perform any input validation.
+The unchecked variants do not perform input validation.
 Any deviation from the specified input and output length ranges results
 in
 .Sy undefined behaviour .
 Make sure your inputs are correct.
+For safer application code, use the checked variants.
 .Sh SECURITY CONSIDERATIONS
 .Ss Signature malleability
 Signature malleability is the ability of an attacker to produce a valid

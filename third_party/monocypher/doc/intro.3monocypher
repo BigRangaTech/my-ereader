@@ -50,7 +50,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd February 20, 2022
+.Dd February 1, 2026
 .Dt INTRO 3MONOCYPHER
 .Os
 .Sh NAME
@@ -81,6 +81,12 @@ implements the BLAKE2b hash.
 BLAKE2b combines the security of SHA-3 and the speed of MD5.
 It is immune to length extension attacks and provides a keyed mode
 that makes it a safe, easy to use authenticator.
+.Pp
+.Xr crypto_blake3 3monocypher
+implements BLAKE3, a fast hash with an extendable output function (XOF).
+.Pp
+.Xr crypto_sha256 3monocypher
+is provided for compatibility with systems that require SHA-256.
 .Ss Password hashing and key derivation
 .Xr crypto_argon2 3monocypher
 implements the Argon2 resource intensive hash algorithm,
@@ -114,6 +120,17 @@ and
 .Xr crypto_verify64 3monocypher
 compare buffers in constant time.
 They should be used to compare secrets to prevent timing attacks.
+.Ss Checked APIs
+Most unchecked APIs do not validate inputs.
+For application code, prefer
+.Dv *_checked
+variants that validate pointers and sizes and return
+.Vt crypto_err
+values.
+If Monocypher is built with
+.Dv MONOCYPHER_STRERROR=1 ,
+.Xr crypto_strerror 3monocypher
+can be used to convert error codes to strings.
 .Ss Memory wipe
 .Xr crypto_wipe 3monocypher
 wipes a buffer.
@@ -141,6 +158,7 @@ and
 .Xr crypto_blake2b_keyed 3monocypher ,
 .Xr crypto_blake2b_keyed_init 3monocypher ,
 .Xr crypto_blake2b_update 3monocypher ,
+.Xr crypto_blake3 3monocypher ,
 .Xr crypto_chacha20_djb 3monocypher ,
 .Xr crypto_chacha20_h 3monocypher ,
 .Xr crypto_chacha20_ietf 3monocypher ,
@@ -161,6 +179,9 @@ and
 .Xr crypto_poly1305_final 3monocypher ,
 .Xr crypto_poly1305_init 3monocypher ,
 .Xr crypto_poly1305_update 3monocypher ,
+.Xr crypto_random 3monocypher ,
+.Xr crypto_sha256 3monocypher ,
+.Xr crypto_strerror 3monocypher ,
 .Xr crypto_verify16 3monocypher ,
 .Xr crypto_verify32 3monocypher ,
 .Xr crypto_verify64 3monocypher ,
@@ -188,11 +209,11 @@ and
 .Xr crypto_sha512_init 3monocypher ,
 .Xr crypto_sha512_update 3monocypher
 .Sh CAVEATS
-Monocypher does not perform any input validation.
+The unchecked variants do not perform input validation.
 Any deviation from the specified input and output length ranges results
 in
 .Sy undefined behaviour .
-Make sure your inputs are correct.
+For safer application code, use checked variants.
 .Sh SECURITY CONSIDERATIONS
 Using cryptography securely is difficult.
 Flaws that never manifest under normal use might be exploited by a
@@ -210,6 +231,29 @@ whose misuse has led to countless vulnerabilities in the past.
 For instance, the random stream may be repeated if one is not careful
 with multi-threading, and forward secrecy is lost without proper key
 erasure.
+.Pp
+Monocypher provides
+.Fn crypto_random
+as a convenience wrapper for OS random bytes.
+On Windows it uses
+.Fn BCryptGenRandom ;
+on Unix-like systems it prefers
+.Fn arc4random_buf
+or
+.Fn getrandom ,
+and falls back to
+.Pa /dev/urandom
+if those are unavailable.
+It returns
+.Dv CRYPTO_OK
+or an error code.
+If you need tighter control over error handling or entropy sources, call
+the OS APIs directly.
+.Pp
+When compiled with
+.Dv MONOCYPHER_RNG_DIAGNOSTICS=1 ,
+.Xr crypto_random_last_error 3monocypher
+exposes the platform-specific error code for debugging.
 .Pp
 Different system calls are available on different systems:
 .Bl -bullet

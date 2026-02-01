@@ -56,7 +56,10 @@
 .Sh NAME
 .Nm crypto_verify16 ,
 .Nm crypto_verify32 ,
-.Nm crypto_verify64
+.Nm crypto_verify64 ,
+.Nm crypto_verify16_checked ,
+.Nm crypto_verify32_checked ,
+.Nm crypto_verify64_checked
 .Nd timing-safe data comparison
 .Sh SYNOPSIS
 .In monocypher.h
@@ -72,6 +75,21 @@
 .Fc
 .Ft int
 .Fo crypto_verify64
+.Fa "const uint8_t a[64]"
+.Fa "const uint8_t b[64]"
+.Fc
+.Ft int
+.Fo crypto_verify16_checked
+.Fa "const uint8_t a[16]"
+.Fa "const uint8_t b[16]"
+.Fc
+.Ft int
+.Fo crypto_verify32_checked
+.Fa "const uint8_t a[32]"
+.Fa "const uint8_t b[32]"
+.Fc
+.Ft int
+.Fo crypto_verify64_checked
 .Fa "const uint8_t a[64]"
 .Fa "const uint8_t b[64]"
 .Fc
@@ -108,9 +126,27 @@ and
 .Pp
 When in doubt, prefer these functions over
 .Xr memcmp 3 .
+.Pp
+For application code, prefer the checked variants:
+.Fn crypto_verify16_checked ,
+.Fn crypto_verify32_checked ,
+and
+.Fn crypto_verify64_checked .
+They validate pointers and return explicit error codes.
 .Sh RETURN VALUES
 These functions return 0 if the two memory chunks are the same and -1
 otherwise.
+.Pp
+The checked variants return:
+.Bl -tag -width Ds
+.It Dv CRYPTO_OK
+The buffers are identical.
+.It Dv CRYPTO_ERR_AUTH
+The buffers differ.
+.It Dv CRYPTO_ERR_NULL
+One or more pointers were
+.Dv NULL .
+.El
 .Sh SEE ALSO
 .Xr intro 3monocypher
 .Sh HISTORY
@@ -125,8 +161,5 @@ and
 .Fn crypto_zerocmp
 functions that were present until Monocypher 1.0.1.
 .Sh CAVEATS
-Monocypher does not perform any input validation.
-Any deviation from the specified input and output length ranges results
-in
-.Sy undefined behaviour .
-Make sure your inputs are correct.
+The unchecked variants do not validate inputs.
+For safer application code, use the checked variants.

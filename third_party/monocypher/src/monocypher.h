@@ -70,11 +70,36 @@ extern "C" {
 int crypto_verify16(const uint8_t a[16], const uint8_t b[16]);
 int crypto_verify32(const uint8_t a[32], const uint8_t b[32]);
 int crypto_verify64(const uint8_t a[64], const uint8_t b[64]);
+int crypto_verify16_checked(const uint8_t a[16], const uint8_t b[16]);
+int crypto_verify32_checked(const uint8_t a[32], const uint8_t b[32]);
+int crypto_verify64_checked(const uint8_t a[64], const uint8_t b[64]);
 
 
 // Erase sensitive data
 // --------------------
 void crypto_wipe(void *secret, size_t size);
+
+// OS-backed random bytes (preferred)
+int crypto_random(uint8_t *out, size_t out_size);
+#if defined(MONOCYPHER_RNG_DIAGNOSTICS) && MONOCYPHER_RNG_DIAGNOSTICS
+// Optional RNG diagnostics (platform-specific error code)
+int crypto_random_last_error(void);
+#endif
+
+// Checked API error codes
+// -----------------------
+typedef enum {
+	CRYPTO_OK           = 0,
+	CRYPTO_ERR_NULL     = -1,
+	CRYPTO_ERR_SIZE     = -2,
+	CRYPTO_ERR_OVERFLOW = -3,
+	CRYPTO_ERR_AUTH     = -4,
+	CRYPTO_ERR_CONFIG   = -5,
+} crypto_err;
+
+#if defined(MONOCYPHER_STRERROR) && MONOCYPHER_STRERROR
+const char *crypto_strerror(int err);
+#endif
 
 
 // Authenticated encryption
@@ -91,6 +116,12 @@ int crypto_aead_unlock(uint8_t       *plain_text,
                        const uint8_t  nonce[24],
                        const uint8_t *ad,          size_t ad_size,
                        const uint8_t *cipher_text, size_t text_size);
+int crypto_aead_unlock_safe(uint8_t       *plain_text,
+                            const uint8_t  mac  [16],
+                            const uint8_t  key  [32],
+                            const uint8_t  nonce[24],
+                            const uint8_t *ad,          size_t ad_size,
+                            const uint8_t *cipher_text, size_t text_size);
 
 // Authenticated stream
 // --------------------
@@ -106,6 +137,15 @@ void crypto_aead_init_djb(crypto_aead_ctx *ctx,
                           const uint8_t key[32], const uint8_t nonce[8]);
 void crypto_aead_init_ietf(crypto_aead_ctx *ctx,
                            const uint8_t key[32], const uint8_t nonce[12]);
+int crypto_aead_init_x_checked(crypto_aead_ctx *ctx,
+                               const uint8_t key[32],
+                               const uint8_t nonce[24]);
+int crypto_aead_init_djb_checked(crypto_aead_ctx *ctx,
+                                 const uint8_t key[32],
+                                 const uint8_t nonce[8]);
+int crypto_aead_init_ietf_checked(crypto_aead_ctx *ctx,
+                                  const uint8_t key[32],
+                                  const uint8_t nonce[12]);
 
 void crypto_aead_write(crypto_aead_ctx *ctx,
                        uint8_t         *cipher_text,
@@ -117,6 +157,47 @@ int crypto_aead_read(crypto_aead_ctx *ctx,
                      const uint8_t    mac[16],
                      const uint8_t   *ad        , size_t ad_size,
                      const uint8_t   *cipher_text, size_t text_size);
+int crypto_aead_read_safe(crypto_aead_ctx *ctx,
+                          uint8_t         *plain_text,
+                          const uint8_t    mac[16],
+                          const uint8_t   *ad        , size_t ad_size,
+                          const uint8_t   *cipher_text, size_t text_size);
+
+// Checked AEAD interface (validates sizes and pointers)
+int crypto_aead_lock_checked(uint8_t       *cipher_text,
+                             uint8_t        mac  [16],
+                             const uint8_t  key  [32],
+                             const uint8_t  nonce[24],
+                             const uint8_t *ad,         size_t ad_size,
+                             const uint8_t *plain_text, size_t text_size);
+int crypto_aead_unlock_checked(uint8_t       *plain_text,
+                               const uint8_t  mac  [16],
+                               const uint8_t  key  [32],
+                               const uint8_t  nonce[24],
+                               const uint8_t *ad,          size_t ad_size,
+                               const uint8_t *cipher_text, size_t text_size);
+int crypto_aead_unlock_safe_checked(uint8_t       *plain_text,
+                                    const uint8_t  mac  [16],
+                                    const uint8_t  key  [32],
+                                    const uint8_t  nonce[24],
+                                    const uint8_t *ad,          size_t ad_size,
+                                    const uint8_t *cipher_text, size_t text_size);
+int crypto_aead_write_checked(crypto_aead_ctx *ctx,
+                              uint8_t         *cipher_text,
+                              uint8_t          mac[16],
+                              const uint8_t   *ad        , size_t ad_size,
+                              const uint8_t   *plain_text, size_t text_size);
+int crypto_aead_read_checked(crypto_aead_ctx *ctx,
+                             uint8_t         *plain_text,
+                             const uint8_t    mac[16],
+                             const uint8_t   *ad        , size_t ad_size,
+                             const uint8_t   *cipher_text, size_t text_size);
+int crypto_aead_read_safe_checked(crypto_aead_ctx *ctx,
+                                  uint8_t         *plain_text,
+                                  const uint8_t    mac[16],
+                                  const uint8_t   *ad        , size_t ad_size,
+                                  const uint8_t   *cipher_text,
+                                  size_t text_size);
 
 
 // General purpose hash (BLAKE2b)
@@ -129,6 +210,13 @@ void crypto_blake2b(uint8_t *hash,          size_t hash_size,
 void crypto_blake2b_keyed(uint8_t *hash,          size_t hash_size,
                           const uint8_t *key,     size_t key_size,
                           const uint8_t *message, size_t message_size);
+
+// Checked BLAKE2b interface
+int crypto_blake2b_checked(uint8_t *hash,          size_t hash_size,
+                           const uint8_t *message, size_t message_size);
+int crypto_blake2b_keyed_checked(uint8_t *hash,          size_t hash_size,
+                                 const uint8_t *key,     size_t key_size,
+                                 const uint8_t *message, size_t message_size);
 
 // Incremental interface
 typedef struct {
@@ -147,6 +235,149 @@ void crypto_blake2b_keyed_init(crypto_blake2b_ctx *ctx, size_t hash_size,
 void crypto_blake2b_update(crypto_blake2b_ctx *ctx,
                            const uint8_t *message, size_t message_size);
 void crypto_blake2b_final(crypto_blake2b_ctx *ctx, uint8_t *hash);
+int crypto_blake2b_init_checked(crypto_blake2b_ctx *ctx, size_t hash_size);
+int crypto_blake2b_keyed_init_checked(crypto_blake2b_ctx *ctx, size_t hash_size,
+                                      const uint8_t *key, size_t key_size);
+int crypto_blake2b_update_checked(crypto_blake2b_ctx *ctx,
+                                  const uint8_t *message, size_t message_size);
+int crypto_blake2b_final_checked(crypto_blake2b_ctx *ctx, uint8_t *hash);
+
+
+// SHA-256
+// -------
+// Incremental interface
+typedef struct {
+	// Do not rely on the size or contents of this type,
+	// for they may change without notice.
+	uint32_t hash[8];
+	uint64_t input_size;
+	uint8_t  input[64];
+	size_t   input_idx;
+} crypto_sha256_ctx;
+
+void crypto_sha256_init  (crypto_sha256_ctx *ctx);
+void crypto_sha256_update(crypto_sha256_ctx *ctx,
+                          const uint8_t *message, size_t message_size);
+void crypto_sha256_final (crypto_sha256_ctx *ctx, uint8_t hash[32]);
+void crypto_sha256(uint8_t hash[32],
+                   const uint8_t *message, size_t message_size);
+int crypto_sha256_init_checked(crypto_sha256_ctx *ctx);
+int crypto_sha256_update_checked(crypto_sha256_ctx *ctx,
+                                 const uint8_t *message, size_t message_size);
+int crypto_sha256_final_checked(crypto_sha256_ctx *ctx, uint8_t hash[32]);
+
+typedef struct {
+	uint8_t key[64];
+	crypto_sha256_ctx ctx;
+} crypto_sha256_hmac_ctx;
+
+void crypto_sha256_hmac_init  (crypto_sha256_hmac_ctx *ctx,
+                               const uint8_t *key, size_t key_size);
+void crypto_sha256_hmac_update(crypto_sha256_hmac_ctx *ctx,
+                               const uint8_t *message, size_t message_size);
+void crypto_sha256_hmac_final (crypto_sha256_hmac_ctx *ctx, uint8_t hmac[32]);
+void crypto_sha256_hmac(uint8_t hmac[32],
+                        const uint8_t *key, size_t key_size,
+                        const uint8_t *message, size_t message_size);
+int crypto_sha256_hmac_init_checked(crypto_sha256_hmac_ctx *ctx,
+                                    const uint8_t *key, size_t key_size);
+int crypto_sha256_hmac_update_checked(crypto_sha256_hmac_ctx *ctx,
+                                      const uint8_t *message,
+                                      size_t message_size);
+int crypto_sha256_hmac_final_checked(crypto_sha256_hmac_ctx *ctx,
+                                     uint8_t hmac[32]);
+
+// SHA-256 HKDF
+void crypto_sha256_hkdf_expand(uint8_t       *okm,  size_t okm_size,
+                               const uint8_t *prk,  size_t prk_size,
+                               const uint8_t *info, size_t info_size);
+void crypto_sha256_hkdf(uint8_t       *okm, size_t okm_size,
+                        const uint8_t *ikm, size_t ikm_size,
+                        const uint8_t *salt, size_t salt_size,
+                        const uint8_t *info, size_t info_size);
+int crypto_sha256_hkdf_expand_checked(uint8_t       *okm, size_t okm_size,
+                                      const uint8_t *prk, size_t prk_size,
+                                      const uint8_t *info, size_t info_size);
+
+// Checked SHA-256 interface
+int crypto_sha256_checked(uint8_t hash[32],
+                          const uint8_t *message, size_t message_size);
+int crypto_sha256_hmac_checked(uint8_t hmac[32],
+                               const uint8_t *key, size_t key_size,
+                               const uint8_t *message, size_t message_size);
+int crypto_sha256_hkdf_checked(uint8_t       *okm, size_t okm_size,
+                               const uint8_t *ikm, size_t ikm_size,
+                               const uint8_t *salt, size_t salt_size,
+                               const uint8_t *info, size_t info_size);
+
+
+// BLAKE3
+// ------
+#define CRYPTO_BLAKE3_OUT_LEN   32
+#define CRYPTO_BLAKE3_KEY_LEN   32
+#define CRYPTO_BLAKE3_BLOCK_LEN 64
+#define CRYPTO_BLAKE3_CHUNK_LEN 1024
+#define CRYPTO_BLAKE3_MAX_DEPTH 54
+
+// Incremental interface
+typedef struct {
+	// Do not rely on the size or contents of this type,
+	// for they may change without notice.
+	uint32_t key[8];
+	struct {
+		uint32_t cv[8];
+		uint64_t chunk_counter;
+		uint8_t  buf[CRYPTO_BLAKE3_BLOCK_LEN];
+		uint8_t  buf_len;
+		uint8_t  blocks_compressed;
+		uint8_t  flags;
+	} chunk;
+	uint8_t cv_stack_len;
+	uint8_t cv_stack[(CRYPTO_BLAKE3_MAX_DEPTH + 1) * CRYPTO_BLAKE3_OUT_LEN];
+} crypto_blake3_ctx;
+
+void crypto_blake3_init(crypto_blake3_ctx *ctx);
+void crypto_blake3_keyed_init(crypto_blake3_ctx *ctx,
+                              const uint8_t key[CRYPTO_BLAKE3_KEY_LEN]);
+void crypto_blake3_derive_key_init(crypto_blake3_ctx *ctx,
+                                   const uint8_t *context,
+                                   size_t context_size);
+void crypto_blake3_update(crypto_blake3_ctx *ctx,
+                          const uint8_t *input, size_t input_size);
+void crypto_blake3_final_seek(const crypto_blake3_ctx *ctx, uint64_t seek,
+                              uint8_t *out, size_t out_size);
+void crypto_blake3_final(crypto_blake3_ctx *ctx, uint8_t *out, size_t out_size);
+void crypto_blake3(uint8_t *out, size_t out_size,
+                   const uint8_t *message, size_t message_size);
+void crypto_blake3_keyed(uint8_t *out, size_t out_size,
+                         const uint8_t key[CRYPTO_BLAKE3_KEY_LEN],
+                         const uint8_t *message, size_t message_size);
+void crypto_blake3_derive_key(uint8_t *out, size_t out_size,
+                              const uint8_t *context, size_t context_size,
+                              const uint8_t *message, size_t message_size);
+int crypto_blake3_init_checked(crypto_blake3_ctx *ctx);
+int crypto_blake3_keyed_init_checked(crypto_blake3_ctx *ctx,
+                                     const uint8_t key[CRYPTO_BLAKE3_KEY_LEN]);
+int crypto_blake3_derive_key_init_checked(crypto_blake3_ctx *ctx,
+                                          const uint8_t *context,
+                                          size_t context_size);
+int crypto_blake3_update_checked(crypto_blake3_ctx *ctx,
+                                 const uint8_t *input, size_t input_size);
+int crypto_blake3_final_seek_checked(const crypto_blake3_ctx *ctx,
+                                     uint64_t seek,
+                                     uint8_t *out, size_t out_size);
+int crypto_blake3_final_checked(crypto_blake3_ctx *ctx,
+                                uint8_t *out, size_t out_size);
+
+// Checked BLAKE3 interface
+int crypto_blake3_checked(uint8_t *out, size_t out_size,
+                          const uint8_t *message, size_t message_size);
+int crypto_blake3_keyed_checked(uint8_t *out, size_t out_size,
+                                const uint8_t key[CRYPTO_BLAKE3_KEY_LEN],
+                                const uint8_t *message, size_t message_size);
+int crypto_blake3_derive_key_checked(uint8_t *out, size_t out_size,
+                                     const uint8_t *context, size_t context_size,
+                                     const uint8_t *message, size_t message_size);
 
 
 // Password key derivation (Argon2)
@@ -159,7 +390,7 @@ typedef struct {
 	uint32_t algorithm;  // Argon2d, Argon2i, Argon2id
 	uint32_t nb_blocks;  // memory hardness, >= 8 * nb_lanes
 	uint32_t nb_passes;  // CPU hardness, >= 1 (>= 3 recommended for Argon2i)
-	uint32_t nb_lanes;   // parallelism level (single threaded anyway)
+	uint32_t nb_lanes;   // parallelism level (threaded if enabled)
 } crypto_argon2_config;
 
 typedef struct {
@@ -183,6 +414,13 @@ void crypto_argon2(uint8_t *hash, uint32_t hash_size, void *work_area,
                    crypto_argon2_inputs inputs,
                    crypto_argon2_extras extras);
 
+// Checked Argon2 interface
+int crypto_argon2_checked(uint8_t *hash, uint32_t hash_size,
+                          void *work_area, size_t work_area_size,
+                          crypto_argon2_config config,
+                          crypto_argon2_inputs inputs,
+                          crypto_argon2_extras extras);
+
 
 // Key exchange (X-25519)
 // ----------------------
@@ -195,8 +433,16 @@ void crypto_x25519(uint8_t       raw_shared_secret[32],
                    const uint8_t your_secret_key  [32],
                    const uint8_t their_public_key [32]);
 
+// Checked X25519 interface
+int crypto_x25519_public_key_checked(uint8_t public_key[32],
+                                     const uint8_t secret_key[32]);
+int crypto_x25519_checked(uint8_t raw_shared_secret[32],
+                          const uint8_t your_secret_key[32],
+                          const uint8_t their_public_key[32]);
+
 // Conversion to EdDSA
 void crypto_x25519_to_eddsa(uint8_t eddsa[32], const uint8_t x25519[32]);
+int crypto_x25519_to_eddsa_checked(uint8_t eddsa[32], const uint8_t x25519[32]);
 
 // scalar "division"
 // Used for OPRF.  Be aware that exponential blinding is less secure
@@ -204,12 +450,17 @@ void crypto_x25519_to_eddsa(uint8_t eddsa[32], const uint8_t x25519[32]);
 void crypto_x25519_inverse(uint8_t       blind_salt [32],
                            const uint8_t private_key[32],
                            const uint8_t curve_point[32]);
+int crypto_x25519_inverse_checked(uint8_t       blind_salt[32],
+                                  const uint8_t private_key[32],
+                                  const uint8_t curve_point[32]);
 
 // "Dirty" versions of x25519_public_key().
 // Use with crypto_elligator_rev().
 // Leaks 3 bits of the private key.
 void crypto_x25519_dirty_small(uint8_t pk[32], const uint8_t sk[32]);
 void crypto_x25519_dirty_fast (uint8_t pk[32], const uint8_t sk[32]);
+int crypto_x25519_dirty_small_checked(uint8_t pk[32], const uint8_t sk[32]);
+int crypto_x25519_dirty_fast_checked (uint8_t pk[32], const uint8_t sk[32]);
 
 
 // Signatures
@@ -225,9 +476,19 @@ void crypto_eddsa_sign(uint8_t        signature [64],
 int crypto_eddsa_check(const uint8_t  signature [64],
                        const uint8_t  public_key[32],
                        const uint8_t *message, size_t message_size);
+int crypto_eddsa_key_pair_checked(uint8_t secret_key[64],
+                                  uint8_t public_key[32],
+                                  uint8_t seed[32]);
+int crypto_eddsa_sign_checked(uint8_t        signature [64],
+                              const uint8_t  secret_key[64],
+                              const uint8_t *message, size_t message_size);
+int crypto_eddsa_check_checked(const uint8_t  signature [64],
+                               const uint8_t  public_key[32],
+                               const uint8_t *message, size_t message_size);
 
 // Conversion to X25519
 void crypto_eddsa_to_x25519(uint8_t x25519[32], const uint8_t eddsa[32]);
+int crypto_eddsa_to_x25519_checked(uint8_t x25519[32], const uint8_t eddsa[32]);
 
 // EdDSA building blocks
 void crypto_eddsa_trim_scalar(uint8_t out[32], const uint8_t in[32]);
@@ -240,6 +501,16 @@ void crypto_eddsa_scalarbase(uint8_t point[32], const uint8_t scalar[32]);
 int crypto_eddsa_check_equation(const uint8_t signature[64],
                                 const uint8_t public_key[32],
                                 const uint8_t h_ram[32]);
+int crypto_eddsa_trim_scalar_checked(uint8_t out[32], const uint8_t in[32]);
+int crypto_eddsa_reduce_checked(uint8_t reduced[32], const uint8_t expanded[64]);
+int crypto_eddsa_mul_add_checked(uint8_t r[32],
+                                 const uint8_t a[32],
+                                 const uint8_t b[32],
+                                 const uint8_t c[32]);
+int crypto_eddsa_scalarbase_checked(uint8_t point[32], const uint8_t scalar[32]);
+int crypto_eddsa_check_equation_checked(const uint8_t signature[64],
+                                        const uint8_t public_key[32],
+                                        const uint8_t h_ram[32]);
 
 
 // Chacha20
@@ -250,6 +521,9 @@ int crypto_eddsa_check_equation(const uint8_t signature[64],
 void crypto_chacha20_h(uint8_t       out[32],
                        const uint8_t key[32],
                        const uint8_t in [16]);
+int crypto_chacha20_h_checked(uint8_t out[32],
+                              const uint8_t key[32],
+                              const uint8_t in[16]);
 
 // Unauthenticated stream cipher.
 // Don't forget to add authentication.
@@ -272,6 +546,29 @@ uint64_t crypto_chacha20_x(uint8_t       *cipher_text,
                            const uint8_t  nonce[24],
                            uint64_t       ctr);
 
+// Checked Chacha20 interface
+int crypto_chacha20_djb_checked(uint8_t       *cipher_text,
+                                const uint8_t *plain_text,
+                                size_t         text_size,
+                                const uint8_t  key[32],
+                                const uint8_t  nonce[8],
+                                uint64_t       ctr,
+                                uint64_t      *ctr_out);
+int crypto_chacha20_ietf_checked(uint8_t       *cipher_text,
+                                 const uint8_t *plain_text,
+                                 size_t         text_size,
+                                 const uint8_t  key[32],
+                                 const uint8_t  nonce[12],
+                                 uint32_t       ctr,
+                                 uint32_t      *ctr_out);
+int crypto_chacha20_x_checked(uint8_t       *cipher_text,
+                              const uint8_t *plain_text,
+                              size_t         text_size,
+                              const uint8_t  key[32],
+                              const uint8_t  nonce[24],
+                              uint64_t       ctr,
+                              uint64_t      *ctr_out);
+
 
 // Poly 1305
 // ---------
@@ -284,6 +581,9 @@ uint64_t crypto_chacha20_x(uint8_t       *cipher_text,
 void crypto_poly1305(uint8_t        mac[16],
                      const uint8_t *message, size_t message_size,
                      const uint8_t  key[32]);
+int crypto_poly1305_checked(uint8_t        mac[16],
+                            const uint8_t *message, size_t message_size,
+                            const uint8_t  key[32]);
 
 // Incremental interface
 typedef struct {
@@ -300,6 +600,12 @@ void crypto_poly1305_init  (crypto_poly1305_ctx *ctx, const uint8_t key[32]);
 void crypto_poly1305_update(crypto_poly1305_ctx *ctx,
                             const uint8_t *message, size_t message_size);
 void crypto_poly1305_final (crypto_poly1305_ctx *ctx, uint8_t mac[16]);
+int crypto_poly1305_init_checked(crypto_poly1305_ctx *ctx,
+                                 const uint8_t key[32]);
+int crypto_poly1305_update_checked(crypto_poly1305_ctx *ctx,
+                                   const uint8_t *message,
+                                   size_t message_size);
+int crypto_poly1305_final_checked(crypto_poly1305_ctx *ctx, uint8_t mac[16]);
 
 
 // Elligator 2
@@ -313,6 +619,12 @@ int  crypto_elligator_rev(uint8_t hidden[32], const uint8_t curve [32],
 // Easy to use key pair generation
 void crypto_elligator_key_pair(uint8_t hidden[32], uint8_t secret_key[32],
                                uint8_t seed[32]);
+int crypto_elligator_map_checked(uint8_t curve[32], const uint8_t hidden[32]);
+int crypto_elligator_rev_checked(uint8_t hidden[32], const uint8_t curve[32],
+                                 uint8_t tweak);
+int crypto_elligator_key_pair_checked(uint8_t hidden[32],
+                                      uint8_t secret_key[32],
+                                      uint8_t seed[32]);
 
 #ifdef __cplusplus
 }

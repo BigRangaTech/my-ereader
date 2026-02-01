@@ -408,6 +408,153 @@ void crypto_sha512_hkdf(u8       *okm , size_t okm_size,
 	crypto_sha512_hkdf_expand(okm, okm_size, prk, sizeof(prk), info, info_size);
 }
 
+int crypto_sha512_init_checked(crypto_sha512_ctx *ctx)
+{
+	if (ctx == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	crypto_sha512_init(ctx);
+	return CRYPTO_OK;
+}
+
+int crypto_sha512_update_checked(crypto_sha512_ctx *ctx,
+                                 const u8 *message, size_t message_size)
+{
+	if (ctx == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	if (message_size != 0 && message == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	crypto_sha512_update(ctx, message, message_size);
+	return CRYPTO_OK;
+}
+
+int crypto_sha512_final_checked(crypto_sha512_ctx *ctx, u8 hash[64])
+{
+	if (ctx == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	if (hash == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	crypto_sha512_final(ctx, hash);
+	return CRYPTO_OK;
+}
+
+int crypto_sha512_hmac_init_checked(crypto_sha512_hmac_ctx *ctx,
+                                    const u8 *key, size_t key_size)
+{
+	if (ctx == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	if (key_size != 0 && key == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	crypto_sha512_hmac_init(ctx, key, key_size);
+	return CRYPTO_OK;
+}
+
+int crypto_sha512_hmac_update_checked(crypto_sha512_hmac_ctx *ctx,
+                                      const u8 *message, size_t message_size)
+{
+	if (ctx == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	if (message_size != 0 && message == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	crypto_sha512_hmac_update(ctx, message, message_size);
+	return CRYPTO_OK;
+}
+
+int crypto_sha512_hmac_final_checked(crypto_sha512_hmac_ctx *ctx, u8 hmac[64])
+{
+	if (ctx == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	if (hmac == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	crypto_sha512_hmac_final(ctx, hmac);
+	return CRYPTO_OK;
+}
+
+int crypto_sha512_hkdf_expand_checked(u8       *okm,  size_t okm_size,
+                                      const u8 *prk,  size_t prk_size,
+                                      const u8 *info, size_t info_size)
+{
+	if (okm == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	if (okm_size > 64 * 255) {
+		return CRYPTO_ERR_SIZE;
+	}
+	if (prk_size != 0 && prk == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	if (info_size != 0 && info == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	crypto_sha512_hkdf_expand(okm, okm_size, prk, prk_size, info, info_size);
+	return CRYPTO_OK;
+}
+
+int crypto_sha512_checked(u8 hash[64],
+                          const u8 *message, size_t message_size)
+{
+	if (hash == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	if (message_size != 0 && message == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	crypto_sha512(hash, message, message_size);
+	return CRYPTO_OK;
+}
+
+int crypto_sha512_hmac_checked(u8 hmac[64],
+                               const u8 *key, size_t key_size,
+                               const u8 *message, size_t message_size)
+{
+	if (hmac == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	if (key_size != 0 && key == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	if (message_size != 0 && message == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	crypto_sha512_hmac(hmac, key, key_size, message, message_size);
+	return CRYPTO_OK;
+}
+
+int crypto_sha512_hkdf_checked(u8       *okm, size_t okm_size,
+                               const u8 *ikm, size_t ikm_size,
+                               const u8 *salt, size_t salt_size,
+                               const u8 *info, size_t info_size)
+{
+	if (okm == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	if (okm_size > 64 * 255) {
+		return CRYPTO_ERR_SIZE;
+	}
+	if (ikm_size != 0 && ikm == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	if (salt_size != 0 && salt == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	if (info_size != 0 && info == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	crypto_sha512_hkdf(okm, okm_size, ikm, ikm_size,
+	                   salt, salt_size, info, info_size);
+	return CRYPTO_OK;
+}
+
 ///////////////
 /// Ed25519 ///
 ///////////////
@@ -492,6 +639,67 @@ int crypto_ed25519_ph_check(const uint8_t sig[64], const uint8_t pk[32],
 	u8 h_ram[32];
 	hash_reduce(h_ram, domain, sizeof(domain), sig, 32, pk, 32, msg_hash, 64);
 	return crypto_eddsa_check_equation(sig, pk, h_ram);
+}
+
+int crypto_ed25519_key_pair_checked(u8 secret_key[64],
+                                    u8 public_key[32],
+                                    u8 seed[32])
+{
+	if (secret_key == 0 || public_key == 0 || seed == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	crypto_ed25519_key_pair(secret_key, public_key, seed);
+	return CRYPTO_OK;
+}
+
+int crypto_ed25519_sign_checked(u8 signature[64], const u8 secret_key[64],
+                                const u8 *message, size_t message_size)
+{
+	if (signature == 0 || secret_key == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	if (message_size != 0 && message == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	crypto_ed25519_sign(signature, secret_key, message, message_size);
+	return CRYPTO_OK;
+}
+
+int crypto_ed25519_check_checked(const u8 signature[64],
+                                 const u8 public_key[32],
+                                 const u8 *message, size_t message_size)
+{
+	if (signature == 0 || public_key == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	if (message_size != 0 && message == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	return crypto_ed25519_check(signature, public_key, message, message_size)
+		? CRYPTO_ERR_AUTH
+		: CRYPTO_OK;
+}
+
+int crypto_ed25519_ph_sign_checked(u8 signature[64], const u8 secret_key[64],
+                                   const u8 message_hash[64])
+{
+	if (signature == 0 || secret_key == 0 || message_hash == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	crypto_ed25519_ph_sign(signature, secret_key, message_hash);
+	return CRYPTO_OK;
+}
+
+int crypto_ed25519_ph_check_checked(const u8 signature[64],
+                                    const u8 public_key[32],
+                                    const u8 message_hash[64])
+{
+	if (signature == 0 || public_key == 0 || message_hash == 0) {
+		return CRYPTO_ERR_NULL;
+	}
+	return crypto_ed25519_ph_check(signature, public_key, message_hash)
+		? CRYPTO_ERR_AUTH
+		: CRYPTO_OK;
 }
 
 

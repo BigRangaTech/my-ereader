@@ -56,11 +56,22 @@
 .Sh NAME
 .Nm crypto_aead_lock ,
 .Nm crypto_aead_unlock ,
+.Nm crypto_aead_unlock_safe ,
 .Nm crypto_aead_init_x ,
 .Nm crypto_aead_init_djb ,
 .Nm crypto_aead_init_ietf ,
 .Nm crypto_aead_write ,
-.Nm crypto_aead_read
+.Nm crypto_aead_read ,
+.Nm crypto_aead_read_safe ,
+.Nm crypto_aead_lock_checked ,
+.Nm crypto_aead_unlock_checked ,
+.Nm crypto_aead_unlock_safe_checked ,
+.Nm crypto_aead_init_x_checked ,
+.Nm crypto_aead_init_djb_checked ,
+.Nm crypto_aead_init_ietf_checked ,
+.Nm crypto_aead_write_checked ,
+.Nm crypto_aead_read_checked ,
+.Nm crypto_aead_read_safe_checked
 .Nd authenticated encryption with additional data
 .Sh SYNOPSIS
 .In monocypher.h
@@ -77,6 +88,17 @@
 .Fc
 .Ft int
 .Fo crypto_aead_unlock
+.Fa "uint8_t *plain_text"
+.Fa "const uint8_t mac[16]"
+.Fa "const uint8_t key[32]"
+.Fa "const uint8_t nonce[24]"
+.Fa "const uint8_t *ad"
+.Fa "size_t ad_size"
+.Fa "const uint8_t *cipher_text"
+.Fa "size_t text_size"
+.Fc
+.Ft int
+.Fo crypto_aead_unlock_safe
 .Fa "uint8_t *plain_text"
 .Fa "const uint8_t mac[16]"
 .Fa "const uint8_t key[32]"
@@ -116,6 +138,97 @@
 .Fc
 .Ft int
 .Fo crypto_aead_read
+.Fa "crypto_aead_ctx *ctx"
+.Fa "uint8_t *plain_text"
+.Fa "const uint8_t mac[16]"
+.Fa "const uint8_t *ad"
+.Fa "size_t ad_size"
+.Fa "const uint8_t *cipher_text"
+.Fa "size_t text_size"
+.Fc
+.Ft int
+.Fo crypto_aead_read_safe
+.Fa "crypto_aead_ctx *ctx"
+.Fa "uint8_t *plain_text"
+.Fa "const uint8_t mac[16]"
+.Fa "const uint8_t *ad"
+.Fa "size_t ad_size"
+.Fa "const uint8_t *cipher_text"
+.Fa "size_t text_size"
+.Fc
+.Ft int
+.Fo crypto_aead_lock_checked
+.Fa "uint8_t *cipher_text"
+.Fa "uint8_t mac[16]"
+.Fa "const uint8_t key[32]"
+.Fa "const uint8_t nonce[24]"
+.Fa "const uint8_t *ad"
+.Fa "size_t ad_size"
+.Fa "const uint8_t *plain_text"
+.Fa "size_t text_size"
+.Fc
+.Ft int
+.Fo crypto_aead_unlock_checked
+.Fa "uint8_t *plain_text"
+.Fa "const uint8_t mac[16]"
+.Fa "const uint8_t key[32]"
+.Fa "const uint8_t nonce[24]"
+.Fa "const uint8_t *ad"
+.Fa "size_t ad_size"
+.Fa "const uint8_t *cipher_text"
+.Fa "size_t text_size"
+.Fc
+.Ft int
+.Fo crypto_aead_unlock_safe_checked
+.Fa "uint8_t *plain_text"
+.Fa "const uint8_t mac[16]"
+.Fa "const uint8_t key[32]"
+.Fa "const uint8_t nonce[24]"
+.Fa "const uint8_t *ad"
+.Fa "size_t ad_size"
+.Fa "const uint8_t *cipher_text"
+.Fa "size_t text_size"
+.Fc
+.Ft int
+.Fo crypto_aead_init_x_checked
+.Fa "crypto_aead_ctx *ctx"
+.Fa "const uint8_t key[32]"
+.Fa "const uint8_t nonce[24]"
+.Fc
+.Ft int
+.Fo crypto_aead_init_djb_checked
+.Fa "crypto_aead_ctx *ctx"
+.Fa "const uint8_t key[32]"
+.Fa "const uint8_t nonce[8]"
+.Fc
+.Ft int
+.Fo crypto_aead_init_ietf_checked
+.Fa "crypto_aead_ctx *ctx"
+.Fa "const uint8_t key[32]"
+.Fa "const uint8_t nonce[12]"
+.Fc
+.Ft int
+.Fo crypto_aead_write_checked
+.Fa "crypto_aead_ctx *ctx"
+.Fa "uint8_t *cipher_text"
+.Fa "uint8_t mac[16]"
+.Fa "const uint8_t *ad"
+.Fa "size_t ad_size"
+.Fa "const uint8_t *plain_text"
+.Fa "size_t text_size"
+.Fc
+.Ft int
+.Fo crypto_aead_read_checked
+.Fa "crypto_aead_ctx *ctx"
+.Fa "uint8_t *plain_text"
+.Fa "const uint8_t mac[16]"
+.Fa "const uint8_t *ad"
+.Fa "size_t ad_size"
+.Fa "const uint8_t *cipher_text"
+.Fa "size_t text_size"
+.Fc
+.Ft int
+.Fo crypto_aead_read_safe_checked
 .Fa "crypto_aead_ctx *ctx"
 .Fa "uint8_t *plain_text"
 .Fa "const uint8_t mac[16]"
@@ -302,13 +415,54 @@ Corruption can be caused by transmission errors, programmer error, or an
 attacker's interference.
 .Fa plain_text
 does not need to be wiped if the decryption fails.
+.Pp
+.Fn crypto_aead_unlock_safe
+and
+.Fn crypto_aead_read_safe
+are safer variants that wipe
+.Fa plain_text
+on authentication failure.
+.Pp
+For application code, prefer the checked variants:
+.Fn crypto_aead_lock_checked ,
+.Fn crypto_aead_unlock_checked ,
+.Fn crypto_aead_unlock_safe_checked ,
+.Fn crypto_aead_init_x_checked ,
+.Fn crypto_aead_init_djb_checked ,
+.Fn crypto_aead_init_ietf_checked ,
+.Fn crypto_aead_write_checked ,
+.Fn crypto_aead_read_checked ,
+and
+.Fn crypto_aead_read_safe_checked .
+They validate sizes and pointers and return explicit error codes.
+.Ss Checked interface return values
+.Bl -tag -width Ds
+.It Dv CRYPTO_OK
+The operation completed successfully.
+.It Dv CRYPTO_ERR_NULL
+One or more pointers were
+.Dv NULL .
+.It Dv CRYPTO_ERR_OVERFLOW
+The stream counter would overflow.
+This can be returned by
+.Fn crypto_aead_write_checked ,
+.Fn crypto_aead_read_checked ,
+and
+.Fn crypto_aead_read_safe_checked .
+.It Dv CRYPTO_ERR_AUTH
+The authentication tag is invalid.
+This can be returned by
+.Fn crypto_aead_unlock_checked ,
+.Fn crypto_aead_unlock_safe_checked ,
+.Fn crypto_aead_read_checked ,
+and
+.Fn crypto_aead_read_safe_checked .
+.El
 .Sh EXAMPLES
 The following examples assume the existence of
-.Fn arc4random_buf ,
+.Xr crypto_random 3monocypher ,
 which fills the given buffer with cryptographically secure random bytes.
-If
-.Fn arc4random_buf
-does not exist on your system, see
+If it does not exist on your system, see
 .Xr intro 3monocypher
 for advice about how to generate cryptographically secure random bytes.
 .Pp
@@ -319,12 +473,14 @@ uint8_t nonce      [24];    /* Use only once per key       */
 uint8_t plain_text [12] = "Lorem ipsum"; /* Secret message */
 uint8_t mac        [16];    /* Message authentication code */
 uint8_t cipher_text[12];              /* Encrypted message */
-arc4random_buf(key,   32);
-arc4random_buf(nonce, 24);
-crypto_aead_lock(cipher_text, mac,
-                 key, nonce,
-                 NULL, 0,
-                 plain_text, sizeof(plain_text));
+crypto_random(key,   32);
+crypto_random(nonce, 24);
+if (crypto_aead_lock_checked(cipher_text, mac,
+                             key, nonce,
+                             NULL, 0,
+                             plain_text, sizeof(plain_text)) != CRYPTO_OK) {
+    /* Abort on invalid inputs */
+}
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(plain_text, 12);
 crypto_wipe(key, 32);
@@ -340,11 +496,12 @@ uint8_t       nonce      [24]; /* Same as the above        */
 const uint8_t cipher_text[12]; /* Encrypted message        */
 const uint8_t mac        [16]; /* Received along with text */
 uint8_t       plain_text [12]; /* Secret message           */
-if (crypto_aead_unlock(plain_text, mac,
-                       key, nonce,
-                       NULL, 0,
-                       cipher_text, sizeof(plain_text))) {
-    /* The message is corrupted.
+if (crypto_aead_unlock_safe_checked(plain_text, mac,
+                                    key, nonce,
+                                    NULL, 0,
+                                    cipher_text, sizeof(plain_text))
+    != CRYPTO_OK) {
+    /* The message is corrupted or inputs are invalid.
      * Wipe key if it is no longer needed,
      * and abort the decryption.
      */
@@ -363,12 +520,14 @@ uint8_t key  [32];    /* Random, secret session key  */
 uint8_t nonce[24];    /* Use only once per key       */
 uint8_t text [12] = "Lorem ipsum"; /* Secret message */
 uint8_t mac  [16];    /* Message authentication code */
-arc4random_buf(key,   32);
-arc4random_buf(nonce, 24);
-crypto_aead_lock(text, mac,
-                 key, nonce,
-                 NULL, 0,
-                 text, sizeof(text));
+crypto_random(key,   32);
+crypto_random(nonce, 24);
+if (crypto_aead_lock_checked(text, mac,
+                             key, nonce,
+                             NULL, 0,
+                             text, sizeof(text)) != CRYPTO_OK) {
+    /* Abort on invalid inputs */
+}
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(key, 32);
 /* Transmit cipher_text, nonce, and mac over the network,
@@ -382,9 +541,9 @@ uint8_t        key  [32]; /* Same as the above             */
 const uint8_t  nonce[24]; /* Same as the above             */
 const uint8_t  mac  [16]; /* Received from along with text */
 uint8_t        text [12]; /* Message to decrypt            */
-if (crypto_aead_unlock(text, mac, key, nonce,
-                       NULL, 0,
-                       text, sizeof(text))) {
+if (crypto_aead_unlock_safe_checked(text, mac, key, nonce,
+                                    NULL, 0,
+                                    text, sizeof(text)) != CRYPTO_OK) {
 	/* The message is corrupted.
 	 * Wipe key if it is no longer needed,
 	 * and abort the decryption.
@@ -405,13 +564,17 @@ uint8_t nonce      [24];    /* Use only once per key       */
 uint8_t plain_text [12] = "Lorem ipsum"; /* Secret message */
 uint8_t mac        [16];    /* Message authentication code */
 uint8_t cipher_text[12];              /* Encrypted message */
-arc4random_buf(key,   32);
-arc4random_buf(nonce, 24);
+crypto_random(key,   32);
+crypto_random(nonce, 24);
 crypto_aead_ctx ctx;
-crypto_aead_init_x(&ctx, key, nonce);
-crypto_aead_write(&ctx, cipher_text, mac,
-                  NULL, 0,
-                  plain_text, sizeof(plain_text));
+if (crypto_aead_init_x_checked(&ctx, key, nonce) != CRYPTO_OK) {
+    /* Abort on invalid inputs */
+}
+if (crypto_aead_write_checked(&ctx, cipher_text, mac,
+                              NULL, 0,
+                              plain_text, sizeof(plain_text)) != CRYPTO_OK) {
+    /* Abort on invalid inputs */
+}
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(plain_text, 12);
 crypto_wipe(key, 32);
@@ -429,10 +592,13 @@ const uint8_t cipher_text[12]; /* Encrypted message        */
 const uint8_t mac        [16]; /* Received along with text */
 uint8_t       plain_text [12]; /* Secret message           */
 crypto_aead_ctx ctx;
-crypto_aead_init_x(&ctx, key, nonce);
-if (crypto_aead_read(&ctx, plain_text, mac,
-                     NULL, 0,
-                     cipher_text, sizeof(plain_text))) {
+if (crypto_aead_init_x_checked(&ctx, key, nonce) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+	crypto_wipe(key, 32);
+} else if (crypto_aead_read_safe_checked(&ctx, plain_text, mac,
+                                         NULL, 0,
+                                         cipher_text, sizeof(plain_text))
+           != CRYPTO_OK) {
 	/* The message is corrupted.
 	 * Wipe key if it is no longer needed,
 	 * and abort the decryption.
@@ -505,8 +671,8 @@ were removed,
 Functions were renamed and arguments reordered for consistency,
 and the incremental interface was added.
 .Sh CAVEATS
-Monocypher does not perform any input validation.
+The unchecked variants do not perform input validation.
 Any deviation from the specified input and output length ranges results
 in
 .Sy undefined behaviour .
-Make sure your inputs are correct.
+For safer application code, use the checked variants.

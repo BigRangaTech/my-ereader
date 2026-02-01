@@ -62,7 +62,13 @@
 .Nm crypto_x25519_dirty_fast ,
 .Nm crypto_x25519_dirty_small ,
 .Nm crypto_x25519_inverse ,
-.Nm crypto_x25519_to_eddsa
+.Nm crypto_x25519_to_eddsa ,
+.Nm crypto_x25519_checked ,
+.Nm crypto_x25519_public_key_checked ,
+.Nm crypto_x25519_dirty_fast_checked ,
+.Nm crypto_x25519_dirty_small_checked ,
+.Nm crypto_x25519_inverse_checked ,
+.Nm crypto_x25519_to_eddsa_checked
 .Nd X25519 key exchange (Public Key Cryptography)
 .Sh SYNOPSIS
 .In monocypher.h
@@ -95,6 +101,38 @@
 .Fc
 .Ft void
 .Fo crypto_x25519_to_eddsa
+.Fa "uint8_t eddsa[32]"
+.Fa "const uint8_t x25519[32]"
+.Fc
+.Ft int
+.Fo crypto_x25519_checked
+.Fa "uint8_t raw_shared_secret[32]"
+.Fa "const uint8_t your_secret_key[32]"
+.Fa "const uint8_t their_public_key[32]"
+.Fc
+.Ft int
+.Fo crypto_x25519_public_key_checked
+.Fa "uint8_t your_public_key[32]"
+.Fa "const uint8_t your_secret_key[32]"
+.Fc
+.Ft int
+.Fo crypto_x25519_dirty_fast_checked
+.Fa "uint8_t your_public_key[32]"
+.Fa "const uint8_t your_secret_key[32]"
+.Fc
+.Ft int
+.Fo crypto_x25519_dirty_small_checked
+.Fa "uint8_t your_public_key[32]"
+.Fa "const uint8_t your_secret_key[32]"
+.Fc
+.Ft int
+.Fo crypto_x25519_inverse_checked
+.Fa "uint8_t blind_salt[32]"
+.Fa "const uint8_t private_key[32]"
+.Fa "const uint8_t curve_point[32]"
+.Fc
+.Ft int
+.Fo crypto_x25519_to_eddsa_checked
 .Fa "uint8_t eddsa[32]"
 .Fa "const uint8_t x25519[32]"
 .Fc
@@ -170,13 +208,28 @@ Or go the other way and implement XEdDSA with the help of
 and
 .Fn crypto_x25519_public_key
 return nothing.
+.Pp
+For application code, prefer the checked variants:
+.Fn crypto_x25519_checked ,
+.Fn crypto_x25519_public_key_checked ,
+.Fn crypto_x25519_dirty_fast_checked ,
+.Fn crypto_x25519_dirty_small_checked ,
+.Fn crypto_x25519_inverse_checked ,
+and
+.Fn crypto_x25519_to_eddsa_checked .
+They validate pointers and return:
+.Bl -tag -width Ds
+.It Dv CRYPTO_OK
+The operation completed successfully.
+.It Dv CRYPTO_ERR_NULL
+One or more pointers were
+.Dv NULL .
+.El
 .Sh EXAMPLES
 The following example assumes the existence of
-.Fn arc4random_buf ,
+.Xr crypto_random 3monocypher ,
 which fills the given buffer with cryptographically secure random bytes.
-If
-.Fn arc4random_buf
-does not exist on your system, see
+If it does not exist on your system, see
 .Xr intro 3monocypher
 for advice about how to generate cryptographically secure random bytes.
 .Pp
@@ -188,19 +241,33 @@ const uint8_t their_pk     [32]; /* Their public key          */
 uint8_t       your_sk      [32]; /* Your secret key           */
 uint8_t       your_pk      [32]; /* Your public key           */
 uint8_t       shared_secret[32]; /* Shared secret (NOT a key) */
-arc4random_buf(your_sk, 32);
-crypto_x25519_public_key(your_pk, your_sk);
-crypto_x25519(shared_secret, your_sk, their_pk);
+crypto_random(your_sk, 32);
+if (crypto_x25519_public_key_checked(your_pk, your_sk) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
+if (crypto_x25519_checked(shared_secret, your_sk, their_pk) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(your_sk, 32);
 
 uint8_t shared_keys[64]; /* Two shared session keys */
 crypto_blake2b_ctx ctx;
-crypto_blake2b_init  (&ctx, 64);
-crypto_blake2b_update(&ctx, shared_secret, 32);
-crypto_blake2b_update(&ctx, your_pk      , 32);
-crypto_blake2b_update(&ctx, their_pk     , 32);
-crypto_blake2b_final (&ctx, shared_keys);
+if (crypto_blake2b_init_checked(&ctx, 64) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
+if (crypto_blake2b_update_checked(&ctx, shared_secret, 32) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
+if (crypto_blake2b_update_checked(&ctx, your_pk, 32) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
+if (crypto_blake2b_update_checked(&ctx, their_pk, 32) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
+if (crypto_blake2b_final_checked(&ctx, shared_keys) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
 const uint8_t *key_1 = shared_keys;      /* Shared key 1 */
 const uint8_t *key_2 = shared_keys + 32; /* Shared key 2 */
 /* Wipe secrets if they are no longer needed */
@@ -216,13 +283,20 @@ It is basically the reverse of
 .Bd -literal -offset indent
 uint8_t b    [32];       /* Random scalar                        */
 uint8_t base [32];       /* Point on the prime order subgroup    */
-crypto_x25519_public_key(base, b);
+if (crypto_x25519_public_key_checked(base, b) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
 
 uint8_t private_key[32]; /* Random secret key                    */
 uint8_t curve_point[32]; /* Point on the prime order subgroup    */
 uint8_t blind_salt [32];
-crypto_x25519(curve_point, private_key, base);
-crypto_x25519_inverse(blind_salt, private_key, curve_point);
+if (crypto_x25519_checked(curve_point, private_key, base) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
+if (crypto_x25519_inverse_checked(blind_salt, private_key, curve_point)
+    != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
 assert(memcmp(blind_salt, base, 32) == 0); /* blind_salt == base */
 .Ed
 .Pp
@@ -299,11 +373,11 @@ and
 .Fn crypto_x25519_to_eddsa
 functions first appeared in Monocypher 3.1.0.
 .Sh CAVEATS
-Monocypher does not perform any input validation.
+The unchecked variants do not perform input validation.
 Any deviation from the specified input and output length ranges results
 in
 .Sy undefined behaviour .
-Make sure your inputs are correct.
+For safer application code, use the checked variants.
 .Sh SECURITY CONSIDERATIONS
 If either of the long-term secret keys leaks, it may compromise
 .Em all past messages .

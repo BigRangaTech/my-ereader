@@ -111,6 +111,31 @@ void crypto_sha512_hkdf(uint8_t       *okm , size_t okm_size,
                         const uint8_t *salt, size_t salt_size,
                         const uint8_t *info, size_t info_size);
 
+// Checked SHA-512 interface
+int crypto_sha512_init_checked(crypto_sha512_ctx *ctx);
+int crypto_sha512_update_checked(crypto_sha512_ctx *ctx,
+                                 const uint8_t *message, size_t message_size);
+int crypto_sha512_final_checked(crypto_sha512_ctx *ctx, uint8_t hash[64]);
+int crypto_sha512_hmac_init_checked(crypto_sha512_hmac_ctx *ctx,
+                                    const uint8_t *key, size_t key_size);
+int crypto_sha512_hmac_update_checked(crypto_sha512_hmac_ctx *ctx,
+                                      const uint8_t *message,
+                                      size_t message_size);
+int crypto_sha512_hmac_final_checked(crypto_sha512_hmac_ctx *ctx,
+                                     uint8_t hmac[64]);
+int crypto_sha512_hkdf_expand_checked(uint8_t       *okm,  size_t okm_size,
+                                      const uint8_t *prk,  size_t prk_size,
+                                      const uint8_t *info, size_t info_size);
+int crypto_sha512_checked(uint8_t hash[64],
+                          const uint8_t *message, size_t message_size);
+int crypto_sha512_hmac_checked(uint8_t hmac[64],
+                               const uint8_t *key, size_t key_size,
+                               const uint8_t *message, size_t message_size);
+int crypto_sha512_hkdf_checked(uint8_t       *okm, size_t okm_size,
+                               const uint8_t *ikm, size_t ikm_size,
+                               const uint8_t *salt, size_t salt_size,
+                               const uint8_t *info, size_t info_size);
+
 // Ed25519
 // -------
 // Signatures (EdDSA with curve25519 + SHA-512)
@@ -132,6 +157,23 @@ void crypto_ed25519_ph_sign(uint8_t       signature   [64],
 int crypto_ed25519_ph_check(const uint8_t signature   [64],
                             const uint8_t public_key  [32],
                             const uint8_t message_hash[64]);
+
+// Checked Ed25519 interface
+int crypto_ed25519_key_pair_checked(uint8_t secret_key[64],
+                                    uint8_t public_key[32],
+                                    uint8_t seed[32]);
+int crypto_ed25519_sign_checked(uint8_t        signature [64],
+                                const uint8_t  secret_key[64],
+                                const uint8_t *message, size_t message_size);
+int crypto_ed25519_check_checked(const uint8_t  signature [64],
+                                 const uint8_t  public_key[32],
+                                 const uint8_t *message, size_t message_size);
+int crypto_ed25519_ph_sign_checked(uint8_t       signature   [64],
+                                   const uint8_t secret_key  [64],
+                                   const uint8_t message_hash[64]);
+int crypto_ed25519_ph_check_checked(const uint8_t signature   [64],
+                                    const uint8_t public_key  [32],
+                                    const uint8_t message_hash[64]);
 
 #ifdef __cplusplus
 }

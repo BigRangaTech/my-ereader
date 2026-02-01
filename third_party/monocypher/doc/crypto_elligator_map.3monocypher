@@ -55,7 +55,10 @@
 .Sh NAME
 .Nm crypto_elligator_map ,
 .Nm crypto_elligator_rev ,
-.Nm crypto_elligator_key_pair
+.Nm crypto_elligator_key_pair ,
+.Nm crypto_elligator_map_checked ,
+.Nm crypto_elligator_rev_checked ,
+.Nm crypto_elligator_key_pair_checked
 .Nd hiding of X25519 public keys
 .Sh SYNOPSIS
 .In monocypher.h
@@ -72,6 +75,23 @@
 .Fc
 .Ft void
 .Fo crypto_elligator_key_pair
+.Fa "uint8_t hidden[32]"
+.Fa "uint8_t secret_key[32]"
+.Fa "uint8_t seed[32]"
+.Fc
+.Ft int
+.Fo crypto_elligator_map_checked
+.Fa "uint8_t curve[32]"
+.Fa "const uint8_t hidden[32]"
+.Fc
+.Ft int
+.Fo crypto_elligator_rev_checked
+.Fa "uint8_t hidden[32]"
+.Fa "const uint8_t curve[32]"
+.Fa "uint8_t tweak"
+.Fc
+.Ft int
+.Fo crypto_elligator_key_pair_checked
 .Fa "uint8_t hidden[32]"
 .Fa "uint8_t secret_key[32]"
 .Fa "uint8_t seed[32]"
@@ -212,6 +232,23 @@ and
 .Fn crypto_elligator_key_pair
 return nothing.
 They cannot fail.
+.Pp
+For application code, prefer the checked variants:
+.Fn crypto_elligator_map_checked ,
+.Fn crypto_elligator_rev_checked ,
+and
+.Fn crypto_elligator_key_pair_checked .
+They validate pointers and return:
+.Bl -tag -width Ds
+.It Dv CRYPTO_OK
+The operation completed successfully.
+.It Dv CRYPTO_ERR_NULL
+One or more pointers were
+.Dv NULL .
+.It Dv CRYPTO_ERR_AUTH
+The curve point is unsuitable for hiding (applies to
+.Fn crypto_elligator_rev_checked ) .
+.El
 .Sh EXAMPLES
 Generate a key pair manually using
 .Xr crypto_x25519_dirty_small 3monocypher
@@ -220,11 +257,13 @@ instead of its fast variant:
 uint8_t sk  [32]; /* Secret key output        */
 uint8_t pk  [32]; /* Hidden public key output */
 uint8_t tweak;    /* Random tweak input       */
-arc4random_buf(&tweak, 1);
+crypto_random(&tweak, 1);
 for (;;) {
-    arc4random_buf(sk, 32);
-    crypto_x25519_dirty_small(pk, sk);
-    if (crypto_elligator_rev(pk, pk, tweak) == 0)
+    crypto_random(sk, 32);
+    if (crypto_x25519_dirty_small_checked(pk, sk) != CRYPTO_OK) {
+        continue;
+    }
+    if (crypto_elligator_rev_checked(pk, pk, tweak) == CRYPTO_OK)
         break;
 }
 /* Now save the secret key and send the hidden public key. */
@@ -237,8 +276,12 @@ uint8_t hidden_pk [32]; /* Their hidden public key   */
 uint8_t their_pk  [32]; /* Their unhidden public key */
 uint8_t your_sk   [32]; /* Your secret key           */
 uint8_t shared_key[32]; /* Shared session key        */
-crypto_elligator_map(their_pk, hidden_pk);
-crypto_x25519(shared_key, your_sk, their_pk);
+if (crypto_elligator_map_checked(their_pk, hidden_pk) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
+if (crypto_x25519_checked(shared_key, your_sk, their_pk) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(your_sk, 32);
 .Ed
@@ -292,11 +335,11 @@ and
 .Fn crypto_elligator_key_pair
 respectively.
 .Sh CAVEATS
-Monocypher does not perform any input validation.
+The unchecked variants do not perform input validation.
 Any deviation from the specified input and output length ranges results
 in
 .Sy undefined behaviour .
-Make sure your inputs are correct.
+For safer application code, use the checked variants.
 .Sh SECURITY CONSIDERATIONS
 The secret keys for the public keys fed into
 .Fn crypto_elligator_rev

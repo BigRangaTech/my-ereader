@@ -1,0 +1,162 @@
+.\" This file is dual-licensed.  Choose whichever you want.
+.\"
+.\" The first licence is a regular 2-clause BSD licence.  The second licence
+.\" is the CC-0 from Creative Commons. It is intended to release Monocypher
+.\" to the public domain.  The BSD licence serves as a fallback option.
+.\"
+.\" SPDX-License-Identifier: BSD-2-Clause OR CC0-1.0
+.\"
+.\" ----------------------------------------------------------------------------
+.\"
+.\" Copyright (c) 2026
+.\" All rights reserved.
+.\"
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions are
+.\" met:
+.\"
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\"
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the
+.\"    distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+.\" "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+.\" LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+.\" A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+.\" HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+.\" SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+.\" LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+.\" DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+.\" THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+.\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+.\" OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+.\"
+.\" ----------------------------------------------------------------------------
+.\"
+.\" Written in 2026
+.\"
+.\" To the extent possible under law, the author(s) have dedicated all copyright
+.\" and related neighboring rights to this software to the public domain
+.\" worldwide.  This software is distributed without any warranty.
+.\"
+.\" You should have received a copy of the CC0 Public Domain Dedication along
+.\" with this software.  If not, see
+.\" <https://creativecommons.org/publicdomain/zero/1.0/>
+.\"
+.Dd February 1, 2026
+.Dt CRYPTO_RANDOM 3MONOCYPHER
+.Os
+.Sh NAME
+.Nm crypto_random ,
+.Nm crypto_random_last_error
+.Nd fill a buffer with OS-backed random bytes
+.Sh SYNOPSIS
+.In monocypher.h
+.Ft int
+.Fo crypto_random
+.Fa "uint8_t *out"
+.Fa "size_t out_size"
+.Fc
+.Ft int
+.Fo crypto_random_last_error
+.Fc
+.Sh DESCRIPTION
+.Fn crypto_random
+fills
+.Fa out
+with
+.Fa out_size
+cryptographically secure random bytes.
+It is a convenience wrapper around the operating system random number
+generator.
+.Pp
+On Windows,
+BCryptGenRandom
+is used.
+On Unix-like systems, the function prefers
+arc4random_buf
+or
+getrandom ,
+and falls back to
+.Pa /dev/urandom
+if those are unavailable.
+.Pp
+If
+.Fa out_size
+is 0,
+.Fn crypto_random
+returns
+.Dv CRYPTO_OK
+and does nothing.
+.Pp
+When compiled with
+.Dv MONOCYPHER_RNG_DIAGNOSTICS=1 ,
+.Fn crypto_random_last_error
+returns the last platform-specific RNG error captured by
+.Fn crypto_random .
+On Unix-like systems this is
+.Dv errno ;
+on Windows it is the
+.Dv NTSTATUS
+value returned by
+BCryptGenRandom .
+The stored value is reset to 0 on successful
+.Fn crypto_random
+calls.
+The diagnostic value is only meaningful after
+.Fn crypto_random
+returns
+.Dv CRYPTO_ERR_CONFIG .
+This diagnostic state is global and not thread-safe.
+.Pp
+If Monocypher is built with
+.Dv MONOCYPHER_STRERROR=1 ,
+.Xr crypto_strerror 3monocypher
+can be used to convert error codes to strings.
+.Sh RETURN VALUES
+.Fn crypto_random
+returns
+.Dv CRYPTO_OK
+on success.
+On error it returns a negative error code:
+.Bl -tag -width Ds
+.It Dv CRYPTO_ERR_NULL
+.Fa out
+is NULL while
+.Fa out_size
+is non-zero.
+.It Dv CRYPTO_ERR_SIZE
+On Windows,
+.Fa out_size
+exceeds
+.Dv ULONG_MAX .
+.It Dv CRYPTO_ERR_CONFIG
+The OS RNG failed or was not accessible.
+.El
+.Pp
+If
+.Dv MONOCYPHER_RNG_DIAGNOSTICS=1
+is enabled,
+.Fn crypto_random_last_error
+returns 0 when no error is recorded, or a platform-specific error code
+when
+.Fn crypto_random
+fails.
+.Sh SECURITY CONSIDERATIONS
+Prefer
+.Fn crypto_random
+or the operating system RNG over user-space pseudo-random generators.
+If you require a specific entropy source or advanced error handling,
+use the OS API directly.
+.Sh SEE ALSO
+.Xr crypto_strerror 3monocypher ,
+.Xr intro 3monocypher
+.Sh HISTORY
+The
+.Fn crypto_random
+function first appeared in this fork.

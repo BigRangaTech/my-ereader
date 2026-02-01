@@ -8,7 +8,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 MONOCYPHER_REMOTE="https://github.com/BigRangaTech/Monocypher"
-MONOCYPHER_REF="v001"
+MONOCYPHER_REF="v002"
 POPPLER_REMOTE="https://github.com/BigRangaTech/my-poppler"
 POPPLER_REF="v001"
 LIBARCHIVE_REMOTE="https://github.com/libarchive/libarchive"

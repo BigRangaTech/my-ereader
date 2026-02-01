@@ -1,0 +1,298 @@
+.\" This file is dual-licensed.  Choose whichever you want.
+.\"
+.\" The first licence is a regular 2-clause BSD licence.  The second licence
+.\" is the CC-0 from Creative Commons. It is intended to release Monocypher
+.\" to the public domain.  The BSD licence serves as a fallback option.
+.\"
+.\" SPDX-License-Identifier: BSD-2-Clause OR CC0-1.0
+.\"
+.\" ----------------------------------------------------------------------------
+.\"
+.\" Copyright (c) 2026
+.\" All rights reserved.
+.\"
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions are
+.\" met:
+.\"
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\"
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the
+.\"    distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+.\" "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+.\" LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+.\" A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+.\" HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+.\" SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+.\" LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+.\" DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+.\" THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+.\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+.\" OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+.\"
+.\" ----------------------------------------------------------------------------
+.\"
+.\" Written in 2026.
+.\"
+.\" To the extent possible under law, the author(s) have dedicated all copyright
+.\" and related neighboring rights to this software to the public domain
+.\" worldwide.  This software is distributed without any warranty.
+.\"
+.\" You should have received a copy of the CC0 Public Domain Dedication along
+.\" with this software.  If not, see
+.\" <https://creativecommons.org/publicdomain/zero/1.0/>
+.\"
+.Dd February 1, 2026
+.Dt CRYPTO_BLAKE3 3MONOCYPHER
+.Os
+.Sh NAME
+.Nm crypto_blake3 ,
+.Nm crypto_blake3_keyed ,
+.Nm crypto_blake3_derive_key ,
+.Nm crypto_blake3_init ,
+.Nm crypto_blake3_keyed_init ,
+.Nm crypto_blake3_derive_key_init ,
+.Nm crypto_blake3_update ,
+.Nm crypto_blake3_final ,
+.Nm crypto_blake3_final_seek ,
+.Nm crypto_blake3_checked ,
+.Nm crypto_blake3_keyed_checked ,
+.Nm crypto_blake3_derive_key_checked ,
+.Nm crypto_blake3_init_checked ,
+.Nm crypto_blake3_keyed_init_checked ,
+.Nm crypto_blake3_derive_key_init_checked ,
+.Nm crypto_blake3_update_checked ,
+.Nm crypto_blake3_final_checked ,
+.Nm crypto_blake3_final_seek_checked
+.Nd hashing and extendable output with BLAKE3
+.Sh SYNOPSIS
+.In monocypher.h
+.Ft void
+.Fo crypto_blake3
+.Fa "uint8_t *out"
+.Fa "size_t out_size"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft void
+.Fo crypto_blake3_keyed
+.Fa "uint8_t *out"
+.Fa "size_t out_size"
+.Fa "const uint8_t key[32]"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft void
+.Fo crypto_blake3_derive_key
+.Fa "uint8_t *out"
+.Fa "size_t out_size"
+.Fa "const uint8_t *context"
+.Fa "size_t context_size"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft void
+.Fo crypto_blake3_init
+.Fa "crypto_blake3_ctx *ctx"
+.Fc
+.Ft void
+.Fo crypto_blake3_keyed_init
+.Fa "crypto_blake3_ctx *ctx"
+.Fa "const uint8_t key[32]"
+.Fc
+.Ft void
+.Fo crypto_blake3_derive_key_init
+.Fa "crypto_blake3_ctx *ctx"
+.Fa "const uint8_t *context"
+.Fa "size_t context_size"
+.Fc
+.Ft void
+.Fo crypto_blake3_update
+.Fa "crypto_blake3_ctx *ctx"
+.Fa "const uint8_t *input"
+.Fa "size_t input_size"
+.Fc
+.Ft void
+.Fo crypto_blake3_final
+.Fa "crypto_blake3_ctx *ctx"
+.Fa "uint8_t *out"
+.Fa "size_t out_size"
+.Fc
+.Ft void
+.Fo crypto_blake3_final_seek
+.Fa "const crypto_blake3_ctx *ctx"
+.Fa "uint64_t seek"
+.Fa "uint8_t *out"
+.Fa "size_t out_size"
+.Fc
+.Ft int
+.Fo crypto_blake3_checked
+.Fa "uint8_t *out"
+.Fa "size_t out_size"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft int
+.Fo crypto_blake3_keyed_checked
+.Fa "uint8_t *out"
+.Fa "size_t out_size"
+.Fa "const uint8_t key[32]"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft int
+.Fo crypto_blake3_derive_key_checked
+.Fa "uint8_t *out"
+.Fa "size_t out_size"
+.Fa "const uint8_t *context"
+.Fa "size_t context_size"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft int
+.Fo crypto_blake3_init_checked
+.Fa "crypto_blake3_ctx *ctx"
+.Fc
+.Ft int
+.Fo crypto_blake3_keyed_init_checked
+.Fa "crypto_blake3_ctx *ctx"
+.Fa "const uint8_t key[32]"
+.Fc
+.Ft int
+.Fo crypto_blake3_derive_key_init_checked
+.Fa "crypto_blake3_ctx *ctx"
+.Fa "const uint8_t *context"
+.Fa "size_t context_size"
+.Fc
+.Ft int
+.Fo crypto_blake3_update_checked
+.Fa "crypto_blake3_ctx *ctx"
+.Fa "const uint8_t *input"
+.Fa "size_t input_size"
+.Fc
+.Ft int
+.Fo crypto_blake3_final_checked
+.Fa "crypto_blake3_ctx *ctx"
+.Fa "uint8_t *out"
+.Fa "size_t out_size"
+.Fc
+.Ft int
+.Fo crypto_blake3_final_seek_checked
+.Fa "const crypto_blake3_ctx *ctx"
+.Fa "uint64_t seek"
+.Fa "uint8_t *out"
+.Fa "size_t out_size"
+.Fc
+.Sh DESCRIPTION
+BLAKE3 is a modern hash function with an extendable output function (XOF)
+mode. It supports unkeyed hashing, keyed hashing, and a key-derivation
+mode with domain separation.
+.Pp
+The arguments are:
+.Bl -tag -width Ds
+.It Fa out
+Output buffer for the hash or derived output.
+.It Fa out_size
+Number of bytes to write to
+.Fa out .
+.It Fa message
+Message to hash.
+.It Fa key
+A 32-byte key for the keyed hash mode.
+.It Fa context
+Domain separation context string for the derive-key mode.
+.El
+.Ss Incremental interface
+.Fn crypto_blake3_init ,
+.Fn crypto_blake3_update ,
+and
+.Fn crypto_blake3_final
+provide an incremental interface for streaming inputs.
+.Fn crypto_blake3_final_seek
+can produce output from an arbitrary seek position in the XOF stream.
+.Pp
+For application code, prefer the checked variants.
+They validate sizes and pointers and return explicit error codes.
+.Sh RETURN VALUES
+The unchecked variants return nothing.
+The checked variants return:
+.Bl -tag -width Ds
+.It Dv CRYPTO_OK
+The operation completed successfully.
+.It Dv CRYPTO_ERR_NULL
+One or more pointers were
+.Dv NULL .
+.El
+.Sh EXAMPLES
+Hashing a message all at once:
+.Bd -literal -offset indent
+uint8_t out[32];
+uint8_t message[12] = "Lorem ipsum";
+if (crypto_blake3_checked(out, sizeof(out), message, sizeof(message))
+    != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
+.Ed
+.Pp
+Computing an XOF stream:
+.Bd -literal -offset indent
+uint8_t out[64];
+uint8_t message[12] = "Lorem ipsum";
+crypto_blake3_ctx ctx;
+if (crypto_blake3_init_checked(&ctx) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
+if (crypto_blake3_update_checked(&ctx, message, sizeof(message))
+    != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
+if (crypto_blake3_final_seek_checked(&ctx, 0, out, sizeof(out))
+    != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
+.Ed
+.Pp
+Keyed hashing:
+.Bd -literal -offset indent
+uint8_t out[32];
+uint8_t key[32];
+uint8_t message[12] = "Lorem ipsum";
+crypto_random(key, sizeof(key));
+if (crypto_blake3_keyed_checked(out, sizeof(out), key,
+                                message, sizeof(message)) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
+crypto_wipe(key, sizeof(key));
+.Ed
+.Pp
+Derive-key mode:
+.Bd -literal -offset indent
+uint8_t out[32];
+const uint8_t ctx_str[16] = "app-context-v1";
+uint8_t message[12] = "Lorem ipsum";
+if (crypto_blake3_derive_key_checked(out, sizeof(out),
+                                     ctx_str, sizeof(ctx_str),
+                                     message, sizeof(message)) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
+.Ed
+.Sh SEE ALSO
+.Xr crypto_blake2b 3monocypher ,
+.Xr crypto_sha256 3monocypher ,
+.Xr crypto_random 3monocypher ,
+.Xr intro 3monocypher
+.Sh CAVEATS
+The unchecked variants do not perform input validation.
+Any deviation from the specified input and output length ranges results
+in
+.Sy undefined behaviour .
+For safer application code, use the checked variants.
+.Sh STANDARDS
+These functions implement BLAKE3 as described at
+.Lk https://blake3.io

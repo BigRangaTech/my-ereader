@@ -49,7 +49,7 @@
 .\" with this software.  If not, see
 .\" <https://creativecommons.org/publicdomain/zero/1.0/>
 .\"
-.Dd February 25, 2023
+.Dd February 01, 2026
 .Dt CRYPTO_SHA512 3MONOCYPHER
 .Os
 .Sh NAME
@@ -57,12 +57,22 @@
 .Nm crypto_sha512_init ,
 .Nm crypto_sha512_update ,
 .Nm crypto_sha512_final
+.Nm crypto_sha512_init_checked ,
+.Nm crypto_sha512_update_checked ,
+.Nm crypto_sha512_final_checked ,
 .Nm crypto_sha512_hmac ,
 .Nm crypto_sha512_hmac_init ,
 .Nm crypto_sha512_hmac_update ,
 .Nm crypto_sha512_hmac_final ,
+.Nm crypto_sha512_hmac_init_checked ,
+.Nm crypto_sha512_hmac_update_checked ,
+.Nm crypto_sha512_hmac_final_checked ,
 .Nm crypto_sha512_hkdf ,
-.Nm crypto_sha512_hkdf_expand
+.Nm crypto_sha512_hkdf_expand ,
+.Nm crypto_sha512_hkdf_expand_checked ,
+.Nm crypto_sha512_checked ,
+.Nm crypto_sha512_hmac_checked ,
+.Nm crypto_sha512_hkdf_checked
 .Nd hashing, message authentication, and key derivation with SHA-512
 .Sh SYNOPSIS
 .In monocypher-ed25519.h
@@ -84,6 +94,21 @@
 .Fc
 .Ft void
 .Fo crypto_sha512_final
+.Fa "crypto_sha512_ctx *ctx"
+.Fa "uint8_t hash[64]"
+.Fc
+.Ft int
+.Fo crypto_sha512_init_checked
+.Fa "crypto_sha512_ctx *ctx"
+.Fc
+.Ft int
+.Fo crypto_sha512_update_checked
+.Fa "crypto_sha512_ctx *ctx"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft int
+.Fo crypto_sha512_final_checked
 .Fa "crypto_sha512_ctx *ctx"
 .Fa "uint8_t hash[64]"
 .Fc
@@ -112,6 +137,23 @@
 .Fa "crypto_sha512_hmac_ctx *ctx"
 .Fa "uint8_t hmac[64]"
 .Fc
+.Ft int
+.Fo crypto_sha512_hmac_init_checked
+.Fa "crypto_sha512_hmac_ctx *ctx"
+.Fa "const uint8_t *key"
+.Fa "size_t key_size"
+.Fc
+.Ft int
+.Fo crypto_sha512_hmac_update_checked
+.Fa "crypto_sha512_hmac_ctx *ctx"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft int
+.Fo crypto_sha512_hmac_final_checked
+.Fa "crypto_sha512_hmac_ctx *ctx"
+.Fa "uint8_t hmac[64]"
+.Fc
 .Ft void
 .Fo crypto_sha512_hkdf
 .Fa "uint8_t *okm"
@@ -132,7 +174,40 @@
 .Fa "const uint8_t *info"
 .Fa "size_t info_size"
 .Fc
-.Ft void
+.Ft int
+.Fo crypto_sha512_hkdf_expand_checked
+.Fa "uint8_t *okm"
+.Fa "size_t okm_size"
+.Fa "const uint8_t *prk"
+.Fa "size_t prk_size"
+.Fa "const uint8_t *info"
+.Fa "size_t info_size"
+.Fc
+.Ft int
+.Fo crypto_sha512_checked
+.Fa "uint8_t hash[64]"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft int
+.Fo crypto_sha512_hmac_checked
+.Fa "uint8_t hmac[64]"
+.Fa "const uint8_t *key"
+.Fa "size_t key_size"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft int
+.Fo crypto_sha512_hkdf_checked
+.Fa "uint8_t *okm"
+.Fa "size_t okm_size"
+.Fa "const uint8_t *ikm"
+.Fa "size_t ikm_size"
+.Fa "const uint8_t *salt"
+.Fa "size_t salt_size"
+.Fa "const uint8_t *info"
+.Fa "size_t info_size"
+.Fc
 .Sh DESCRIPTION
 .Ss Hashing
 .Fn crypto_sha512 ,
@@ -400,14 +475,44 @@ performs
 .Fn crypto_sha512_hmac_update ,
 and
 .Fn crypto_sha512_hmac_final .
+.Pp
+For application code, prefer the checked variants:
+.Fn crypto_sha512_checked ,
+.Fn crypto_sha512_hmac_checked ,
+.Fn crypto_sha512_hkdf_checked ,
+and the incremental checked helpers
+.Fn crypto_sha512_init_checked ,
+.Fn crypto_sha512_update_checked ,
+.Fn crypto_sha512_final_checked ,
+.Fn crypto_sha512_hmac_init_checked ,
+.Fn crypto_sha512_hmac_update_checked ,
+and
+.Fn crypto_sha512_hmac_final_checked .
+They validate pointers and return explicit error codes.
 .Sh RETURN VALUES
-These functions return nothing.
+The unchecked variants return nothing.
+The checked variants return:
+.Bl -tag -width Ds
+.It Dv CRYPTO_OK
+The operation completed successfully.
+.It Dv CRYPTO_ERR_NULL
+One or more pointers were
+.Dv NULL .
+.It Dv CRYPTO_ERR_SIZE
+The output length for HKDF is too large
+(applies to
+.Fn crypto_sha512_hkdf_checked
+and
+.Fn crypto_sha512_hkdf_expand_checked ) .
+.El
 .Sh EXAMPLES
 Hashing a message all at once:
 .Bd -literal -offset indent
 uint8_t hash   [64]; /* Output hash (64 bytes)          */
 uint8_t message[12] = "Lorem ipsum"; /* Message to hash */
-crypto_sha512(hash, message, 12);
+if (crypto_sha512_checked(hash, message, 12) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
 .Ed
 .Pp
 Hashing a message incrementally:
@@ -415,11 +520,18 @@ Hashing a message incrementally:
 uint8_t hash   [ 64]; /* Output hash (64 bytes) */
 uint8_t message[500] = {1}; /* Message to hash  */
 crypto_sha512_ctx ctx;
-crypto_sha512_init(&ctx);
-for (size_t i = 0; i < 500; i += 100) {
-    crypto_sha512_update(&ctx, message + i, 100);
+if (crypto_sha512_init_checked(&ctx) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
 }
-crypto_sha512_final(&ctx, hash);
+for (size_t i = 0; i < 500; i += 100) {
+    if (crypto_sha512_update_checked(&ctx, message + i, 100)
+        != CRYPTO_OK) {
+        /* Abort on invalid inputs */
+    }
+}
+if (crypto_sha512_final_checked(&ctx, hash) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
 .Ed
 .Pp
 Computing a message authentication code all at once:
@@ -427,8 +539,10 @@ Computing a message authentication code all at once:
 uint8_t hash   [64];                /* Output hash             */
 uint8_t key    [32];                /* Key                     */
 uint8_t message[10] = "Lorem ipsu"; /* Message to authenticate */
-arc4random_buf(key, 32);
-crypto_sha512_hmac(hash, key, 32, message, 10);
+crypto_random(key, 32);
+if (crypto_sha512_hmac_checked(hash, key, 32, message, 10) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(message, 10);
 crypto_wipe(key, 32);
@@ -440,16 +554,23 @@ uint8_t hash   [64];        /* Output hash             */
 uint8_t key    [32];        /* Key                     */
 uint8_t message[500] = {1}; /* Message to authenticate */
 crypto_sha512_hmac_ctx ctx;
-arc4random_buf(key, 32);
-crypto_sha512_hmac_init(&ctx, key, 32);
+crypto_random(key, 32);
+if (crypto_sha512_hmac_init_checked(&ctx, key, 32) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
 /* Wipe the key */
 crypto_wipe(key, 32);
 for (size_t i = 0; i < 500; i += 100) {
-    crypto_sha512_hmac_update(&ctx, message + i, 100);
+    if (crypto_sha512_hmac_update_checked(&ctx, message + i, 100)
+        != CRYPTO_OK) {
+        /* Abort on invalid inputs */
+    }
     /* Wipe secrets if they are no longer needed */
     crypto_wipe(message + i, 100);
 }
-crypto_sha512_hmac_final(&ctx, hash);
+if (crypto_sha512_hmac_final_checked(&ctx, hash) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
 .Ed
 .Pp
 Deriving keys from input key material:
@@ -458,11 +579,13 @@ uint8_t okm[128];                 /* Output random keys */
 uint8_t ikm [96];                 /* Input key material */
 uint8_t salt[16];                 /* Random salt        */
 uint8_t info[11] = "Lorem ipsum"; /* Domain separation  */
-arc4random_buf(salt, sizeof(salt));
-crypto_sha512_hkdf(okm, sizeof(okm),
-                   ikm, sizeof(ikm),
-                   salt, sizeof(salt),
-                   info, sizeof(info));
+crypto_random(salt, sizeof(salt));
+if (crypto_sha512_hkdf_checked(okm, sizeof(okm),
+                               ikm, sizeof(ikm),
+                               salt, sizeof(salt),
+                               info, sizeof(info)) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
 uint8_t *key1 = okm +  0;
 uint8_t *key2 = okm + 32;
 uint8_t *key3 = okm + 64;
@@ -479,7 +602,7 @@ uint8_t skab[32];            /* Alice & bob shared secret */
 uint8_t ikm [96];            /* Input key material        */
 uint8_t salt[16];            /* Random salt               */
 uint8_t info[ 6] = "X25519"; /* Domain separation         */
-arc4random_buf(salt, sizeof(salt));
+crypto_random(salt, sizeof(salt));
 
 /* Extract */
 uint8_t prk[64];             /* pseudo-random key         */
@@ -545,11 +668,11 @@ and
 .Fn crypto_sha512_hkdf_expand
 were added in Monocypher 4.0.0.
 .Sh CAVEATS
-Monocypher does not perform any input validation.
+The unchecked variants do not perform input validation.
 Any deviation from the specified input and output length ranges results
 in
 .Sy undefined behaviour .
-Make sure your inputs are correct.
+For safer application code, use the checked variants.
 .Sh SECURITY CONSIDERATIONS
 SHA-512 is a general-purpose cryptographic hash function;
 this means that it is not suited for hashing passwords and deriving

@@ -67,8 +67,7 @@ cp style.css html/
 
 cat ../src/monocypher.h ../src/optional/monocypher-ed25519.h |\
     egrep -v "^(//|\}| |	|extern)"                        |\
-    grep crypto_                                             |\
-    sed 's|[a-z0-9_]*  *\([a-z0-9_]*\).*|\1|'                |\
+    awk 'match($0, /crypto_[A-Za-z0-9_]+[[:space:]]*\(/) { name = substr($0, RSTART, RLENGTH); sub(/[[:space:]]*\(.*/, "", name); print name }' |\
     ./doc_check.py *.3monocypher
 
 for source in $(find . -name "*.3monocypher" | sed 's|^\./||' | sort)

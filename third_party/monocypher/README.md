@@ -27,17 +27,26 @@ speed of [libsodium][].
 [libsodium]: https://libsodium.org
 [TweetNaCl]: https://tweetnacl.cr.yp.to/
 
+License (this fork)
+-------------------
+
+This fork is distributed under GPL-2.0-or-later. See `LICENSE` and
+`NOTICE.md`. Upstream Monocypher sources remain BSD-2-Clause OR CC0-1.0
+as described in `LICENCE.md`.
+
 
 Features
 --------
 
 - [Authenticated Encryption][AEAD] with XChaCha20 and Poly1305
   (RFC 8439).
-- [Hashing and key derivation][HASH] with BLAKE2b (and [SHA-512][]).
+- [Hashing and key derivation][HASH] with BLAKE2b, BLAKE3,
+  [SHA-512][], and SHA-256.
 - [Password Hashing][PWH] with Argon2.
 - [Public Key Cryptography][PKC] with X25519 key exchanges.
 - [Public Key Signatures][EDDSA] with EdDSA and [Ed25519][].
 - [Steganography and PAKE][STEG] with [Elligator 2][ELLI].
+- OS-backed random bytes helper: `crypto_random`.
 
 [AEAD]:    https://monocypher.org/manual/aead
 [HASH]:    https://monocypher.org/manual/blake2b
@@ -55,6 +64,11 @@ Manual
 
 The manual can be found at https://monocypher.org/manual/, and in the
 `doc/` folder.
+
+Fork docs:
+
+- `TOOLING.md` for tests, coverage, fuzzing, and toolchain setup.
+- `ERROR_HANDLING.md` for the checked-API/error handling roadmap.
 
 
 Installation
@@ -75,10 +89,28 @@ If you need the optional SHA-512 or Ed25519, grab
 Run `make`, then grab the `src/monocypher.h` header and either the
 `lib/libmonocypher.a` or `lib/libmonocypher.so` library.  The default
 compiler is `gcc -std=c99`, and the default flags are `-pedantic -Wall
--Wextra -O3 -march=native`.  If they don't work on your platform, you
-can change them like this:
+-Wextra -O3`.  If they don't work on your platform, you can change them
+like this:
 
     $ make CC="clang -std=c11" CFLAGS="-O2"
+
+Build profiles:
+
+- `PORTABLE=1` (default) disables `-march=native`. Set `PORTABLE=0` to
+  enable it for local builds.
+- `HARDEN=1` adds stack protector, FORTIFY, and relro/now flags.
+- `SANITIZE=address,undefined` builds with sanitizers. You can also use
+  the convenience targets: `make harden` and `make sanitize`.
+- `SIZE=1` builds with `-Os` and `-DBLAKE2_NO_UNROLLING` (smaller binaries).
+- `ARGON2_THREADS=1` enables pthread-based parallel Argon2 lanes
+  (POSIX-only; falls back to single-threaded on Windows).
+- `BLAKE3_THREADS=1` enables pthread-based parallel BLAKE3 subtree hashing
+  (POSIX-only; falls back to single-threaded on Windows).
+- `CHACHA20_THREADS=1` enables pthread-based parallel ChaCha20 for large
+  buffers (POSIX-only; falls back to single-threaded on Windows).
+- `STRERROR=1` enables `crypto_strerror` (string names for `crypto_err`).
+- `RNG_DIAGNOSTICS=1` enables `crypto_random_last_error` for OS RNG
+  diagnostics (platform-specific error codes).
 
 ### Option 3: install it on your system
 
@@ -114,7 +146,11 @@ The same test suite can be run under Clang sanitisers and Valgrind, and
 be checked for code coverage:
 
     $ tests/test.sh
+    $ tests/test-local.sh
     $ tests/coverage.sh
+
+See `TOOLING.md` for details on tests, coverage, fuzzing, and toolchain
+setup.
 
 
 ### Serious auditing
@@ -145,6 +181,12 @@ Notes:
 
 [Frama-c]:https://frama-c.com/
 [TIS]: https://trust-in-soft.com/tis-interpreter/
+
+Fuzzing
+-------
+
+LibFuzzer and AFL harnesses live under `tests/fuzz/`. See `TOOLING.md`
+and `tests/fuzz/README.md` for build/run details.
 
 
 Customisation

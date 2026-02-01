@@ -1,3 +1,45 @@
+Unreleased
+-----
+2026/01/31
+
+- Added SHA-256 (hash, HMAC, HKDF) to core.
+- Added BLAKE3 (hash, keyed hash, derive-key mode) to core.
+- Relicensed fork under GPL-2.0-or-later (see LICENSE and NOTICE.md).
+- Added checked API wrappers with clearer error codes for size/pointer validation.
+- Expanded checked API coverage (verify, Poly1305, EdDSA, Elligator, X25519 conversions).
+- Added build profiles: PORTABLE (default), HARDEN, and SANITIZE.
+- Added SIZE build profile (uses -Os and -DBLAKE2_NO_UNROLLING).
+- Strengthened crypto_wipe with platform secure zeroization when available.
+- Added crypto_random OS-backed RNG helper.
+- Added libFuzzer and AFL harnesses for AEAD, X25519, EdDSA, and Argon2.
+- Expanded fuzzing harnesses to cover safe AEAD, hashes, Poly1305, and Elligator.
+- Added fuzz seed corpus generator and Makefile fuzz targets.
+- Added TOOLING.md to track tests, coverage, and fuzzing workflows.
+- Added ERROR_HANDLING.md to track the error handling roadmap.
+- Documented crypto_random and tooling updates in README/manual.
+- Documented hardened build profile in TOOLING.md.
+- crypto_random now prefers getrandom/arc4random_buf with /dev/urandom fallback.
+- Added SIMD-accelerated ChaCha20 (SSE2/NEON) with runtime detection.
+- Added SIMD Poly1305 multiplication (AVX2/SSE2/NEON) and SIMD X25519
+  field ops (AVX2/SSE2/NEON), with runtime dispatch.
+- Added AVX2 intrinsics-based dot-product helpers for X25519 field mul/sq.
+- Added NEON dot-product helpers for X25519 field mul/sq.
+- Added SSE4.1 dot-product helpers for X25519 field mul/sq and mul-small.
+- Added SIMD fast path for constant-time verify (x16/x32/x64).
+- Added optional pthread-based parallel Argon2 lanes (ARGON2_THREADS=1).
+- Added optional pthread-based parallel BLAKE3 subtree hashing (BLAKE3_THREADS=1).
+- Added safe AEAD helpers that zero plaintext on authentication failure.
+- Added optional pthread-based parallel ChaCha20 (CHACHA20_THREADS=1).
+- Added AVX2 8-way ChaCha20 path with runtime dispatch.
+- Added checked wrappers for incremental hash/AEAD APIs and X25519 inverse.
+- Added optional crypto_strerror helper (STRERROR=1 / MONOCYPHER_STRERROR=1).
+- Added optional RNG diagnostics helper (RNG_DIAGNOSTICS=1 /
+  MONOCYPHER_RNG_DIAGNOSTICS=1) with crypto_random_last_error().
+- Added SHA-256 and BLAKE3 manpages and updated docs to prefer checked APIs.
+- Added checked wrappers for optional SHA-512 incremental/HMAC/HKDF expand and
+  Ed25519 APIs.
+
+
 4.0.2
 -----
 2023/08/24

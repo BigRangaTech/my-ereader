@@ -57,7 +57,11 @@
 .Nm crypto_poly1305 ,
 .Nm crypto_poly1305_init ,
 .Nm crypto_poly1305_update ,
-.Nm crypto_poly1305_final
+.Nm crypto_poly1305_final ,
+.Nm crypto_poly1305_checked ,
+.Nm crypto_poly1305_init_checked ,
+.Nm crypto_poly1305_update_checked ,
+.Nm crypto_poly1305_final_checked
 .Nd Poly1305 one-time message authentication codes
 .Sh SYNOPSIS
 .In monocypher.h
@@ -81,6 +85,29 @@
 .Fc
 .Ft void
 .Fo crypto_poly1305_final
+.Fa "crypto_poly1305_ctx *ctx"
+.Fa "uint8_t mac[16]"
+.Fc
+.Ft int
+.Fo crypto_poly1305_checked
+.Fa "uint8_t mac[16]"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fa "const uint8_t key[32]"
+.Fc
+.Ft int
+.Fo crypto_poly1305_init_checked
+.Fa "crypto_poly1305_ctx *ctx"
+.Fa "const uint8_t key[32]"
+.Fc
+.Ft int
+.Fo crypto_poly1305_update_checked
+.Fa "crypto_poly1305_ctx *ctx"
+.Fa "const uint8_t *message"
+.Fa "size_t message_size"
+.Fc
+.Ft int
+.Fo crypto_poly1305_final_checked
 .Fa "crypto_poly1305_ctx *ctx"
 .Fa "uint8_t mac[16]"
 .Fc
@@ -136,15 +163,29 @@ authenticates the message chunk by chunk.
 Once the message is entirely processed,
 .Fn crypto_poly1305_final
 yields the message authentication code.
+.Pp
+For application code, prefer the checked variants:
+.Fn crypto_poly1305_checked ,
+.Fn crypto_poly1305_init_checked ,
+.Fn crypto_poly1305_update_checked ,
+and
+.Fn crypto_poly1305_final_checked .
+They validate sizes and pointers and return explicit error codes.
 .Sh RETURN VALUES
-These functions return nothing.
+The unchecked variants return nothing.
+The checked variants return:
+.Bl -tag -width Ds
+.It Dv CRYPTO_OK
+The operation completed successfully.
+.It Dv CRYPTO_ERR_NULL
+One or more pointers were
+.Dv NULL .
+.El
 .Sh EXAMPLES
 The following examples assume the existence of
-.Fn arc4random_buf ,
+.Xr crypto_random 3monocypher ,
 which fills the given buffer with cryptographically secure random bytes.
-If
-.Fn arc4random_buf
-does not exist on your system, see
+If it does not exist on your system, see
 .Xr intro 3monocypher
 for advice about how to generate cryptographically secure random bytes.
 .Pp
@@ -153,8 +194,10 @@ To authenticate a message:
 const uint8_t msg[ 5] = "Lorem"; /* Message to authenticate */
 uint8_t       key[32]; /* Random secret key (use only once) */
 uint8_t       mac[16]; /* Message authentication code (MAC) */
-arc4random_buf(key, 32);
-crypto_poly1305(mac, msg, 5, key);
+crypto_random(key, 32);
+if (crypto_poly1305_checked(mac, msg, 5, key) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
 /* Wipe the key */
 crypto_wipe(key, 32);
 .Ed
@@ -165,10 +208,12 @@ const uint8_t msg     [ 5] = "Lorem"; /* Message to verify */
 uint8_t       key     [32];           /* The above key     */
 const uint8_t mac     [16];           /* The above MAC     */
 uint8_t       real_mac[16];           /* The actual MAC    */
-crypto_poly1305(real_mac, msg, 5, key);
+if (crypto_poly1305_checked(real_mac, msg, 5, key) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
 /* Wipe the key */
 crypto_wipe(key, 32);
-if (crypto_verify16(mac, real_mac)) {
+if (crypto_verify16_checked(mac, real_mac) != CRYPTO_OK) {
     /* Corrupted message, abort processing */
 } else {
     /* Genuine message */
@@ -183,14 +228,20 @@ const uint8_t msg[500]= {1}; /* Message to authenticate      */
 uint8_t       key[ 32]; /* Random secret key (use only once) */
 uint8_t       mac[ 16]; /* Message authentication code (MAC) */
 crypto_poly1305_ctx ctx;
-arc4random_buf(key, 32);
-crypto_poly1305_init(&ctx, key);
+crypto_random(key, 32);
+if (crypto_poly1305_init_checked(&ctx, key) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
 /* Wipe the key */
 crypto_wipe(key, 32);
 for (int i = 0; i < 500; i += 100) {
-    crypto_poly1305_update(&ctx, msg, 100);
+    if (crypto_poly1305_update_checked(&ctx, msg, 100) != CRYPTO_OK) {
+        /* Abort on invalid inputs */
+    }
 }
-crypto_poly1305_final(&ctx, mac);
+if (crypto_poly1305_final_checked(&ctx, mac) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
 .Ed
 .Sh SEE ALSO
 .Xr crypto_blake2b 3monocypher ,
@@ -209,11 +260,11 @@ functions first appeared in Monocypher 0.1.
 .Fn crypto_poly1305
 first appeared in Monocypher 1.1.0.
 .Sh CAVEATS
-Monocypher does not perform any input validation.
+The unchecked variants do not perform input validation.
 Any deviation from the specified input and output length ranges results
 in
 .Sy undefined behaviour .
-Make sure your inputs are correct.
+For safer application code, use the checked variants.
 .Sh SECURITY CONSIDERATIONS
 Poly1305 is difficult to use correctly.
 Do not use it unless you are absolutely sure what you are doing.

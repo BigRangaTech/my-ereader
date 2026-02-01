@@ -57,7 +57,11 @@
 .Nm crypto_chacha20_djb ,
 .Nm crypto_chacha20_ietf ,
 .Nm crypto_chacha20_x ,
-.Nm crypto_chacha20_h
+.Nm crypto_chacha20_h ,
+.Nm crypto_chacha20_djb_checked ,
+.Nm crypto_chacha20_ietf_checked ,
+.Nm crypto_chacha20_x_checked ,
+.Nm crypto_chacha20_h_checked
 .Nd ChaCha20 and XChaCha20 encryption functions
 .Sh SYNOPSIS
 .In monocypher.h
@@ -90,6 +94,42 @@
 .Fc
 .Ft void
 .Fo crypto_chacha20_h
+.Fa "uint8_t out[32]"
+.Fa "const uint8_t key[32]"
+.Fa "const uint8_t in[16]"
+.Fc
+.Ft int
+.Fo crypto_chacha20_djb_checked
+.Fa "uint8_t *cipher_text"
+.Fa "const uint8_t *plain_text"
+.Fa "size_t text_size"
+.Fa "const uint8_t key[32]"
+.Fa "const uint8_t nonce[8]"
+.Fa "uint64_t ctr"
+.Fa "uint64_t *ctr_out"
+.Fc
+.Ft int
+.Fo crypto_chacha20_ietf_checked
+.Fa "uint8_t *cipher_text"
+.Fa "const uint8_t *plain_text"
+.Fa "size_t text_size"
+.Fa "const uint8_t key[32]"
+.Fa "const uint8_t nonce[12]"
+.Fa "uint32_t ctr"
+.Fa "uint32_t *ctr_out"
+.Fc
+.Ft int
+.Fo crypto_chacha20_x_checked
+.Fa "uint8_t *cipher_text"
+.Fa "const uint8_t *plain_text"
+.Fa "size_t text_size"
+.Fa "const uint8_t key[32]"
+.Fa "const uint8_t nonce[24]"
+.Fa "uint64_t ctr"
+.Fa "uint64_t *ctr_out"
+.Fc
+.Ft int
+.Fo crypto_chacha20_h_checked
 .Fa "uint8_t out[32]"
 .Fa "const uint8_t key[32]"
 .Fa "const uint8_t in[16]"
@@ -233,13 +273,33 @@ this is the previous
 plus
 .Fa text_size
 divided by 64 (rounded up).
+.Pp
+For application code, prefer the checked variants:
+.Fn crypto_chacha20_djb_checked ,
+.Fn crypto_chacha20_ietf_checked ,
+.Fn crypto_chacha20_x_checked ,
+and
+.Fn crypto_chacha20_h_checked .
+They validate inputs and return explicit error codes.
+.Pp
+The checked variants return:
+.Bl -tag -width Ds
+.It Dv CRYPTO_OK
+The operation completed successfully.
+.It Dv CRYPTO_ERR_NULL
+One or more pointers were
+.Dv NULL .
+.It Dv CRYPTO_ERR_OVERFLOW
+The counter would overflow.
+.El
+On success,
+.Fa ctr_out
+receives the next counter value for the stream ciphers.
 .Sh EXAMPLES
 The following examples assume the existence of
-.Fn arc4random_buf ,
+.Xr crypto_random 3monocypher ,
 which fills the given buffer with cryptographically secure random bytes.
-If
-.Fn arc4random_buf
-does not exist on your system, see
+If it does not exist on your system, see
 .Xr intro 3monocypher
 for advice about how to generate cryptographically secure random bytes.
 .Pp
@@ -249,9 +309,13 @@ uint8_t key        [ 32]; /* Secret random key              */
 uint8_t nonce      [ 24]; /* Unique nonce (possibly random) */
 uint8_t plain_text [500] = {1}; /* Secret message           */
 uint8_t cipher_text[500]; /* Encrypted message              */
-arc4random_buf(key,   32);
-arc4random_buf(nonce, 24);
-crypto_chacha20_x(cipher_text, plain_text, 500, key, nonce, 0);
+uint64_t ctr_out = 0;
+crypto_random(key,   32);
+crypto_random(nonce, 24);
+if (crypto_chacha20_x_checked(cipher_text, plain_text, 500,
+                              key, nonce, 0, &ctr_out) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(key,        32);
 crypto_wipe(plain_text, 500);
@@ -263,7 +327,11 @@ uint8_t       key        [ 32]; /* Same key as above        */
 const uint8_t nonce      [ 24]; /* Same nonce as above      */
 uint8_t       cipher_text[500]; /* Message to decrypt       */
 uint8_t       plain_text [500]; /* Secret message           */
-crypto_chacha20_x(plain_text, cipher_text, 500, key, nonce, 0);
+uint64_t ctr_out = 0;
+if (crypto_chacha20_x_checked(plain_text, cipher_text, 500,
+                              key, nonce, 0, &ctr_out) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(key,        32);
 /* The plaintext likely needs to be processed before you wipe it */
@@ -277,18 +345,24 @@ uint8_t  nonce      [ 24]; /* Unique nonce (possibly random) */
 uint8_t  plain_text [500]; /* Secret message                 */
 uint8_t  cipher_text[500]; /* Encrypted message              */
 uint64_t ctr = 0;          /* Block counter                  */
+uint64_t ctr_out = 0;
 unsigned int i;
-arc4random_buf(key,   32);
-arc4random_buf(nonce, 24);
+crypto_random(key,   32);
+crypto_random(nonce, 24);
 for(i = 0; i < 500; i += 64) {
-    ctr = crypto_chacha20_x(cipher_text+i, plain_text+i, 64,
-                            key, nonce, ctr);
+    if (crypto_chacha20_x_checked(cipher_text+i, plain_text+i, 64,
+                                  key, nonce, ctr, &ctr_out) != CRYPTO_OK) {
+        /* Abort on invalid inputs */
+    }
+    ctr = ctr_out;
 }
 /* Process data that didn't fit into 64-byte pieces */
-crypto_chacha20_x(cipher_text+500-(i-64),
-                  plain_text+500-(i-64),
-                  500-(i-64),
-                  key, nonce, ctr);
+if (crypto_chacha20_x_checked(cipher_text+500-(i-64),
+                              plain_text+500-(i-64),
+                              500-(i-64),
+                              key, nonce, ctr, &ctr_out) != CRYPTO_OK) {
+    /* Abort on invalid inputs */
+}
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(key,        32);
 crypto_wipe(plain_text, 500);
@@ -301,15 +375,21 @@ uint8_t key        [ 32]; /* Secret random key              */
 uint8_t nonce      [ 24]; /* Unique nonce (possibly random) */
 uint8_t plain_text [500] = {1}; /* Message to be encrypted  */
 uint8_t cipher_text[500]; /* Will be the encrypted message  */
-arc4random_buf(key,   32);
-arc4random_buf(nonce, 24);
+uint64_t ctr_out = 0;
+crypto_random(key,   32);
+crypto_random(nonce, 24);
 /* Encrypt the second part of the message first... */
-crypto_chacha20_x(cipher_text + (3 * 64),
-                  plain_text  + (3 * 64),
-                  500         - (3 * 64),
-                  key, nonce, 3);
+if (crypto_chacha20_x_checked(cipher_text + (3 * 64),
+                              plain_text  + (3 * 64),
+                              500         - (3 * 64),
+                              key, nonce, 3, &ctr_out) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
 /* ...then encrypt the first part */
-crypto_chacha20_x(cipher_text, plain_text, 3 * 64, key, nonce, 0);
+if (crypto_chacha20_x_checked(cipher_text, plain_text, 3 * 64,
+                              key, nonce, 0, &ctr_out) != CRYPTO_OK) {
+	/* Abort on invalid inputs */
+}
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(key,        32);
 crypto_wipe(plain_text, 500);
@@ -346,7 +426,7 @@ For instance:
 uint8_t key[32]; /* Must have enough entropy           */
 uint8_t in [16]; /* Does not have to be random         */
 uint8_t out[32]; /* Will be random iff the above holds */
-arc4random_buf(key, 32);
+crypto_random(key, 32);
 crypto_chacha20_h(out, key, in);
 /* Wipe secrets if they are no longer needed */
 crypto_wipe(key, 32);
@@ -403,11 +483,11 @@ in Monocypher 3.0.0, then
 .Fn crypto_chacha20_h
 in Monocypher 4.0.0.
 .Sh CAVEATS
-Monocypher does not perform any input validation.
+The unchecked variants do not perform input validation.
 Any deviation from the specified input and output length ranges results
 in
 .Sy undefined behaviour .
-Make sure your inputs are correct.
+For safer application code, use the checked variants.
 .Sh SECURITY CONSIDERATIONS
 .Ss Encrypted does not mean secure
 ChaCha20 only protects against eavesdropping, not forgeries.

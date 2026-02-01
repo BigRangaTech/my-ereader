@@ -60,8 +60,6 @@ cat << END
 #include "../src/monocypher.h"
 #include "../src/optional/monocypher-ed25519.h"
 
-void arc4random_buf(void*, size_t);
-
 int main() {
 END
 

@@ -13,7 +13,7 @@ that is built and bundled into prebuilt binaries.
 ## Current vendors
 - Monocypher
   - Source: `third_party/monocypher/`
-  - Upstream: https://github.com/BigRangaTech/Monocypher (tag `v001`)
+- Upstream: https://github.com/BigRangaTech/Monocypher (tag `v002`)
   - License: `third_party/monocypher/LICENCE.md`
   - Notes: custom crypto backend
 - Poppler
@@ -32,7 +32,7 @@ that is built and bundled into prebuilt binaries.
   - Notes: ZIP reader used for EPUB parsing
 - libarchive
   - Source: `third_party/libarchive/`
-  - Upstream: https://github.com/libarchive/libarchive (v3.7.2)
+  - Upstream: https://github.com/BigRangaTech/libarchive (tag `v001`)
   - License: `third_party/libarchive/COPYING`
   - Notes: CBR extraction (bundled)
   - Build: `scripts/build_libarchive.sh`
