@@ -20,6 +20,7 @@ target_include_directories(formats PUBLIC include)
 target_link_libraries(formats PUBLIC Qt6::Core Qt6::Gui Qt6::Xml)
 
 find_package(ZLIB REQUIRED)
+find_package(LibXml2 REQUIRED)
 
 target_sources(formats PRIVATE
   ../../third_party/miniz/miniz.c
@@ -50,7 +51,7 @@ set(LIBMOBI_SOURCES
 
 target_sources(formats PRIVATE ${LIBMOBI_SOURCES})
 target_include_directories(formats PRIVATE ../../third_party/libmobi/src)
-target_link_libraries(formats PUBLIC ZLIB::ZLIB)
+target_link_libraries(formats PUBLIC ZLIB::ZLIB LibXml2::LibXml2)
 
 if (POPPLER_QT6_AVAILABLE)
   target_link_libraries(formats PUBLIC Poppler::Qt6)

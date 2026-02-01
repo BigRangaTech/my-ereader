@@ -18,7 +18,7 @@ that is built and bundled into prebuilt binaries.
   - Notes: custom crypto backend
 - Poppler
   - Source: `poppler/`
-  - Upstream: https://github.com/BigRangaTech/my-poppler (tag `001`)
+  - Upstream: https://github.com/BigRangaTech/my-poppler (tag `v001`)
   - License: see `poppler/` tree
   - Notes: built and bundled in prebuilt binaries
   - Build: `scripts/build_poppler.sh`
@@ -38,6 +38,6 @@ that is built and bundled into prebuilt binaries.
   - Build: `scripts/build_libarchive.sh`
 - libmobi
   - Source: `third_party/libmobi/`
-  - Upstream: https://github.com/BigRangaTech/libmobi (tag `v001`)
+  - Upstream: https://github.com/BigRangaTech/libmobi (tag `b01.1`)
   - License: `third_party/libmobi/COPYING`
   - Notes: MOBI/AZW3 parsing

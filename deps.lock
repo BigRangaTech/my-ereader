@@ -2,8 +2,8 @@
 # Format: name | upstream | commit/tag | local path | license file
 
 monocypher | https://github.com/BigRangaTech/Monocypher | v001 | third_party/monocypher | third_party/monocypher/LICENCE.md
-poppler | https://github.com/BigRangaTech/my-poppler | 001 | poppler | poppler/README.md
+poppler | https://github.com/BigRangaTech/my-poppler | v001 | poppler | poppler/README.md
 monocypher-snapshot | https://github.com/LoupVaillant/Monocypher | 4.0.2 | monocypher-4.0.2 | monocypher-4.0.2/README.md
 miniz | https://github.com/richgel999/miniz | unknown | third_party/miniz | third_party/miniz/LICENSE.txt
 libarchive | https://github.com/libarchive/libarchive | v3.7.2 | third_party/libarchive | third_party/libarchive/COPYING
-libmobi | https://github.com/BigRangaTech/libmobi | a01.1 | third_party/libmobi | third_party/libmobi/COPYING
+libmobi | https://github.com/BigRangaTech/libmobi | b01.1 | third_party/libmobi | third_party/libmobi/COPYING

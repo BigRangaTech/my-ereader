@@ -17,6 +17,17 @@ finish-args:
   - --env=QML_IMPORT_PATH=/app/share/my-ereader/qml
   - --env=QT_PLUGIN_PATH=/app/plugins:/usr/plugins
 modules:
+  - name: libxml2
+    buildsystem: meson
+    config-opts:
+      - -Dtests=false
+      - -Dpython=false
+      - -Dicu=false
+    sources:
+      - type: git
+        url: https://gitlab.gnome.org/GNOME/libxml2.git
+        tag: v2.12.5
+
   - name: libarchive
     buildsystem: autotools
     config-opts:
