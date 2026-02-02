@@ -39,6 +39,19 @@ flatpak build-export --update-appstream --gpg-sign="$GPG_KEY_ID" \
   "$REPO_DIR" \
   "$BUILD_DIR"
 
+# Ensure repo + appstream refs are signed (fixes appstream GPG warnings on clients).
+flatpak build-update-repo --gpg-sign="$GPG_KEY_ID" "$REPO_DIR"
+
+# Verify that appstream refs are signed.
+if ! ostree show --repo="$REPO_DIR" appstream/x86_64 >/tmp/ereader-appstream.txt 2>/dev/null; then
+  echo "Failed to locate appstream/x86_64 in repo" >&2
+  exit 1
+fi
+if ! rg -q "Signed:.*yes" /tmp/ereader-appstream.txt; then
+  echo "Appstream ref is not signed. Check GPG setup." >&2
+  exit 1
+fi
+
 flatpak build-bundle \
   "$REPO_DIR" \
   "$ROOT_DIR/dist/my-ereader-$(date +%Y%m%d%H%M).flatpak" \

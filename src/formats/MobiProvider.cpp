@@ -610,10 +610,11 @@ QStringList extractGuideTitles(const MOBIRawml *rawml) {
     return titles;
   }
   const MOBIIndx *guide = rawml->guide;
+  static const unsigned guideTagArr[] = {1, 0};
   for (size_t i = 0; i < guide->entries_count; ++i) {
     const MOBIIndexEntry &entry = guide->entries[i];
     uint32_t cncXOffset = 0;
-    if (mobi_get_indxentry_tagvalue(&cncXOffset, &entry, INDX_TAG_GUIDE_TITLE_CNCX) != MOBI_SUCCESS) {
+    if (mobi_get_indxentry_tagvalue(&cncXOffset, &entry, guideTagArr) != MOBI_SUCCESS) {
       continue;
     }
     char *title = mobi_get_cncx_string_utf8(guide->cncx_record, cncXOffset, guide->encoding);
