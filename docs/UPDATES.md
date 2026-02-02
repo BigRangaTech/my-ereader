@@ -36,6 +36,39 @@ To ship an updated repo:
 1) Build: `./scripts/build_flatpak.sh`
 2) Publish `flatpak/repo` to your host (or copy to USB/LAN)
 
+### Fedora (older Flatpak) two-step add
+Some Fedora installs don’t support `--gpg-import` on `remote-add`. Add the remote
+first, then import the key:
+
+```bash
+flatpak remote-add --system --if-not-exists myereader \
+  https://bigrangatech.github.io/my-ereader-flatpak/
+
+flatpak remote-modify --system --gpg-import=/home/jessie/Downloads/repo-gpg.pub myereader
+```
+
+Then install:
+```bash
+flatpak install --system myereader app/com.bigrangatech.MyEreader/x86_64/master
+```
+
+### Common mistakes and fixes
+- **Remote URL shows `file:///home/... https://...`**  
+  Cause: leading space or stray backslash before the URL.  
+  Fix: re-add the remote with a clean URL:
+  ```bash
+  flatpak remote-delete --system myereader
+  flatpak remote-add --system --if-not-exists myereader \
+    https://bigrangatech.github.io/my-ereader-flatpak/
+  ```
+- **“No remote refs found for ‘myereader’”**  
+  Cause: remote not added, wrong URL, or repo not published.  
+  Fix: `flatpak remote-ls --system myereader` and verify the repo exports refs.
+- **Remote exists in both user and system installs**  
+  Fix: remove one: `flatpak remote-delete --user myereader` or `--system`.
+- **Appstream/GPG errors**  
+  Appstream is optional. You can install/update by ref even without appstream.
+
 ## Android
 Update path to be defined later. We will not ship background updaters.
 
