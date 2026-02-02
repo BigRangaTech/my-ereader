@@ -12,7 +12,7 @@ ApplicationWindow {
   width: 1200
   height: 800
   visible: true
-  title: "My Ereader"
+  title: "My Ereader " + Qt.application.version
 
   readonly property string uiFont: "Space Grotesk"
   readonly property string readingFont: "Literata"
@@ -5375,7 +5375,7 @@ ApplicationWindow {
             Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
 
             Text {
-              text: "Version 0.1.0"
+              text: "Version " + Qt.application.version
               color: theme.textMuted
               font.pixelSize: 13
               font.family: root.uiFont

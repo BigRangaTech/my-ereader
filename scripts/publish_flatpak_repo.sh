@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="/home/jessie/Documents/my ereader"
-REPO_DIR="/home/jessie/Documents/my-ereader-flatpak"
+REPO_DIR="$ROOT_DIR/flatpak/repo"
 BUILD_DIR="$ROOT_DIR/flatpak/build"
 MANIFEST="$ROOT_DIR/flatpak/com.bigrangatech.MyEreader.yaml"
 INDEX_SRC="$ROOT_DIR/index.html"
@@ -13,10 +13,7 @@ if [ ! -f "$MANIFEST" ]; then
   exit 1
 fi
 
-if [ ! -d "$REPO_DIR/.git" ]; then
-  echo "Missing flatpak repo git dir: $REPO_DIR" >&2
-  exit 1
-fi
+mkdir -p "$REPO_DIR"
 
 if [ ! -d "$BUILD_DIR" ]; then
   echo "Missing build dir: $BUILD_DIR" >&2
@@ -42,14 +39,12 @@ flatpak build-export --update-appstream --gpg-sign="$GPG_KEY_ID" \
 # Ensure repo + appstream refs are signed (fixes appstream GPG warnings on clients).
 flatpak build-update-repo --gpg-sign="$GPG_KEY_ID" "$REPO_DIR"
 
-# Verify that appstream refs are signed.
-if ! ostree show --repo="$REPO_DIR" appstream/x86_64 >/tmp/ereader-appstream.txt 2>/dev/null; then
-  echo "Failed to locate appstream/x86_64 in repo" >&2
-  exit 1
+# Explicitly sign appstream refs when present (some clients require it).
+if ostree show --repo="$REPO_DIR" appstream/x86_64 >/dev/null 2>&1; then
+  ostree gpg-sign --repo="$REPO_DIR" appstream/x86_64 "$GPG_KEY_ID"
 fi
-if ! rg -q "Signed:.*yes" /tmp/ereader-appstream.txt; then
-  echo "Appstream ref is not signed. Check GPG setup." >&2
-  exit 1
+if ostree show --repo="$REPO_DIR" appstream2/x86_64 >/dev/null 2>&1; then
+  ostree gpg-sign --repo="$REPO_DIR" appstream2/x86_64 "$GPG_KEY_ID"
 fi
 
 flatpak build-bundle \
@@ -58,17 +53,14 @@ flatpak build-bundle \
   com.bigrangatech.MyEreader \
   --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
 
-cd "$REPO_DIR"
-
-git fetch origin gh-pages || true
-
-git checkout gh-pages
-
-cp "$INDEX_SRC" ./index.html
+cp "$INDEX_SRC" "$REPO_DIR/index.html"
 gpg --export --armor "$GPG_KEY_ID" > "$REPO_DIR/repo-gpg.pub"
+GPG_KEY_B64=$(gpg --export "$GPG_KEY_ID" | base64 -w 0)
+cat > "$REPO_DIR/my-ereader.flatpakrepo" <<EOF
+[Flatpak Repo]
+Title=My Ereader
+Url=https://bigrangatech.github.io/my-ereader-flatpak/
+GPGKey=${GPG_KEY_B64}
+EOF
 
-git add -A
-
-git commit -m "Update flatpak repo" || echo "No changes to commit"
-
-printf "\nDone. Flatpak repo and bundle updated. Push gh-pages manually when ready.\n"
+printf "\nDone. Flatpak repo updated at %s and bundle created in dist/. Copy repo manually as needed.\n" "$REPO_DIR"
