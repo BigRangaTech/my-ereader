@@ -94,6 +94,7 @@ QVariantList SyncManager::devices() const {
     entry.insert("port", device.port);
     entry.insert("paired", device.paired);
     entry.insert("lastSeen", QDateTime::fromMSecsSinceEpoch(device.lastSeen).toString(Qt::ISODate));
+    entry.insert("lastSync", device.lastSync);
     list.append(entry);
   }
   return list;
@@ -278,11 +279,13 @@ void SyncManager::syncNow(const QString &deviceId) {
   auto *socket = new QTcpSocket(this);
   connect(socket, &QTcpSocket::connected, this, [this, socket, info]() {
     const QVariantList annotations = annotationPayload();
+    const QVariantList library = libraryPayload();
     QJsonObject payload{
         {"type", "sync_request"},
         {"id", m_deviceId},
         {"token", info.token},
         {"annotations", QJsonDocument::fromVariant(annotations).array()},
+        {"library", QJsonDocument::fromVariant(library).array()},
     };
     socket->write(QJsonDocument(payload).toJson(QJsonDocument::Compact));
     setStatus("Syncing with " + info.name);
@@ -304,8 +307,15 @@ void SyncManager::syncNow(const QString &deviceId) {
       return;
     }
     const QJsonArray annotations = obj.value("annotations").toArray();
+    const QJsonArray library = obj.value("library").toArray();
     const int added = applyAnnotationPayload(annotations.toVariantList());
-    setStatus(QString("Synced with %1 (%2 new)").arg(info.name).arg(added));
+    const int metaUpdated = applyLibraryPayload(library.toVariantList());
+    PairedInfo updated = info;
+    updated.lastSync = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+    m_paired.insert(updated.id, updated);
+    savePairedDevices();
+    updateDevice(updated.id, updated.name, updated.address, updated.port, true);
+    setStatus(QString("Synced with %1 (%2 notes, %3 meta)").arg(info.name).arg(added).arg(metaUpdated));
     socket->disconnectFromHost();
     socket->deleteLater();
   });
@@ -445,15 +455,24 @@ void SyncManager::ensureServer() {
               return;
             }
             const QJsonArray annotations = obj.value("annotations").toArray();
+            const QJsonArray library = obj.value("library").toArray();
             const int added = applyAnnotationPayload(annotations.toVariantList());
+            const int metaUpdated = applyLibraryPayload(library.toVariantList());
             QJsonObject resp{
                 {"type", "sync_response"},
                 {"annotations", QJsonDocument::fromVariant(annotationPayload()).array()},
-                {"added", added}};
+                {"library", QJsonDocument::fromVariant(libraryPayload()).array()},
+                {"added", added},
+                {"meta_updated", metaUpdated}};
             socket->write(QJsonDocument(resp).toJson(QJsonDocument::Compact));
             socket->disconnectFromHost();
             socket->deleteLater();
-            setStatus("Synced with " + m_paired.value(remoteId).name);
+            PairedInfo updated = m_paired.value(remoteId);
+            updated.lastSync = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+            m_paired.insert(remoteId, updated);
+            savePairedDevices();
+            updateDevice(remoteId, updated.name, updated.address, updated.port, true);
+            setStatus("Synced with " + updated.name);
             return;
           }
           socket->disconnectFromHost();
@@ -532,6 +551,11 @@ void SyncManager::updateDevice(const QString &id,
   info.port = port;
   info.lastSeen = QDateTime::currentMSecsSinceEpoch();
   info.paired = m_paired.contains(id);
+  if (info.paired) {
+    info.lastSync = m_paired.value(id).lastSync;
+  } else {
+    info.lastSync.clear();
+  }
   m_devices.insert(id, info);
   if (discovered) {
     emit devicesChanged();
@@ -568,6 +592,7 @@ void SyncManager::loadPairedDevices() {
     info.address = m_settings->value("address").toString();
     info.port = m_settings->value("port").toInt();
     info.token = m_settings->value("token").toString();
+    info.lastSync = m_settings->value("last_sync").toString();
     m_paired.insert(info.id, info);
     DeviceInfo device;
     device.id = info.id;
@@ -576,6 +601,7 @@ void SyncManager::loadPairedDevices() {
     device.port = info.port;
     device.paired = true;
     device.lastSeen = 0;
+    device.lastSync = info.lastSync;
     m_devices.insert(info.id, device);
     m_settings->endGroup();
   }
@@ -594,6 +620,7 @@ void SyncManager::savePairedDevices() {
     m_settings->setValue("address", info.address);
     m_settings->setValue("port", info.port);
     m_settings->setValue("token", info.token);
+    m_settings->setValue("last_sync", info.lastSync);
     m_settings->endGroup();
   }
   m_settings->endGroup();
@@ -620,4 +647,18 @@ int SyncManager::applyAnnotationPayload(const QVariantList &payload) {
     return 0;
   }
   return m_libraryModel->importAnnotationSync(payload);
+}
+
+QVariantList SyncManager::libraryPayload() const {
+  if (!m_libraryModel) {
+    return {};
+  }
+  return m_libraryModel->exportLibrarySync();
+}
+
+int SyncManager::applyLibraryPayload(const QVariantList &payload) {
+  if (!m_libraryModel) {
+    return 0;
+  }
+  return m_libraryModel->importLibrarySync(payload);
 }

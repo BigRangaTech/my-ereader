@@ -81,6 +81,8 @@ private:
   void setDiscovering(bool discovering);
   QVariantList annotationPayload() const;
   int applyAnnotationPayload(const QVariantList &payload);
+  QVariantList libraryPayload() const;
+  int applyLibraryPayload(const QVariantList &payload);
 
   bool m_enabled = false;
   QString m_status = "Idle";
@@ -98,6 +100,7 @@ private:
     int port = 0;
     bool paired = false;
     qint64 lastSeen = 0;
+    QString lastSync;
   };
   struct PairedInfo {
     QString id;
@@ -105,6 +108,7 @@ private:
     QString address;
     int port = 0;
     QString token;
+    QString lastSync;
   };
   QHash<QString, DeviceInfo> m_devices;
   QHash<QString, PairedInfo> m_paired;

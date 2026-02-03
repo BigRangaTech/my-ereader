@@ -24,6 +24,11 @@ Settings live under `config/` at the repo root.
 - `device/pin` (default: random 4-digit PIN)
 - `network/discovery_port` (default: 45454)
 - `network/listen_port` (default: 45455)
+- `paired/<device-id>/name` — paired device label
+- `paired/<device-id>/address` — last known IP
+- `paired/<device-id>/port` — TCP port
+- `paired/<device-id>/token` — pairing token
+- `paired/<device-id>/last_sync` — ISO timestamp of last successful sync
 
 ## EPUB (`config/epub.ini`)
 - `reading/font_size` (default: 20)

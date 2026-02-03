@@ -56,6 +56,8 @@ public slots:
   void deleteAnnotation(int annotationId, int libraryItemId);
   QVariantList exportAnnotationSync();
   int importAnnotationSync(const QVariantList &payload);
+  QVariantList exportLibrarySync();
+  int importLibrarySync(const QVariantList &payload);
 
 signals:
   void openFinished(bool ok, const QString &error);
@@ -75,6 +77,7 @@ private:
   bool ensureSchema(QString *error);
   bool ensureColumn(const QString &table, const QString &column, const QString &type, QString *error);
   bool ensureAnnotationUuids(QString *error);
+  bool ensureLibraryUpdatedAt(QString *error);
   QVector<LibraryItem> fetchLibrary(QString *error);
   QVector<LibraryItem> fetchLibraryFiltered(const QString &searchQuery,
                                             const QString &sortKey,

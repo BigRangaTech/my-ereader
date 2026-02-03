@@ -483,6 +483,23 @@ int LibraryModel::importAnnotationSync(const QVariantList &payload) {
   return added;
 }
 
+QVariantList LibraryModel::exportLibrarySync() const {
+  QVariantList payload;
+  QMetaObject::invokeMethod(dbWorker(), "exportLibrarySync",
+                            Qt::BlockingQueuedConnection,
+                            Q_RETURN_ARG(QVariantList, payload));
+  return payload;
+}
+
+int LibraryModel::importLibrarySync(const QVariantList &payload) {
+  int applied = 0;
+  QMetaObject::invokeMethod(dbWorker(), "importLibrarySync",
+                            Qt::BlockingQueuedConnection,
+                            Q_RETURN_ARG(int, applied),
+                            Q_ARG(QVariantList, payload));
+  return applied;
+}
+
 bool LibraryModel::ready() const { return m_ready; }
 
 int LibraryModel::count() const { return m_items.size(); }

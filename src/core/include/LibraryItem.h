@@ -18,6 +18,7 @@ struct LibraryItem {
   QString format;
   QString fileHash;
   QString addedAt;
+  QString updatedAt;
   int annotationCount = 0;
 };
 

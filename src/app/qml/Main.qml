@@ -3638,6 +3638,15 @@ ApplicationWindow {
                     font.pixelSize: 11
                     font.family: root.uiFont
                   }
+
+                  Text {
+                    text: modelData.lastSync && modelData.lastSync.length > 0
+                          ? "Last sync: " + modelData.lastSync
+                          : "Last sync: never"
+                    color: theme.textMuted
+                    font.pixelSize: 10
+                    font.family: root.uiFont
+                  }
                 }
 
                 Button {

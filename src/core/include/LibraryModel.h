@@ -69,6 +69,8 @@ public:
   Q_INVOKABLE QVariantMap get(int index) const;
   Q_INVOKABLE QVariantList exportAnnotationSync() const;
   Q_INVOKABLE int importAnnotationSync(const QVariantList &payload);
+  Q_INVOKABLE QVariantList exportLibrarySync() const;
+  Q_INVOKABLE int importLibrarySync(const QVariantList &payload);
 
   QString searchQuery() const;
   QString sortKey() const;

@@ -224,7 +224,7 @@ void DbWorker::updateLibraryItem(int id,
   QSqlQuery query(m_db);
   query.prepare(
       "UPDATE library_items SET title = ?, authors = ?, series = ?, publisher = ?, description = ?, "
-      "tags = ?, collection = ? WHERE id = ?");
+      "tags = ?, collection = ?, updated_at = ? WHERE id = ?");
   query.addBindValue(title);
   query.addBindValue(authors);
   query.addBindValue(series);
@@ -232,6 +232,7 @@ void DbWorker::updateLibraryItem(int id,
   query.addBindValue(description);
   query.addBindValue(tags);
   query.addBindValue(collection);
+  query.addBindValue(QDateTime::currentDateTimeUtc().toString(Qt::ISODate));
   query.addBindValue(id);
   if (!query.exec()) {
     emit updateBookFinished(false, query.lastError().text());
@@ -298,18 +299,22 @@ void DbWorker::bulkUpdateTagsCollection(const QVector<int> &ids,
       continue;
     }
     QSqlQuery query(m_db);
+    const QString now = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
     if (updateTags && updateCollection) {
-      query.prepare("UPDATE library_items SET tags = ?, collection = ? WHERE id = ?");
+      query.prepare("UPDATE library_items SET tags = ?, collection = ?, updated_at = ? WHERE id = ?");
       query.addBindValue(tags);
       query.addBindValue(collection);
+      query.addBindValue(now);
       query.addBindValue(id);
     } else if (updateTags) {
-      query.prepare("UPDATE library_items SET tags = ? WHERE id = ?");
+      query.prepare("UPDATE library_items SET tags = ?, updated_at = ? WHERE id = ?");
       query.addBindValue(tags);
+      query.addBindValue(now);
       query.addBindValue(id);
     } else {
-      query.prepare("UPDATE library_items SET collection = ? WHERE id = ?");
+      query.prepare("UPDATE library_items SET collection = ?, updated_at = ? WHERE id = ?");
       query.addBindValue(collection);
+      query.addBindValue(now);
       query.addBindValue(id);
     }
     if (!query.exec()) {
@@ -564,6 +569,88 @@ int DbWorker::importAnnotationSync(const QVariantList &payload) {
   return added;
 }
 
+QVariantList DbWorker::exportLibrarySync() {
+  QVariantList list;
+  if (!m_db.isOpen()) {
+    return list;
+  }
+  QSqlQuery query(m_db);
+  query.prepare("SELECT file_hash, title, authors, series, publisher, description, tags, collection, format, updated_at "
+                "FROM library_items WHERE file_hash IS NOT NULL AND file_hash != ''");
+  if (!query.exec()) {
+    return list;
+  }
+  while (query.next()) {
+    QVariantMap item;
+    item.insert("file_hash", query.value(0).toString());
+    item.insert("title", query.value(1).toString());
+    item.insert("authors", query.value(2).toString());
+    item.insert("series", query.value(3).toString());
+    item.insert("publisher", query.value(4).toString());
+    item.insert("description", query.value(5).toString());
+    item.insert("tags", query.value(6).toString());
+    item.insert("collection", query.value(7).toString());
+    item.insert("format", query.value(8).toString());
+    item.insert("updated_at", query.value(9).toString());
+    list.append(item);
+  }
+  return list;
+}
+
+int DbWorker::importLibrarySync(const QVariantList &payload) {
+  if (!m_db.isOpen() || payload.isEmpty()) {
+    return 0;
+  }
+  int applied = 0;
+  QSqlQuery findItem(m_db);
+  QSqlQuery update(m_db);
+  findItem.prepare("SELECT id, updated_at FROM library_items WHERE file_hash = ? LIMIT 1");
+  update.prepare(
+      "UPDATE library_items SET title = ?, authors = ?, series = ?, publisher = ?, description = ?, "
+      "tags = ?, collection = ?, updated_at = ? WHERE id = ?");
+  for (const auto &entry : payload) {
+    const QVariantMap map = entry.toMap();
+    const QString fileHash = map.value("file_hash").toString();
+    if (fileHash.isEmpty()) {
+      continue;
+    }
+    findItem.bindValue(0, fileHash);
+    if (!findItem.exec() || !findItem.next()) {
+      findItem.finish();
+      continue;
+    }
+    const int id = findItem.value(0).toInt();
+    const QString localUpdated = findItem.value(1).toString();
+    findItem.finish();
+
+    const QString remoteUpdated = map.value("updated_at").toString();
+    const qint64 localTime = QDateTime::fromString(localUpdated, Qt::ISODate).toMSecsSinceEpoch();
+    const qint64 remoteTime = QDateTime::fromString(remoteUpdated, Qt::ISODate).toMSecsSinceEpoch();
+    if (remoteTime <= 0 || remoteTime <= localTime) {
+      continue;
+    }
+
+    update.addBindValue(map.value("title").toString());
+    update.addBindValue(map.value("authors").toString());
+    update.addBindValue(map.value("series").toString());
+    update.addBindValue(map.value("publisher").toString());
+    update.addBindValue(map.value("description").toString());
+    update.addBindValue(map.value("tags").toString());
+    update.addBindValue(map.value("collection").toString());
+    update.addBindValue(remoteUpdated);
+    update.addBindValue(id);
+    if (update.exec()) {
+      applied++;
+    }
+    update.finish();
+  }
+  if (applied > 0) {
+    emit libraryLoaded(fetchLibraryFiltered(m_searchQuery, m_sortKey, m_sortDescending,
+                                            m_filterTag, m_filterCollection, nullptr));
+  }
+  return applied;
+}
+
 bool DbWorker::openDatabase(const QString &dbPath, QString *error) {
   if (m_db.isOpen()) {
     m_db.close();
@@ -599,7 +686,8 @@ bool DbWorker::ensureSchema(QString *error) {
           "path TEXT UNIQUE,"
           "format TEXT,"
           "file_hash TEXT,"
-          "added_at TEXT"
+          "added_at TEXT,"
+          "updated_at TEXT"
           ")")) {
     if (error) {
       *error = query.lastError().text();
@@ -614,6 +702,7 @@ bool DbWorker::ensureSchema(QString *error) {
           "type TEXT NOT NULL,"
           "text TEXT,"
           "color TEXT,"
+          "uuid TEXT,"
           "created_at TEXT,"
           "FOREIGN KEY(library_item_id) REFERENCES library_items(id)"
           ")")) {
@@ -640,7 +729,13 @@ bool DbWorker::ensureSchema(QString *error) {
   if (!ensureColumn("library_items", "cover_path", "TEXT", error)) {
     return false;
   }
+  if (!ensureColumn("library_items", "updated_at", "TEXT", error)) {
+    return false;
+  }
   if (!ensureColumn("annotations", "uuid", "TEXT", error)) {
+    return false;
+  }
+  if (!ensureLibraryUpdatedAt(error)) {
     return false;
   }
   if (!ensureAnnotationUuids(error)) {
@@ -705,6 +800,33 @@ bool DbWorker::ensureAnnotationUuids(QString *error) {
   return true;
 }
 
+bool DbWorker::ensureLibraryUpdatedAt(QString *error) {
+  QSqlQuery query(m_db);
+  if (!query.exec("SELECT id, added_at FROM library_items WHERE updated_at IS NULL OR updated_at = ''")) {
+    if (error) {
+      *error = query.lastError().text();
+    }
+    return false;
+  }
+  while (query.next()) {
+    const int id = query.value(0).toInt();
+    const QString addedAt = query.value(1).toString();
+    const QString updatedAt =
+        addedAt.isEmpty() ? QDateTime::currentDateTimeUtc().toString(Qt::ISODate) : addedAt;
+    QSqlQuery update(m_db);
+    update.prepare("UPDATE library_items SET updated_at = ? WHERE id = ?");
+    update.addBindValue(updatedAt);
+    update.addBindValue(id);
+    if (!update.exec()) {
+      if (error) {
+        *error = update.lastError().text();
+      }
+      return false;
+    }
+  }
+  return true;
+}
+
 QVector<LibraryItem> DbWorker::fetchLibrary(QString *error) {
   return fetchLibraryFiltered(QString(), QStringLiteral("title"), false, QString(), QString(), error);
 }
@@ -736,7 +858,7 @@ QVector<LibraryItem> DbWorker::fetchLibraryFiltered(const QString &searchQuery,
        sortColumn == "publisher" || sortColumn == "format" || sortColumn == "collection");
 
   QString sql =
-      "SELECT id, title, authors, series, publisher, description, tags, collection, cover_path, path, format, file_hash, added_at, "
+      "SELECT id, title, authors, series, publisher, description, tags, collection, cover_path, path, format, file_hash, added_at, updated_at, "
       "(SELECT COUNT(*) FROM annotations WHERE library_item_id = library_items.id) "
       "FROM library_items";
 
@@ -811,7 +933,8 @@ QVector<LibraryItem> DbWorker::fetchLibraryFiltered(const QString &searchQuery,
       item.format = query.value(10).toString();
       item.fileHash = query.value(11).toString();
       item.addedAt = query.value(12).toString();
-      item.annotationCount = query.value(13).toInt();
+      item.updatedAt = query.value(13).toString();
+      item.annotationCount = query.value(14).toInt();
       items.push_back(std::move(item));
     }
   } else if (error) {
@@ -857,8 +980,8 @@ bool DbWorker::insertLibraryItem(const LibraryItem &item, QString *error) {
   QSqlQuery query(m_db);
   query.prepare(
       "INSERT OR IGNORE INTO library_items "
-      "(title, authors, series, publisher, description, tags, collection, cover_path, path, format, file_hash, added_at) "
-      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+      "(title, authors, series, publisher, description, tags, collection, cover_path, path, format, file_hash, added_at, updated_at) "
+      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
   query.addBindValue(item.title);
   query.addBindValue(item.authors);
   query.addBindValue(item.series);
@@ -871,6 +994,7 @@ bool DbWorker::insertLibraryItem(const LibraryItem &item, QString *error) {
   query.addBindValue(item.format);
   query.addBindValue(item.fileHash);
   query.addBindValue(item.addedAt);
+  query.addBindValue(item.updatedAt.isEmpty() ? item.addedAt : item.updatedAt);
   if (!query.exec()) {
     if (error) {
       *error = query.lastError().text();
@@ -895,6 +1019,7 @@ LibraryItem DbWorker::makeItemFromFile(const QString &filePath) {
   item.format = info.suffix().toLower();
   item.fileHash = computeFileHash(filePath);
   item.addedAt = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+  item.updatedAt = item.addedAt;
   const QString ext = item.format;
   const bool wantsMetadata =
       (ext == "mobi" || ext == "azw" || ext == "azw3" || ext == "azw4" || ext == "prc" ||

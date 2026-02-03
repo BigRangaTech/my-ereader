@@ -28,7 +28,7 @@
 
 ## Phase 3: Sync + TTS
 - [x] LAN pairing
-- [ ] Delta sync for library/annotations
+- [x] Delta sync for library metadata + annotations
 - [x] TTS controls + playback
 
 ## Phase 4: Performance + polish
