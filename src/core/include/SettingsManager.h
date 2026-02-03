@@ -11,6 +11,9 @@ class SettingsManager : public QObject {
   Q_PROPERTY(double ttsPitch READ ttsPitch WRITE setTtsPitch NOTIFY ttsPitchChanged)
   Q_PROPERTY(double ttsVolume READ ttsVolume WRITE setTtsVolume NOTIFY ttsVolumeChanged)
   Q_PROPERTY(QString ttsVoiceKey READ ttsVoiceKey WRITE setTtsVoiceKey NOTIFY ttsVoiceKeyChanged)
+  Q_PROPERTY(bool autoLockEnabled READ autoLockEnabled WRITE setAutoLockEnabled NOTIFY autoLockEnabledChanged)
+  Q_PROPERTY(int autoLockMinutes READ autoLockMinutes WRITE setAutoLockMinutes NOTIFY autoLockMinutesChanged)
+  Q_PROPERTY(bool rememberPassphrase READ rememberPassphrase WRITE setRememberPassphrase NOTIFY rememberPassphraseChanged)
   Q_PROPERTY(int epubFontSize READ epubFontSize WRITE setEpubFontSize NOTIFY epubFontSizeChanged)
   Q_PROPERTY(double epubLineHeight READ epubLineHeight WRITE setEpubLineHeight NOTIFY epubLineHeightChanged)
   Q_PROPERTY(bool epubShowImages READ epubShowImages WRITE setEpubShowImages NOTIFY epubShowImagesChanged)
@@ -82,6 +85,9 @@ public:
   double ttsPitch() const;
   double ttsVolume() const;
   QString ttsVoiceKey() const;
+  bool autoLockEnabled() const;
+  int autoLockMinutes() const;
+  bool rememberPassphrase() const;
   int epubFontSize() const;
   double epubLineHeight() const;
   bool epubShowImages() const;
@@ -151,6 +157,9 @@ public:
   void setTtsPitch(double value);
   void setTtsVolume(double value);
   void setTtsVoiceKey(const QString &value);
+  void setAutoLockEnabled(bool value);
+  void setAutoLockMinutes(int value);
+  void setRememberPassphrase(bool value);
   void setEpubFontSize(int value);
   void setEpubLineHeight(double value);
   void setEpubShowImages(bool value);
@@ -230,6 +239,9 @@ signals:
   void ttsPitchChanged();
   void ttsVolumeChanged();
   void ttsVoiceKeyChanged();
+  void autoLockEnabledChanged();
+  void autoLockMinutesChanged();
+  void rememberPassphraseChanged();
   void epubFontSizeChanged();
   void epubLineHeightChanged();
   void epubShowImagesChanged();
@@ -308,6 +320,9 @@ private:
   double m_ttsPitch = 0.0;
   double m_ttsVolume = 1.0;
   QString m_ttsVoiceKey;
+  bool m_autoLockEnabled = true;
+  int m_autoLockMinutes = 10;
+  bool m_rememberPassphrase = true;
   int m_epubFontSize = 20;
   double m_epubLineHeight = 1.4;
   bool m_epubShowImages = true;

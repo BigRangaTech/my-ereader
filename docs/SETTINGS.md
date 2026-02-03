@@ -13,6 +13,9 @@ Settings live under `config/` at the repo root.
 - `tts/pitch` (default: 0.0) — range `-1.0` to `1.0`
 - `tts/volume` (default: 1.0) — range `0.0` to `1.0`
 - `tts/voice_key` (default: empty) — `VoiceName|locale` when set
+- `security/auto_lock_enabled` (default: true)
+- `security/auto_lock_minutes` (default: 10) — range `1` to `240`
+- `security/remember_passphrase` (default: true) — keep passphrase in memory for this session
 
 ## Sync (`config/sync.ini`)
 - `sync/enabled` (default: false)

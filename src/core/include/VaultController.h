@@ -9,6 +9,7 @@ class VaultController : public QObject {
   Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
   Q_PROPERTY(QString vaultPath READ vaultPath CONSTANT)
   Q_PROPERTY(QString dbPath READ dbPath CONSTANT)
+  Q_PROPERTY(bool keychainAvailable READ keychainAvailable CONSTANT)
   Q_PROPERTY(QObject *libraryModel READ libraryModel WRITE setLibraryModel NOTIFY libraryModelChanged)
 
 public:
@@ -21,6 +22,7 @@ public:
   QString lastError() const;
   QString vaultPath() const;
   QString dbPath() const;
+  bool keychainAvailable() const;
   QObject *libraryModel() const;
   void setLibraryModel(QObject *model);
 
@@ -28,6 +30,9 @@ public:
   Q_INVOKABLE bool unlock(const QString &passphrase);
   Q_INVOKABLE bool setupNew(const QString &passphrase);
   Q_INVOKABLE bool lock(const QString &passphrase);
+  Q_INVOKABLE QString loadStoredPassphrase();
+  Q_INVOKABLE bool storePassphrase(const QString &passphrase);
+  Q_INVOKABLE bool clearStoredPassphrase();
 
 signals:
   void stateChanged();
@@ -43,4 +48,5 @@ private:
   QString m_vaultPath;
   QString m_dbPath;
   QObject *m_libraryModel = nullptr;
+  bool m_keychainAvailable = false;
 };

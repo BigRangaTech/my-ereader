@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QSqlDatabase>
+#include <QVariantList>
 #include <QVector>
 
 #include "LibraryItem.h"
@@ -53,6 +54,8 @@ public slots:
                         const QString &text,
                         const QString &color);
   void deleteAnnotation(int annotationId, int libraryItemId);
+  QVariantList exportAnnotationSync();
+  int importAnnotationSync(const QVariantList &payload);
 
 signals:
   void openFinished(bool ok, const QString &error);
@@ -71,6 +74,7 @@ private:
   bool openDatabase(const QString &dbPath, QString *error);
   bool ensureSchema(QString *error);
   bool ensureColumn(const QString &table, const QString &column, const QString &type, QString *error);
+  bool ensureAnnotationUuids(QString *error);
   QVector<LibraryItem> fetchLibrary(QString *error);
   QVector<LibraryItem> fetchLibraryFiltered(const QString &searchQuery,
                                             const QString &sortKey,

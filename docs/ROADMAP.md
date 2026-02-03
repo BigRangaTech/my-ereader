@@ -27,9 +27,9 @@
   - [x] Extra EXTH metadata (language, page-dir, writing-mode, fixed-layout)
 
 ## Phase 3: Sync + TTS
-- [ ] LAN pairing
+- [x] LAN pairing
 - [ ] Delta sync for library/annotations
-- [ ] TTS controls + playback
+- [x] TTS controls + playback
 
 ## Phase 4: Performance + polish
 - [ ] Caching and pre-render
@@ -41,12 +41,12 @@
 - [ ] Update verification (signed tags)
 - [ ] Custom vault format + migration tooling
 - [ ] Monocypher v002 adoption:
-  - [ ] Migrate CryptoBackendMonocypher to checked APIs to harden size/pointer handling
-    - [ ] Use checked AEAD/hash/signature APIs where available
-    - [ ] Map Monocypher error codes via crypto_strerror in logs
-  - [ ] Replace any non-crypto RNG usage in security paths with crypto_random
-    - [ ] Salts, nonces, passphrase KDF inputs
-    - [ ] Add optional RNG diagnostics in debug builds
+  - [x] Migrate CryptoBackendMonocypher to checked APIs to harden size/pointer handling
+    - [x] Use checked AEAD/hash/signature APIs where available
+    - [x] Map Monocypher error codes via crypto_strerror in logs
+  - [x] Replace any non-crypto RNG usage in security paths with crypto_random
+    - [x] Salts, nonces, passphrase KDF inputs
+    - [x] Add optional RNG diagnostics in debug builds
   - [ ] Adopt SHA-256/BLAKE3 helpers where appropriate
     - [ ] BLAKE3 for fast file hashing/indexing (optional)
     - [ ] SHA-256 for security-sensitive integrity checks

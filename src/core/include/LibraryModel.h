@@ -3,6 +3,7 @@
 #include <QAbstractListModel>
 #include <QVector>
 #include <QVariant>
+#include <QVariantList>
 #include <QVariantMap>
 
 #include "LibraryItem.h"
@@ -66,6 +67,8 @@ public:
                                         bool updateCollection);
   Q_INVOKABLE bool removeBooks(const QVariantList &ids);
   Q_INVOKABLE QVariantMap get(int index) const;
+  Q_INVOKABLE QVariantList exportAnnotationSync() const;
+  Q_INVOKABLE int importAnnotationSync(const QVariantList &payload);
 
   QString searchQuery() const;
   QString sortKey() const;

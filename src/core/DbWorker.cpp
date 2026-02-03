@@ -6,6 +6,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QUuid>
 #include <QStringList>
 #include <QMetaType>
 #include <QSqlDatabase>
@@ -410,8 +411,10 @@ void DbWorker::addAnnotation(int libraryItemId,
     return;
   }
   QSqlQuery query(m_db);
-  query.prepare("INSERT INTO annotations (library_item_id, locator, type, text, color, created_at) "
-                "VALUES (?, ?, ?, ?, ?, ?)");
+  const QString uuid = QUuid::createUuid().toString(QUuid::WithoutBraces);
+  query.prepare("INSERT INTO annotations (uuid, library_item_id, locator, type, text, color, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)");
+  query.addBindValue(uuid);
   query.addBindValue(libraryItemId);
   query.addBindValue(locator);
   query.addBindValue(type);
@@ -474,6 +477,91 @@ void DbWorker::deleteAnnotation(int annotationId, int libraryItemId) {
   emit deleteAnnotationFinished(true, "");
   loadAnnotations(libraryItemId);
   emit annotationsChanged();
+}
+
+QVariantList DbWorker::exportAnnotationSync() {
+  QVariantList list;
+  if (!m_db.isOpen()) {
+    return list;
+  }
+  QSqlQuery query(m_db);
+  query.prepare(
+      "SELECT library_items.file_hash, annotations.uuid, annotations.locator, annotations.type, "
+      "annotations.text, annotations.color, annotations.created_at "
+      "FROM annotations "
+      "JOIN library_items ON annotations.library_item_id = library_items.id "
+      "WHERE library_items.file_hash IS NOT NULL AND library_items.file_hash != ''");
+  if (!query.exec()) {
+    return list;
+  }
+  while (query.next()) {
+    QVariantMap item;
+    item.insert("file_hash", query.value(0).toString());
+    item.insert("uuid", query.value(1).toString());
+    item.insert("locator", query.value(2).toString());
+    item.insert("type", query.value(3).toString());
+    item.insert("text", query.value(4).toString());
+    item.insert("color", query.value(5).toString());
+    item.insert("created_at", query.value(6).toString());
+    list.append(item);
+  }
+  return list;
+}
+
+int DbWorker::importAnnotationSync(const QVariantList &payload) {
+  if (!m_db.isOpen() || payload.isEmpty()) {
+    return 0;
+  }
+  int added = 0;
+  QSqlQuery findItem(m_db);
+  QSqlQuery check(m_db);
+  QSqlQuery insert(m_db);
+  findItem.prepare("SELECT id FROM library_items WHERE file_hash = ? LIMIT 1");
+  check.prepare("SELECT id FROM annotations WHERE uuid = ? LIMIT 1");
+  insert.prepare("INSERT INTO annotations (uuid, library_item_id, locator, type, text, color, created_at) "
+                 "VALUES (?, ?, ?, ?, ?, ?, ?)");
+  for (const auto &entry : payload) {
+    const QVariantMap map = entry.toMap();
+    const QString fileHash = map.value("file_hash").toString();
+    if (fileHash.isEmpty()) {
+      continue;
+    }
+    findItem.bindValue(0, fileHash);
+    if (!findItem.exec() || !findItem.next()) {
+      findItem.finish();
+      continue;
+    }
+    const int libraryItemId = findItem.value(0).toInt();
+    findItem.finish();
+    QString uuid = map.value("uuid").toString();
+    if (uuid.isEmpty()) {
+      uuid = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    }
+    check.bindValue(0, uuid);
+    if (check.exec() && check.next()) {
+      check.finish();
+      continue;
+    }
+    check.finish();
+    insert.addBindValue(uuid);
+    insert.addBindValue(libraryItemId);
+    insert.addBindValue(map.value("locator").toString());
+    insert.addBindValue(map.value("type").toString());
+    insert.addBindValue(map.value("text").toString());
+    insert.addBindValue(map.value("color").toString());
+    const QString createdAt = map.value("created_at").toString();
+    insert.addBindValue(createdAt.isEmpty()
+                            ? QDateTime::currentDateTimeUtc().toString(Qt::ISODate)
+                            : createdAt);
+    if (insert.exec()) {
+      added++;
+    }
+    insert.finish();
+  }
+  if (added > 0) {
+    emit annotationsChanged();
+  }
+  return added;
 }
 
 bool DbWorker::openDatabase(const QString &dbPath, QString *error) {
@@ -552,6 +640,12 @@ bool DbWorker::ensureSchema(QString *error) {
   if (!ensureColumn("library_items", "cover_path", "TEXT", error)) {
     return false;
   }
+  if (!ensureColumn("annotations", "uuid", "TEXT", error)) {
+    return false;
+  }
+  if (!ensureAnnotationUuids(error)) {
+    return false;
+  }
   return true;
 }
 
@@ -582,6 +676,31 @@ bool DbWorker::ensureColumn(const QString &table,
       *error = alter.lastError().text();
     }
     return false;
+  }
+  return true;
+}
+
+bool DbWorker::ensureAnnotationUuids(QString *error) {
+  QSqlQuery query(m_db);
+  if (!query.exec("SELECT id FROM annotations WHERE uuid IS NULL OR uuid = ''")) {
+    if (error) {
+      *error = query.lastError().text();
+    }
+    return false;
+  }
+  while (query.next()) {
+    const int id = query.value(0).toInt();
+    const QString uuid = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    QSqlQuery update(m_db);
+    update.prepare("UPDATE annotations SET uuid = ? WHERE id = ?");
+    update.addBindValue(uuid);
+    update.addBindValue(id);
+    if (!update.exec()) {
+      if (error) {
+        *error = update.lastError().text();
+      }
+      return false;
+    }
   }
   return true;
 }

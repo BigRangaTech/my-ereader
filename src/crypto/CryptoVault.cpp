@@ -3,11 +3,34 @@
 #include <QDataStream>
 #include <QFile>
 
+#include <cstring>
+
 #include "include/CryptoBackend.h"
+
+#ifdef HAVE_MONOCYPHER
+extern "C" {
+#include "monocypher.h"
+}
+#endif
 
 namespace {
 constexpr char kMagic[] = "MYEVAULT";
 constexpr quint8 kVersion = 1;
+
+void wipeBytes(QByteArray *buffer) {
+  if (!buffer || buffer->isEmpty()) {
+    return;
+  }
+#ifdef HAVE_MONOCYPHER
+  crypto_wipe(buffer->data(), static_cast<size_t>(buffer->size()));
+#else
+  volatile char *ptr = buffer->data();
+  const int size = buffer->size();
+  for (int i = 0; i < size; ++i) {
+    ptr[i] = 0;
+  }
+#endif
+}
 }
 
 CryptoVault::CryptoVault(std::unique_ptr<CryptoBackend> backend)
@@ -65,6 +88,18 @@ bool CryptoVault::encryptFromBytes(const QString &outputPath,
   }
   const QByteArray salt = m_backend->generateSalt();
   const QByteArray nonce = m_backend->generateNonce();
+  if (salt.size() != m_backend->saltBytes()) {
+    if (error) {
+      *error = "Failed to generate salt";
+    }
+    return false;
+  }
+  if (nonce.size() != m_backend->nonceBytes()) {
+    if (error) {
+      *error = "Failed to generate nonce";
+    }
+    return false;
+  }
   const CryptoKdfParams params = m_backend->defaultKdfParams();
 
   QByteArray key;
@@ -73,6 +108,7 @@ bool CryptoVault::encryptFromBytes(const QString &outputPath,
     if (error) {
       *error = localError.isEmpty() ? "Key derivation failed" : localError;
     }
+    wipeBytes(&key);
     return false;
   }
 
@@ -81,10 +117,12 @@ bool CryptoVault::encryptFromBytes(const QString &outputPath,
     if (error) {
       *error = localError.isEmpty() ? "Encryption failed" : localError;
     }
+    wipeBytes(&key);
     return false;
   }
-
-  return writeVault(outputPath, salt, nonce, ciphertext, params, error);
+  const bool ok = writeVault(outputPath, salt, nonce, ciphertext, params, error);
+  wipeBytes(&key);
+  return ok;
 }
 
 bool CryptoVault::decryptToBytes(const QString &inputPath,
@@ -112,6 +150,7 @@ bool CryptoVault::decryptToBytes(const QString &inputPath,
     if (error) {
       *error = localError.isEmpty() ? "Key derivation failed" : localError;
     }
+    wipeBytes(&key);
     return false;
   }
 
@@ -120,8 +159,10 @@ bool CryptoVault::decryptToBytes(const QString &inputPath,
     if (error) {
       *error = localError.isEmpty() ? "Decryption failed" : localError;
     }
+    wipeBytes(&key);
     return false;
   }
+  wipeBytes(&key);
 
   if (outPlaintext) {
     *outPlaintext = plaintext;

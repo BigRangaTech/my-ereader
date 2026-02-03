@@ -63,6 +63,22 @@ ApplicationWindow {
       vault.lock(sessionPassphrase)
     }
   }
+  onActiveFocusItemChanged: markActivity()
+  Keys.onPressed: markActivity()
+  Keys.onReleased: markActivity()
+  onActiveChanged: {
+    if (!active && vault.state === VaultController.Unlocked && sessionPassphrase.length > 0) {
+      if (vault.lock(sessionPassphrase)) {
+        autoUnlockArmed = settings.rememberPassphrase
+        if (!settings.rememberPassphrase) {
+          sessionPassphrase = ""
+        }
+      }
+    }
+    if (active) {
+      markActivity()
+    }
+  }
 
   QtObject {
     id: theme
@@ -81,6 +97,44 @@ ApplicationWindow {
   property int textSelectionStart: -1
   property int textSelectionEnd: -1
   property string textSelectionText: ""
+  property double lastActivityMs: Date.now()
+  property bool autoUnlockArmed: false
+
+  function markActivity() {
+    lastActivityMs = Date.now()
+    if (autoUnlockArmed && vault.state === VaultController.Locked &&
+        sessionPassphrase.length > 0 && settings.rememberPassphrase) {
+      if (vault.unlock(sessionPassphrase)) {
+        autoUnlockArmed = false
+      }
+    }
+  }
+
+  function passphraseScore(value) {
+    if (!value) return 0
+    var score = 0
+    if (value.length >= 10) score += 1
+    if (value.length >= 14) score += 1
+    if (/[a-z]/.test(value)) score += 1
+    if (/[A-Z]/.test(value)) score += 1
+    if (/[0-9]/.test(value)) score += 1
+    if (/[^A-Za-z0-9]/.test(value)) score += 1
+    return score
+  }
+
+  function passphraseStrengthLabel(value) {
+    const score = passphraseScore(value)
+    if (score <= 2) return "Weak"
+    if (score <= 4) return "Ok"
+    return "Strong"
+  }
+
+  function passphraseStrengthColor(value) {
+    const score = passphraseScore(value)
+    if (score <= 2) return "#f26d6d"
+    if (score <= 4) return "#f3c969"
+    return "#7fe39a"
+  }
 
   function selectionRange() {
     if (textSelectionStart < 0 || textSelectionEnd < 0 || textSelectionStart === textSelectionEnd) {
@@ -133,6 +187,51 @@ ApplicationWindow {
       return html
     }
     return "<div style=\"line-height:" + lh + ";\">" + html + "</div>"
+  }
+
+  MouseArea {
+    anchors.fill: parent
+    hoverEnabled: true
+    acceptedButtons: Qt.AllButtons
+    propagateComposedEvents: true
+    onPressed: {
+      root.markActivity()
+      mouse.accepted = false
+    }
+    onReleased: {
+      root.markActivity()
+      mouse.accepted = false
+    }
+    onPositionChanged: {
+      root.markActivity()
+      mouse.accepted = false
+    }
+  }
+
+  WheelHandler {
+    onWheel: root.markActivity()
+  }
+
+  Timer {
+    id: autoLockTimer
+    interval: 15000
+    repeat: true
+    running: true
+    onTriggered: {
+      if (!settings.autoLockEnabled) return
+      if (vault.state !== VaultController.Unlocked) return
+      if (sessionPassphrase.length === 0) return
+      const limitMs = settings.autoLockMinutes * 60 * 1000
+      if (limitMs <= 0) return
+      if (Date.now() - lastActivityMs >= limitMs) {
+        if (vault.lock(sessionPassphrase)) {
+          autoUnlockArmed = settings.rememberPassphrase
+          if (!settings.rememberPassphrase) {
+            sessionPassphrase = ""
+          }
+        }
+      }
+    }
   }
 
   function applyHighlightsToHtml(html, ranges) {
@@ -290,6 +389,7 @@ ApplicationWindow {
 
   SyncManager {
     id: syncManager
+    libraryModel: libraryModel
   }
 
   TtsController {
@@ -464,6 +564,17 @@ ApplicationWindow {
 
   Component.onCompleted: {
     vault.initialize()
+    if (!vault.keychainAvailable && settings.rememberPassphrase) {
+      settings.rememberPassphrase = false
+    }
+    if (settings.rememberPassphrase && vault.keychainAvailable) {
+      const stored = vault.loadStoredPassphrase()
+      if (stored && stored.length > 0) {
+        sessionPassphrase = stored
+        autoUnlockArmed = true
+        markActivity()
+      }
+    }
     ttsBackend.rate = settings.ttsRate
     ttsBackend.pitch = settings.ttsPitch
     ttsBackend.volume = settings.ttsVolume
@@ -491,6 +602,19 @@ ApplicationWindow {
         tts.setQmlVoiceKey(settings.ttsVoiceKey)
       }
     }
+    function onRememberPassphraseChanged() {
+      if (!vault.keychainAvailable) {
+        settings.rememberPassphrase = false
+        return
+      }
+      if (settings.rememberPassphrase) {
+        if (sessionPassphrase.length > 0) {
+          vault.storePassphrase(sessionPassphrase)
+        }
+      } else {
+        vault.clearStoredPassphrase()
+      }
+    }
   }
 
   Connections {
@@ -513,6 +637,9 @@ ApplicationWindow {
     function onStateChanged() {
       if (vault.state === VaultController.Locked) {
         annotationModel.attachDatabase("")
+        if (autoUnlockArmed) {
+          return
+        }
         if (!unlockDialog.visible) {
           unlockDialog.open()
         }
@@ -1298,8 +1425,13 @@ ApplicationWindow {
     }
 
     onAccepted: {
-      if (passField.text.length < 6) {
-        errorText = "Passphrase too short"
+      const strength = passphraseScore(passField.text)
+      if (passField.text.length < 10) {
+        errorText = "Passphrase must be at least 10 characters"
+        return
+      }
+      if (strength <= 2) {
+        errorText = "Passphrase is too weak"
         return
       }
       if (passField.text !== confirmField.text) {
@@ -1308,6 +1440,14 @@ ApplicationWindow {
       }
       if (vault.setupNew(passField.text)) {
         sessionPassphrase = passField.text
+        autoUnlockArmed = false
+        if (vault.unlock(passField.text)) {
+          markActivity()
+        }
+        if (settings.rememberPassphrase && vault.keychainAvailable) {
+          vault.storePassphrase(passField.text)
+        }
+        markActivity()
         setupDialog.close()
       } else {
         errorText = vault.lastError
@@ -1334,12 +1474,40 @@ ApplicationWindow {
           id: passField
           echoMode: TextInput.Password
           placeholderText: "Passphrase"
+          onTextChanged: setupDialog.errorText = ""
         }
 
         TextField {
           id: confirmField
           echoMode: TextInput.Password
           placeholderText: "Confirm passphrase"
+          onTextChanged: setupDialog.errorText = ""
+        }
+
+        RowLayout {
+          Layout.fillWidth: true
+          spacing: 8
+
+          Rectangle {
+            Layout.fillWidth: true
+            height: 8
+            radius: 4
+            color: theme.panelHighlight
+
+            Rectangle {
+              width: parent.width * Math.min(1, passphraseScore(passField.text) / 6)
+              height: parent.height
+              radius: 4
+              color: passphraseStrengthColor(passField.text)
+            }
+          }
+
+          Text {
+            text: passphraseStrengthLabel(passField.text)
+            color: passphraseStrengthColor(passField.text)
+            font.pixelSize: 12
+            font.family: root.uiFont
+          }
         }
 
         Text {
@@ -1371,6 +1539,11 @@ ApplicationWindow {
     onAccepted: {
       if (vault.unlock(unlockField.text)) {
         sessionPassphrase = unlockField.text
+        autoUnlockArmed = false
+        markActivity()
+        if (settings.rememberPassphrase && vault.keychainAvailable) {
+          vault.storePassphrase(unlockField.text)
+        }
         unlockDialog.close()
       } else {
         errorText = vault.lastError
@@ -1427,7 +1600,10 @@ ApplicationWindow {
 
     onAccepted: {
       if (vault.lock(lockField.text)) {
-        sessionPassphrase = ""
+        autoUnlockArmed = false
+        if (!settings.rememberPassphrase) {
+          sessionPassphrase = ""
+        }
         lockDialog.close()
       } else {
         errorText = vault.lastError
@@ -2183,8 +2359,12 @@ ApplicationWindow {
               visible: vault.state === VaultController.Unlocked
               onClicked: {
                 if (sessionPassphrase.length > 0) {
-                  vault.lock(sessionPassphrase)
-                  sessionPassphrase = ""
+                  if (vault.lock(sessionPassphrase)) {
+                    autoUnlockArmed = false
+                    if (!settings.rememberPassphrase) {
+                      sessionPassphrase = ""
+                    }
+                  }
                 } else {
                   lockDialog.open()
                 }
@@ -2744,8 +2924,12 @@ ApplicationWindow {
               visible: vault.state === VaultController.Unlocked
               onClicked: {
                 if (sessionPassphrase.length > 0) {
-                  vault.lock(sessionPassphrase)
-                  sessionPassphrase = ""
+                  if (vault.lock(sessionPassphrase)) {
+                    autoUnlockArmed = false
+                    if (!settings.rememberPassphrase) {
+                      sessionPassphrase = ""
+                    }
+                  }
                   reader.close()
                   stack.pop()
                 } else {
@@ -3468,8 +3652,127 @@ ApplicationWindow {
                     }
                   }
                 }
+
+                Button {
+                  text: "Sync"
+                  font.family: root.uiFont
+                  visible: modelData.paired
+                  enabled: syncManager.enabled
+                  onClicked: syncManager.syncNow(modelData.id)
+                }
               }
             }
+          }
+
+          Rectangle {
+            Layout.fillWidth: true
+            height: 1
+            color: theme.panelHighlight
+          }
+
+          Text {
+            text: "Security"
+            color: theme.textPrimary
+            font.pixelSize: 20
+            font.family: root.uiFont
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Auto-lock"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            CheckBox {
+              checked: settings.autoLockEnabled
+              onToggled: settings.autoLockEnabled = checked
+            }
+
+            Text {
+              text: settings.autoLockEnabled ? "Enabled" : "Disabled"
+              color: theme.textMuted
+              font.pixelSize: 12
+              font.family: root.uiFont
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Auto-lock after"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 1
+              to: 240
+              stepSize: 1
+              value: settings.autoLockMinutes
+              enabled: settings.autoLockEnabled
+              onMoved: settings.autoLockMinutes = Math.round(value)
+            }
+
+            SpinBox {
+              from: 1
+              to: 240
+              value: settings.autoLockMinutes
+              editable: true
+              enabled: settings.autoLockEnabled
+              onValueModified: settings.autoLockMinutes = value
+            }
+
+            Text {
+              text: "min"
+              color: theme.textMuted
+              font.pixelSize: 12
+              font.family: root.uiFont
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Remember passphrase"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            CheckBox {
+              checked: settings.rememberPassphrase
+              enabled: vault.keychainAvailable
+              onToggled: settings.rememberPassphrase = checked
+            }
+
+            Text {
+              text: settings.rememberPassphrase ? "Stored in keychain" : "Prompt each time"
+              color: theme.textMuted
+              font.pixelSize: 12
+              font.family: root.uiFont
+            }
+          }
+
+          Text {
+            visible: !vault.keychainAvailable
+            text: "Keychain unavailable — persistent passphrase storage disabled."
+            color: theme.textMuted
+            font.pixelSize: 12
+            font.family: root.uiFont
           }
 
           Rectangle {

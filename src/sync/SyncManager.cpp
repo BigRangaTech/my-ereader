@@ -1,5 +1,6 @@
 #include "include/SyncManager.h"
 #include "../core/include/AppPaths.h"
+#include "../core/include/LibraryModel.h"
 
 #include <QCryptographicHash>
 #include <QDateTime>
@@ -7,6 +8,7 @@
 #include <QFileInfo>
 #include <QHostAddress>
 #include <QHostInfo>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QRandomGenerator>
@@ -97,6 +99,10 @@ QVariantList SyncManager::devices() const {
   return list;
 }
 
+QObject *SyncManager::libraryModel() const {
+  return m_libraryModel;
+}
+
 void SyncManager::setDeviceName(const QString &name) {
   const QString trimmed = name.trimmed();
   if (trimmed.isEmpty() || m_deviceName == trimmed) {
@@ -145,6 +151,14 @@ void SyncManager::setListenPort(int port) {
     m_server->close();
   }
   ensureServer();
+}
+
+void SyncManager::setLibraryModel(QObject *model) {
+  if (m_libraryModel == model) {
+    return;
+  }
+  m_libraryModel = qobject_cast<LibraryModel *>(model);
+  emit libraryModelChanged();
 }
 
 void SyncManager::startDiscovery() {
@@ -246,6 +260,62 @@ void SyncManager::unpair(const QString &deviceId) {
   setStatus("Unpaired");
 }
 
+void SyncManager::syncNow(const QString &deviceId) {
+  if (!m_enabled) {
+    setStatus("Sync disabled");
+    return;
+  }
+  if (!m_libraryModel) {
+    setStatus("Library unavailable");
+    return;
+  }
+  const QString trimmed = deviceId.trimmed();
+  if (trimmed.isEmpty() || !m_paired.contains(trimmed)) {
+    setStatus("Device not paired");
+    return;
+  }
+  const auto info = m_paired.value(trimmed);
+  auto *socket = new QTcpSocket(this);
+  connect(socket, &QTcpSocket::connected, this, [this, socket, info]() {
+    const QVariantList annotations = annotationPayload();
+    QJsonObject payload{
+        {"type", "sync_request"},
+        {"id", m_deviceId},
+        {"token", info.token},
+        {"annotations", QJsonDocument::fromVariant(annotations).array()},
+    };
+    socket->write(QJsonDocument(payload).toJson(QJsonDocument::Compact));
+    setStatus("Syncing with " + info.name);
+  });
+  connect(socket, &QTcpSocket::readyRead, this, [this, socket, info]() {
+    const QByteArray data = socket->readAll();
+    const auto doc = QJsonDocument::fromJson(data);
+    if (!doc.isObject()) {
+      setStatus("Sync failed");
+      socket->disconnectFromHost();
+      socket->deleteLater();
+      return;
+    }
+    const auto obj = doc.object();
+    if (obj.value("type").toString() != "sync_response") {
+      setStatus("Sync failed");
+      socket->disconnectFromHost();
+      socket->deleteLater();
+      return;
+    }
+    const QJsonArray annotations = obj.value("annotations").toArray();
+    const int added = applyAnnotationPayload(annotations.toVariantList());
+    setStatus(QString("Synced with %1 (%2 new)").arg(info.name).arg(added));
+    socket->disconnectFromHost();
+    socket->deleteLater();
+  });
+  connect(socket, &QTcpSocket::errorOccurred, this, [this, socket](QAbstractSocket::SocketError) {
+    setStatus("Sync failed");
+    socket->deleteLater();
+  });
+  socket->connectToHost(info.address, info.port);
+}
+
 void SyncManager::setStatus(const QString &status) {
   if (m_status == status) {
     return;
@@ -327,43 +397,67 @@ void SyncManager::ensureServer() {
             return;
           }
           const auto obj = doc.object();
-          if (obj.value("type").toString() != "pair_request") {
-            socket->disconnectFromHost();
-            socket->deleteLater();
-            return;
-          }
-          const QString pin = obj.value("pin").toString();
-          const QString remoteId = obj.value("id").toString();
-          const QString remoteName = obj.value("name").toString();
-          const int remotePort = obj.value("port").toInt();
-          if (pin.isEmpty() || pin != m_pin) {
-            QJsonObject resp{{"type", "pair_reject"}};
+          const QString type = obj.value("type").toString();
+          if (type == "pair_request") {
+            const QString pin = obj.value("pin").toString();
+            const QString remoteId = obj.value("id").toString();
+            const QString remoteName = obj.value("name").toString();
+            const int remotePort = obj.value("port").toInt();
+            if (pin.isEmpty() || pin != m_pin) {
+              QJsonObject resp{{"type", "pair_reject"}};
+              socket->write(QJsonDocument(resp).toJson(QJsonDocument::Compact));
+              socket->disconnectFromHost();
+              socket->deleteLater();
+              return;
+            }
+            const QString token = QUuid::createUuid().toString(QUuid::WithoutBraces);
+            PairedInfo info;
+            info.id = remoteId;
+            info.name = remoteName;
+            info.address = socket->peerAddress().toString();
+            info.port = remotePort;
+            info.token = token;
+            m_paired.insert(remoteId, info);
+            savePairedDevices();
+            updateDevice(remoteId, remoteName, info.address, remotePort, true);
+            QJsonObject resp{
+                {"type", "pair_ok"},
+                {"id", m_deviceId},
+                {"name", m_deviceName},
+                {"address", socket->localAddress().toString()},
+                {"port", m_listenPort},
+                {"token", token}};
             socket->write(QJsonDocument(resp).toJson(QJsonDocument::Compact));
             socket->disconnectFromHost();
             socket->deleteLater();
+            setStatus("Paired with " + remoteName);
             return;
           }
-          const QString token = QUuid::createUuid().toString(QUuid::WithoutBraces);
-          PairedInfo info;
-          info.id = remoteId;
-          info.name = remoteName;
-          info.address = socket->peerAddress().toString();
-          info.port = remotePort;
-          info.token = token;
-          m_paired.insert(remoteId, info);
-          savePairedDevices();
-          updateDevice(remoteId, remoteName, info.address, remotePort, true);
-          QJsonObject resp{
-              {"type", "pair_ok"},
-              {"id", m_deviceId},
-              {"name", m_deviceName},
-              {"address", socket->localAddress().toString()},
-              {"port", m_listenPort},
-              {"token", token}};
-          socket->write(QJsonDocument(resp).toJson(QJsonDocument::Compact));
+          if (type == "sync_request") {
+            const QString remoteId = obj.value("id").toString();
+            const QString token = obj.value("token").toString();
+            if (remoteId.isEmpty() || !m_paired.contains(remoteId) ||
+                m_paired.value(remoteId).token != token) {
+              QJsonObject resp{{"type", "sync_error"}, {"error", "unauthorized"}};
+              socket->write(QJsonDocument(resp).toJson(QJsonDocument::Compact));
+              socket->disconnectFromHost();
+              socket->deleteLater();
+              return;
+            }
+            const QJsonArray annotations = obj.value("annotations").toArray();
+            const int added = applyAnnotationPayload(annotations.toVariantList());
+            QJsonObject resp{
+                {"type", "sync_response"},
+                {"annotations", QJsonDocument::fromVariant(annotationPayload()).array()},
+                {"added", added}};
+            socket->write(QJsonDocument(resp).toJson(QJsonDocument::Compact));
+            socket->disconnectFromHost();
+            socket->deleteLater();
+            setStatus("Synced with " + m_paired.value(remoteId).name);
+            return;
+          }
           socket->disconnectFromHost();
           socket->deleteLater();
-          setStatus("Paired with " + remoteName);
         });
       }
     });
@@ -512,4 +606,18 @@ void SyncManager::setDiscovering(bool discovering) {
   }
   m_discovering = discovering;
   emit discoveringChanged();
+}
+
+QVariantList SyncManager::annotationPayload() const {
+  if (!m_libraryModel) {
+    return {};
+  }
+  return m_libraryModel->exportAnnotationSync();
+}
+
+int SyncManager::applyAnnotationPayload(const QVariantList &payload) {
+  if (!m_libraryModel) {
+    return 0;
+  }
+  return m_libraryModel->importAnnotationSync(payload);
 }

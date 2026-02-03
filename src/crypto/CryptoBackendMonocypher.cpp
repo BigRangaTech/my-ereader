@@ -1,7 +1,7 @@
 #include "include/CryptoBackend.h"
 
 #ifdef HAVE_MONOCYPHER
-#include <QRandomGenerator>
+#include <QDebug>
 #include <vector>
 
 #include <cstring>
@@ -37,21 +37,51 @@ quint32 blocksFromBytes(quint64 memBytes) {
   return static_cast<quint32>(blocks);
 }
 
+QString errorString(int code) {
+#if defined(MONOCYPHER_STRERROR) && MONOCYPHER_STRERROR
+  const char *message = crypto_strerror(code);
+  if (message) {
+    return QString::fromUtf8(message);
+  }
+#endif
+  switch (code) {
+    case CRYPTO_OK:
+      return "ok";
+    case CRYPTO_ERR_NULL:
+      return "null pointer";
+    case CRYPTO_ERR_SIZE:
+      return "invalid size";
+    case CRYPTO_ERR_OVERFLOW:
+      return "size overflow";
+    case CRYPTO_ERR_AUTH:
+      return "authentication failed";
+    case CRYPTO_ERR_CONFIG:
+      return "invalid config";
+    default:
+      return "unknown error";
+  }
+}
+
 QByteArray randomBytes(int size) {
   QByteArray data;
+  if (size <= 0) {
+    return data;
+  }
   data.resize(size);
-  auto *generator = QRandomGenerator::system();
-  int offset = 0;
-  while (offset + 4 <= data.size()) {
-    quint32 chunk = generator->generate();
-    memcpy(data.data() + offset, &chunk, sizeof(chunk));
-    offset += 4;
+  const int rc = crypto_random(reinterpret_cast<uint8_t *>(data.data()),
+                               static_cast<size_t>(data.size()));
+  if (rc == CRYPTO_OK) {
+    return data;
   }
-  if (offset < data.size()) {
-    quint32 chunk = generator->generate();
-    memcpy(data.data() + offset, &chunk, static_cast<size_t>(data.size() - offset));
-  }
-  return data;
+
+#if defined(MONOCYPHER_RNG_DIAGNOSTICS) && MONOCYPHER_RNG_DIAGNOSTICS
+  qWarning() << "Monocypher RNG failed" << rc << errorString(rc)
+             << "last_error" << crypto_random_last_error();
+#else
+  qWarning() << "Monocypher RNG failed" << rc << errorString(rc);
+#endif
+
+  return {};
 }
 }
 
@@ -86,7 +116,7 @@ public:
       return false;
     }
 
-    const QByteArray passUtf8 = passphrase.toUtf8();
+    QByteArray passUtf8 = passphrase.toUtf8();
     crypto_argon2_config config;
     config.algorithm = CRYPTO_ARGON2_ID;
     config.nb_lanes = kDefaultLanes;
@@ -104,12 +134,22 @@ public:
 
     QByteArray key;
     key.resize(kKeyBytes);
-    crypto_argon2(reinterpret_cast<uint8_t *>(key.data()),
-                  static_cast<uint32_t>(key.size()),
-                  workArea.data(),
-                  config,
-                  inputs,
-                  crypto_argon2_no_extras);
+    const int rc = crypto_argon2_checked(reinterpret_cast<uint8_t *>(key.data()),
+                                         static_cast<uint32_t>(key.size()),
+                                         workArea.data(),
+                                         config,
+                                         inputs,
+                                         crypto_argon2_no_extras);
+    crypto_wipe(workArea.data(), workArea.size() * sizeof(uint64_t));
+    crypto_wipe(passUtf8.data(), static_cast<size_t>(passUtf8.size()));
+    if (rc != CRYPTO_OK) {
+      if (error) {
+        *error = QString("Argon2id failed: %1").arg(errorString(rc));
+      }
+      qWarning() << "Monocypher Argon2id failed" << rc << errorString(rc);
+      crypto_wipe(key.data(), static_cast<size_t>(key.size()));
+      return false;
+    }
 
     if (outKey) {
       *outKey = key;
@@ -134,14 +174,21 @@ public:
     uint8_t *mac = reinterpret_cast<uint8_t *>(cipher.data());
     uint8_t *cipherText = reinterpret_cast<uint8_t *>(cipher.data() + kMacBytes);
 
-    crypto_aead_lock(cipherText,
-                     mac,
-                     reinterpret_cast<const uint8_t *>(key.constData()),
-                     reinterpret_cast<const uint8_t *>(nonce.constData()),
-                     nullptr,
-                     0,
-                     reinterpret_cast<const uint8_t *>(plaintext.constData()),
-                     static_cast<size_t>(plaintext.size()));
+    const int rc = crypto_aead_lock_checked(cipherText,
+                                            mac,
+                                            reinterpret_cast<const uint8_t *>(key.constData()),
+                                            reinterpret_cast<const uint8_t *>(nonce.constData()),
+                                            nullptr,
+                                            0,
+                                            reinterpret_cast<const uint8_t *>(plaintext.constData()),
+                                            static_cast<size_t>(plaintext.size()));
+    if (rc != CRYPTO_OK) {
+      if (error) {
+        *error = QString("Encrypt failed: %1").arg(errorString(rc));
+      }
+      qWarning() << "Monocypher AEAD lock failed" << rc << errorString(rc);
+      return false;
+    }
 
     if (outCiphertext) {
       *outCiphertext = cipher;
@@ -173,18 +220,19 @@ public:
 
     QByteArray plain;
     plain.resize(static_cast<int>(cipherSize));
-    const int ok = crypto_aead_unlock(reinterpret_cast<uint8_t *>(plain.data()),
-                                      mac,
-                                      reinterpret_cast<const uint8_t *>(key.constData()),
-                                      reinterpret_cast<const uint8_t *>(nonce.constData()),
-                                      nullptr,
-                                      0,
-                                      cipherText,
-                                      cipherSize);
-    if (ok != 0) {
+    const int rc = crypto_aead_unlock_safe_checked(reinterpret_cast<uint8_t *>(plain.data()),
+                                                   mac,
+                                                   reinterpret_cast<const uint8_t *>(key.constData()),
+                                                   reinterpret_cast<const uint8_t *>(nonce.constData()),
+                                                   nullptr,
+                                                   0,
+                                                   cipherText,
+                                                   cipherSize);
+    if (rc != CRYPTO_OK) {
       if (error) {
-        *error = "Decryption failed";
+        *error = QString("Decryption failed: %1").arg(errorString(rc));
       }
+      qWarning() << "Monocypher AEAD unlock failed" << rc << errorString(rc);
       return false;
     }
 

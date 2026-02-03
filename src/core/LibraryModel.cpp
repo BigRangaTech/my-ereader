@@ -463,6 +463,26 @@ QVariantMap LibraryModel::get(int index) const {
   return map;
 }
 
+QVariantList LibraryModel::exportAnnotationSync() const {
+  QVariantList payload;
+  QMetaObject::invokeMethod(dbWorker(), "exportAnnotationSync",
+                            Qt::BlockingQueuedConnection,
+                            Q_RETURN_ARG(QVariantList, payload));
+  return payload;
+}
+
+int LibraryModel::importAnnotationSync(const QVariantList &payload) {
+  int added = 0;
+  QMetaObject::invokeMethod(dbWorker(), "importAnnotationSync",
+                            Qt::BlockingQueuedConnection,
+                            Q_RETURN_ARG(int, added),
+                            Q_ARG(QVariantList, payload));
+  if (added > 0) {
+    QMetaObject::invokeMethod(dbWorker(), "loadLibrary", Qt::QueuedConnection);
+  }
+  return added;
+}
+
 bool LibraryModel::ready() const { return m_ready; }
 
 int LibraryModel::count() const { return m_items.size(); }

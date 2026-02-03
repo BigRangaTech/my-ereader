@@ -13,6 +13,8 @@ if (ENABLE_MONOCYPHER)
   target_sources(crypto PRIVATE ../../third_party/monocypher/src/monocypher.c)
   target_include_directories(crypto PRIVATE ../../third_party/monocypher/src)
   target_compile_definitions(crypto PUBLIC HAVE_MONOCYPHER=1)
+  target_compile_definitions(crypto PRIVATE MONOCYPHER_STRERROR=1)
+  target_compile_definitions(crypto PRIVATE $<$<CONFIG:Debug>:MONOCYPHER_RNG_DIAGNOSTICS=1>)
 endif()
 
 option(ENABLE_LIBSODIUM "Enable libsodium crypto backend" ON)

@@ -9,6 +9,8 @@
 - Encryption at rest for the library database and annotation content
   - Key derived from a user passphrase (KDF with strong parameters)
   - No cloud key storage; keys stay local to the device
+  - Monocypher checked APIs with explicit error handling
+  - OS-backed RNG via Monocypher for salts/nonces
 - Network defaults
   - Sync is off by default
   - LAN-only discovery and pairing
@@ -29,6 +31,7 @@
 - Use a memory-hard KDF (Argon2id or scrypt) with device-tuned parameters
 - Store only a verifier; never store the raw passphrase
 - Keep decrypted keys in memory only for the active session
+- Optional: store passphrase in OS keychain for auto-unlock
 - Provide a manual lock action and auto-lock after inactivity
 
 ## Notes

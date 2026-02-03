@@ -7,6 +7,7 @@
 #include <QDebug>
 
 #include "LibraryModel.h"
+#include "KeychainStore.h"
 
 namespace {
 QString appDataDir() {
@@ -18,6 +19,8 @@ VaultController::VaultController(QObject *parent) : QObject(parent) {
   const QString base = appDataDir();
   m_vaultPath = QDir(base).filePath("library.vault");
   m_dbPath = ":memory:";
+  KeychainStore store;
+  m_keychainAvailable = store.isAvailable();
 }
 
 VaultController::State VaultController::state() const { return m_state; }
@@ -27,6 +30,8 @@ QString VaultController::lastError() const { return m_lastError; }
 QString VaultController::vaultPath() const { return m_vaultPath; }
 
 QString VaultController::dbPath() const { return m_dbPath; }
+
+bool VaultController::keychainAvailable() const { return m_keychainAvailable; }
 
 QObject *VaultController::libraryModel() const { return m_libraryModel; }
 
@@ -114,6 +119,48 @@ bool VaultController::lock(const QString &passphrase) {
   setState(Locked);
   qInfo() << "VaultController: locked";
   return true;
+}
+
+QString VaultController::loadStoredPassphrase() {
+  KeychainStore store;
+  if (!store.isAvailable()) {
+    setLastError("Keychain unavailable");
+    return {};
+  }
+  QString error;
+  const QString pass = store.loadPassphrase(&error);
+  if (!error.isEmpty()) {
+    setLastError(error);
+  }
+  return pass;
+}
+
+bool VaultController::storePassphrase(const QString &passphrase) {
+  KeychainStore store;
+  if (!store.isAvailable()) {
+    setLastError("Keychain unavailable");
+    return false;
+  }
+  QString error;
+  const bool ok = store.storePassphrase(passphrase, &error);
+  if (!ok) {
+    setLastError(error);
+  }
+  return ok;
+}
+
+bool VaultController::clearStoredPassphrase() {
+  KeychainStore store;
+  if (!store.isAvailable()) {
+    setLastError("Keychain unavailable");
+    return false;
+  }
+  QString error;
+  const bool ok = store.clearPassphrase(&error);
+  if (!ok) {
+    setLastError(error);
+  }
+  return ok;
 }
 
 void VaultController::setState(State state) {

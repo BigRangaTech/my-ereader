@@ -67,6 +67,9 @@ double SettingsManager::ttsRate() const { return m_ttsRate; }
 double SettingsManager::ttsPitch() const { return m_ttsPitch; }
 double SettingsManager::ttsVolume() const { return m_ttsVolume; }
 QString SettingsManager::ttsVoiceKey() const { return m_ttsVoiceKey; }
+bool SettingsManager::autoLockEnabled() const { return m_autoLockEnabled; }
+int SettingsManager::autoLockMinutes() const { return m_autoLockMinutes; }
+bool SettingsManager::rememberPassphrase() const { return m_rememberPassphrase; }
 int SettingsManager::epubFontSize() const { return m_epubFontSize; }
 double SettingsManager::epubLineHeight() const { return m_epubLineHeight; }
 bool SettingsManager::epubShowImages() const { return m_epubShowImages; }
@@ -188,6 +191,34 @@ void SettingsManager::setTtsVoiceKey(const QString &value) {
   m_ttsVoiceKey = value;
   saveValue("tts/voice_key", value);
   emit ttsVoiceKeyChanged();
+}
+
+void SettingsManager::setAutoLockEnabled(bool value) {
+  if (m_autoLockEnabled == value) {
+    return;
+  }
+  m_autoLockEnabled = value;
+  saveValue("security/auto_lock_enabled", value);
+  emit autoLockEnabledChanged();
+}
+
+void SettingsManager::setAutoLockMinutes(int value) {
+  value = clampInt(value, 1, 240);
+  if (m_autoLockMinutes == value) {
+    return;
+  }
+  m_autoLockMinutes = value;
+  saveValue("security/auto_lock_minutes", value);
+  emit autoLockMinutesChanged();
+}
+
+void SettingsManager::setRememberPassphrase(bool value) {
+  if (m_rememberPassphrase == value) {
+    return;
+  }
+  m_rememberPassphrase = value;
+  saveValue("security/remember_passphrase", value);
+  emit rememberPassphraseChanged();
 }
 
 void SettingsManager::setEpubFontSize(int value) {
@@ -815,6 +846,9 @@ void SettingsManager::resetDefaults() {
   setTtsPitch(0.0);
   setTtsVolume(1.0);
   setTtsVoiceKey("");
+  setAutoLockEnabled(true);
+  setAutoLockMinutes(10);
+  setRememberPassphrase(true);
   setEpubFontSize(20);
   setEpubLineHeight(1.4);
   setEpubShowImages(true);
@@ -967,6 +1001,9 @@ void SettingsManager::loadFromSettings() {
   m_ttsPitch = clampDouble(m_settings.value("tts/pitch", 0.0).toDouble(), -1.0, 1.0);
   m_ttsVolume = clampDouble(m_settings.value("tts/volume", 1.0).toDouble(), 0.0, 1.0);
   m_ttsVoiceKey = m_settings.value("tts/voice_key", "").toString();
+  m_autoLockEnabled = m_settings.value("security/auto_lock_enabled", true).toBool();
+  m_autoLockMinutes = clampInt(m_settings.value("security/auto_lock_minutes", 10).toInt(), 1, 240);
+  m_rememberPassphrase = m_settings.value("security/remember_passphrase", true).toBool();
 
   m_epubFontSize = clampInt(readFormatValue("epub", "reading/font_size", m_readingFontSize).toInt(), 12, 36);
   m_epubLineHeight =
@@ -1187,6 +1224,9 @@ void SettingsManager::loadFromSettings() {
 
   emit readingFontSizeChanged();
   emit readingLineHeightChanged();
+  emit autoLockEnabledChanged();
+  emit autoLockMinutesChanged();
+  emit rememberPassphraseChanged();
   emit epubFontSizeChanged();
   emit epubLineHeightChanged();
   emit epubShowImagesChanged();

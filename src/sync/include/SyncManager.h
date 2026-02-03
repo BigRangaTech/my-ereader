@@ -7,6 +7,8 @@
 #include <QString>
 #include <QVariantList>
 
+class LibraryModel;
+
 class SyncManager : public QObject {
   Q_OBJECT
   Q_PROPERTY(bool enabled READ enabled WRITE setEnabled NOTIFY enabledChanged)
@@ -18,6 +20,7 @@ class SyncManager : public QObject {
   Q_PROPERTY(int listenPort READ listenPort WRITE setListenPort NOTIFY listenPortChanged)
   Q_PROPERTY(bool discovering READ discovering NOTIFY discoveringChanged)
   Q_PROPERTY(QVariantList devices READ devices NOTIFY devicesChanged)
+  Q_PROPERTY(QObject *libraryModel READ libraryModel WRITE setLibraryModel NOTIFY libraryModelChanged)
 
 public:
   explicit SyncManager(QObject *parent = nullptr);
@@ -33,16 +36,19 @@ public:
   int listenPort() const;
   bool discovering() const;
   QVariantList devices() const;
+  QObject *libraryModel() const;
 
   void setDeviceName(const QString &name);
   void setPin(const QString &pin);
   void setDiscoveryPort(int port);
   void setListenPort(int port);
+  void setLibraryModel(QObject *model);
 
   Q_INVOKABLE void startDiscovery();
   Q_INVOKABLE void stopDiscovery();
   Q_INVOKABLE void requestPairing(const QString &deviceId);
   Q_INVOKABLE void unpair(const QString &deviceId);
+  Q_INVOKABLE void syncNow(const QString &deviceId);
 
 signals:
   void enabledChanged();
@@ -53,6 +59,7 @@ signals:
   void listenPortChanged();
   void discoveringChanged();
   void devicesChanged();
+  void libraryModelChanged();
 
 private:
   void setStatus(const QString &status);
@@ -72,6 +79,8 @@ private:
   void loadPairedDevices();
   void savePairedDevices();
   void setDiscovering(bool discovering);
+  QVariantList annotationPayload() const;
+  int applyAnnotationPayload(const QVariantList &payload);
 
   bool m_enabled = false;
   QString m_status = "Idle";
@@ -99,6 +108,7 @@ private:
   };
   QHash<QString, DeviceInfo> m_devices;
   QHash<QString, PairedInfo> m_paired;
+  class LibraryModel *m_libraryModel = nullptr;
 
   class QUdpSocket *m_udp = nullptr;
   class QTcpServer *m_server = nullptr;
