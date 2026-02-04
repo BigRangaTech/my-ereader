@@ -5,6 +5,8 @@
 #include <QEventLoop>
 #include <QFile>
 #include <QSettings>
+#include <QCoreApplication>
+#include <QTimer>
 #include <QVariantMap>
 
 #include "include/AppPaths.h"
@@ -19,6 +21,7 @@
 #include <QtDBus/QDBusPendingReply>
 #include <QtDBus/QDBusUnixFileDescriptor>
 
+#include <fcntl.h>
 #include <unistd.h>
 
 #ifdef HAVE_LIBSECRET
@@ -49,6 +52,13 @@ const SecretSchema *schema() {
 namespace {
 QString portalConfigPath() {
   return AppPaths::configFile("vault.ini");
+}
+
+bool portalDataPresent() {
+  QSettings settings(portalConfigPath(), QSettings::IniFormat);
+  const QString token = settings.value("portal/token").toString();
+  const QByteArray ciphertext = QByteArray::fromBase64(settings.value("portal/ciphertext").toByteArray());
+  return !token.isEmpty() && !ciphertext.isEmpty();
 }
 
 class PortalResponseWatcher : public QObject {
@@ -90,6 +100,18 @@ QByteArray deriveKey(const QByteArray &secret, int keyBytes) {
 }
 
 QByteArray portalSecret(QString *outToken, QString *error) {
+  if (!QCoreApplication::instance()) {
+    if (error) {
+      *error = "Secret portal unavailable (no Qt application)";
+    }
+    return {};
+  }
+  if (!QDBusConnection::sessionBus().isConnected()) {
+    if (error) {
+      *error = "Secret portal unavailable (no DBus session)";
+    }
+    return {};
+  }
   QSettings settings(portalConfigPath(), QSettings::IniFormat);
   const QString token = settings.value("portal/token").toString();
 
@@ -112,6 +134,11 @@ QByteArray portalSecret(QString *outToken, QString *error) {
     return {};
   }
 
+  const int readFlags = fcntl(fds[0], F_GETFL, 0);
+  if (readFlags >= 0) {
+    fcntl(fds[0], F_SETFL, readFlags | O_NONBLOCK);
+  }
+
   QDBusUnixFileDescriptor writeFd(fds[1]);
   QVariantMap options;
   if (!token.isEmpty()) {
@@ -121,8 +148,23 @@ QByteArray portalSecret(QString *outToken, QString *error) {
   QDBusPendingCall call = portal.asyncCall("RetrieveSecret", QVariant::fromValue(writeFd), options);
   QDBusPendingCallWatcher watcher(call);
   QEventLoop loop;
+  QTimer retrieveTimer;
+  retrieveTimer.setSingleShot(true);
+  QObject::connect(&retrieveTimer, &QTimer::timeout, &loop, &QEventLoop::quit);
   QObject::connect(&watcher, &QDBusPendingCallWatcher::finished, &loop, &QEventLoop::quit);
+  retrieveTimer.start(3000);
   loop.exec();
+
+  if (retrieveTimer.isActive()) {
+    retrieveTimer.stop();
+  } else {
+    if (error) {
+      *error = "Secret portal timeout";
+    }
+    ::close(fds[0]);
+    ::close(fds[1]);
+    return {};
+  }
 
   QDBusPendingReply<QDBusObjectPath> reply = watcher.reply();
   if (reply.isError()) {
@@ -138,7 +180,17 @@ QByteArray portalSecret(QString *outToken, QString *error) {
   int responseCode = 1;
   QVariantMap results;
   const QDBusObjectPath requestPath = reply.value();
+  if (requestPath.path().isEmpty()) {
+    if (error) {
+      *error = "Secret portal returned empty request path";
+    }
+    ::close(fds[0]);
+    ::close(fds[1]);
+    return {};
+  }
   QEventLoop responseLoop;
+  QTimer responseTimer;
+  responseTimer.setSingleShot(true);
   PortalResponseWatcher responseWatcher;
   responseWatcher.loop = &responseLoop;
   responseWatcher.responseCode = &responseCode;
@@ -149,7 +201,15 @@ QByteArray portalSecret(QString *outToken, QString *error) {
                                         "Response",
                                         &responseWatcher,
                                         SLOT(onResponse(uint,QVariantMap)));
+  QObject::connect(&responseTimer, &QTimer::timeout, &responseLoop, &QEventLoop::quit);
+  responseTimer.start(3000);
   responseLoop.exec();
+
+  if (!responseTimer.isActive()) {
+    if (error) {
+      *error = "Secret portal response timeout";
+    }
+  }
   if (responseCode == 0) {
     QFile readFile;
     readFile.open(fds[0], QIODevice::ReadOnly);
@@ -160,9 +220,15 @@ QByteArray portalSecret(QString *outToken, QString *error) {
   ::close(fds[0]);
   ::close(fds[1]);
 
+  if (!responseTimer.isActive()) {
+    if (error) {
+      *error = "Secret portal response timeout";
+    }
+  }
+
   if (responseCode != 0 || secret.isEmpty()) {
     if (error) {
-      *error = "Secret portal denied";
+      *error = secret.isEmpty() ? "Secret portal returned no data" : "Secret portal denied";
     }
     return {};
   }
@@ -186,9 +252,7 @@ bool KeychainStore::isAvailable() const {
 #ifdef HAVE_LIBSECRET
   return true;
 #else
-  QString error;
-  const QByteArray secret = portalSecret(nullptr, &error);
-  return !secret.isEmpty();
+  return portalDataPresent();
 #endif
 }
 
@@ -323,6 +387,9 @@ bool KeychainStore::clearPassphrase(QString *error) {
   }
   return true;
 #else
+  if (!portalDataPresent()) {
+    return {};
+  }
   QSettings settings(portalConfigPath(), QSettings::IniFormat);
   settings.remove("portal/nonce");
   settings.remove("portal/ciphertext");
