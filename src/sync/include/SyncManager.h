@@ -21,6 +21,15 @@ class SyncManager : public QObject {
   Q_PROPERTY(bool discovering READ discovering NOTIFY discoveringChanged)
   Q_PROPERTY(QVariantList devices READ devices NOTIFY devicesChanged)
   Q_PROPERTY(QObject *libraryModel READ libraryModel WRITE setLibraryModel NOTIFY libraryModelChanged)
+  Q_PROPERTY(QString conflictPolicy READ conflictPolicy WRITE setConflictPolicy NOTIFY conflictPolicyChanged)
+  Q_PROPERTY(bool transferEnabled READ transferEnabled WRITE setTransferEnabled NOTIFY transferEnabledChanged)
+  Q_PROPERTY(int transferMaxMb READ transferMaxMb WRITE setTransferMaxMb NOTIFY transferMaxMbChanged)
+  Q_PROPERTY(bool transferActive READ transferActive NOTIFY transferProgressChanged)
+  Q_PROPERTY(int transferTotal READ transferTotal NOTIFY transferProgressChanged)
+  Q_PROPERTY(int transferDone READ transferDone NOTIFY transferProgressChanged)
+  Q_PROPERTY(bool uploadActive READ uploadActive NOTIFY uploadProgressChanged)
+  Q_PROPERTY(int uploadTotal READ uploadTotal NOTIFY uploadProgressChanged)
+  Q_PROPERTY(int uploadDone READ uploadDone NOTIFY uploadProgressChanged)
 
 public:
   explicit SyncManager(QObject *parent = nullptr);
@@ -37,12 +46,24 @@ public:
   bool discovering() const;
   QVariantList devices() const;
   QObject *libraryModel() const;
+  QString conflictPolicy() const;
+  bool transferEnabled() const;
+  int transferMaxMb() const;
+  bool transferActive() const;
+  int transferTotal() const;
+  int transferDone() const;
+  bool uploadActive() const;
+  int uploadTotal() const;
+  int uploadDone() const;
 
   void setDeviceName(const QString &name);
   void setPin(const QString &pin);
   void setDiscoveryPort(int port);
   void setListenPort(int port);
   void setLibraryModel(QObject *model);
+  void setConflictPolicy(const QString &policy);
+  void setTransferEnabled(bool enabled);
+  void setTransferMaxMb(int mb);
 
   Q_INVOKABLE void startDiscovery();
   Q_INVOKABLE void stopDiscovery();
@@ -60,6 +81,11 @@ signals:
   void discoveringChanged();
   void devicesChanged();
   void libraryModelChanged();
+  void conflictPolicyChanged();
+  void transferEnabledChanged();
+  void transferMaxMbChanged();
+  void transferProgressChanged();
+  void uploadProgressChanged();
 
 private:
   void setStatus(const QString &status);
@@ -83,6 +109,7 @@ private:
   int applyAnnotationPayload(const QVariantList &payload);
   QVariantList libraryPayload() const;
   int applyLibraryPayload(const QVariantList &payload);
+  QString syncInboxDir() const;
 
   bool m_enabled = false;
   QString m_status = "Idle";
@@ -92,6 +119,15 @@ private:
   int m_discoveryPort = 45454;
   int m_listenPort = 45455;
   bool m_discovering = false;
+  QString m_conflictPolicy = "newer";
+  bool m_transferEnabled = true;
+  int m_transferMaxMb = 50;
+  bool m_transferActive = false;
+  int m_transferTotal = 0;
+  int m_transferDone = 0;
+  bool m_uploadActive = false;
+  int m_uploadTotal = 0;
+  int m_uploadDone = 0;
 
   struct DeviceInfo {
     QString id;

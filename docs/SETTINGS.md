@@ -19,6 +19,9 @@ Settings live under `config/` at the repo root.
 
 ## Sync (`config/sync.ini`)
 - `sync/enabled` (default: false)
+- `sync/conflict_policy` (default: `newer`) — `newer|prefer_local|prefer_remote`
+- `sync/transfer_enabled` (default: true)
+- `sync/transfer_max_mb` (default: 50)
 - `device/name` (default: hostname)
 - `device/id` (default: generated UUID)
 - `device/pin` (default: random 4-digit PIN)

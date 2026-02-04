@@ -70,7 +70,9 @@ public:
   Q_INVOKABLE QVariantList exportAnnotationSync() const;
   Q_INVOKABLE int importAnnotationSync(const QVariantList &payload);
   Q_INVOKABLE QVariantList exportLibrarySync() const;
-  Q_INVOKABLE int importLibrarySync(const QVariantList &payload);
+  Q_INVOKABLE int importLibrarySync(const QVariantList &payload, const QString &conflictPolicy);
+  Q_INVOKABLE bool hasFileHash(const QString &fileHash) const;
+  Q_INVOKABLE QString pathForHash(const QString &fileHash) const;
 
   QString searchQuery() const;
   QString sortKey() const;

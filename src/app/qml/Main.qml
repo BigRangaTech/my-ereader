@@ -1426,8 +1426,8 @@ ApplicationWindow {
 
     onAccepted: {
       const strength = passphraseScore(passField.text)
-      if (passField.text.length < 10) {
-        errorText = "Passphrase must be at least 10 characters"
+      if (passField.text.length < 6) {
+        errorText = "Passphrase must be at least 6 characters"
         return
       }
       if (strength <= 2) {
@@ -3588,6 +3588,155 @@ ApplicationWindow {
                   syncManager.startDiscovery()
                 }
               }
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Conflict policy"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            ComboBox {
+              Layout.fillWidth: true
+              enabled: syncManager.enabled
+              model: ["newer", "prefer_local", "prefer_remote"]
+              currentIndex: {
+                const policy = syncManager.conflictPolicy
+                if (policy === "prefer_local") return 1
+                if (policy === "prefer_remote") return 2
+                return 0
+              }
+              onActivated: {
+                syncManager.conflictPolicy = model[currentIndex]
+              }
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Transfer files"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            CheckBox {
+              checked: syncManager.transferEnabled
+              enabled: syncManager.enabled
+              onToggled: syncManager.transferEnabled = checked
+            }
+
+            Text {
+              text: syncManager.transferEnabled ? "Enabled" : "Disabled"
+              color: theme.textMuted
+              font.pixelSize: 12
+              font.family: root.uiFont
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Max transfer"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 1
+              to: 512
+              stepSize: 1
+              value: syncManager.transferMaxMb
+              enabled: syncManager.enabled && syncManager.transferEnabled
+              onMoved: syncManager.transferMaxMb = Math.round(value)
+            }
+
+            SpinBox {
+              from: 1
+              to: 512
+              value: syncManager.transferMaxMb
+              editable: true
+              enabled: syncManager.enabled && syncManager.transferEnabled
+              onValueModified: syncManager.transferMaxMb = value
+            }
+
+            Text {
+              text: "MB"
+              color: theme.textMuted
+              font.pixelSize: 12
+              font.family: root.uiFont
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+            visible: syncManager.transferActive
+
+            Text {
+              text: "Transfer"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            ProgressBar {
+              Layout.fillWidth: true
+              from: 0
+              to: Math.max(1, syncManager.transferTotal)
+              value: syncManager.transferDone
+            }
+
+            Text {
+              text: syncManager.transferDone + "/" + syncManager.transferTotal
+              color: theme.textMuted
+              font.pixelSize: 12
+              font.family: root.uiFont
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+            visible: syncManager.uploadActive
+
+            Text {
+              text: "Upload"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            ProgressBar {
+              Layout.fillWidth: true
+              from: 0
+              to: Math.max(1, syncManager.uploadTotal)
+              value: syncManager.uploadDone
+            }
+
+            Text {
+              text: syncManager.uploadDone + "/" + syncManager.uploadTotal
+              color: theme.textMuted
+              font.pixelSize: 12
+              font.family: root.uiFont
             }
           }
 

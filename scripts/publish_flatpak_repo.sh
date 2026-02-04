@@ -7,6 +7,7 @@ BUILD_DIR="$ROOT_DIR/flatpak/build"
 MANIFEST="$ROOT_DIR/flatpak/com.bigrangatech.MyEreader.yaml"
 INDEX_SRC="$ROOT_DIR/index.html"
 GPG_KEY_ID="FF1EC6D9FC8202B9"
+export GPG_TTY="${GPG_TTY:-$(tty)}"
 
 if [ ! -f "$MANIFEST" ]; then
   echo "Missing manifest: $MANIFEST" >&2
@@ -39,13 +40,12 @@ flatpak build-export --update-appstream --gpg-sign="$GPG_KEY_ID" \
 # Ensure repo + appstream refs are signed (fixes appstream GPG warnings on clients).
 flatpak build-update-repo --gpg-sign="$GPG_KEY_ID" "$REPO_DIR"
 
-# Explicitly sign appstream refs when present (some clients require it).
-if ostree show --repo="$REPO_DIR" appstream/x86_64 >/dev/null 2>&1; then
-  ostree gpg-sign --repo="$REPO_DIR" appstream/x86_64 "$GPG_KEY_ID"
-fi
-if ostree show --repo="$REPO_DIR" appstream2/x86_64 >/dev/null 2>&1; then
-  ostree gpg-sign --repo="$REPO_DIR" appstream2/x86_64 "$GPG_KEY_ID"
-fi
+# Ensure all refs (including Locale) are signed.
+while IFS= read -r ref; do
+  if [ -n "$ref" ]; then
+    ostree gpg-sign --repo="$REPO_DIR" "$ref" "$GPG_KEY_ID" || true
+  fi
+done < <(ostree refs --repo="$REPO_DIR")
 
 flatpak build-bundle \
   "$REPO_DIR" \

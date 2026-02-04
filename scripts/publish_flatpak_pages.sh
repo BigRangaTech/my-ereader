@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REPO_DIR="${REPO_DIR:-$ROOT/flatpak/repo}"
 PAGES_DIR="${PAGES_DIR:-}"
+COPY_REPO="${COPY_REPO:-0}"
 BRANCH="${PAGES_BRANCH:-gh-pages}"
 
 if [[ ! -d "$REPO_DIR" ]]; then
@@ -29,6 +30,12 @@ if git show-ref --verify --quiet "refs/heads/$BRANCH"; then
   git checkout "$BRANCH"
 else
   git checkout -b "$BRANCH"
+fi
+
+if [[ "$COPY_REPO" != "1" ]]; then
+  echo "COPY_REPO=1 not set; skipping repo sync."
+  echo "Manually copy $REPO_DIR to $PAGES_DIR, or rerun with COPY_REPO=1." >&2
+  exit 0
 fi
 
 echo "Syncing Flatpak repo into $PAGES_DIR..."

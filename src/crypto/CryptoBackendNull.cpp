@@ -40,10 +40,8 @@ public:
 
 std::unique_ptr<CryptoBackend> CryptoBackendFactory::createDefault() {
 #ifdef HAVE_MONOCYPHER
-  std::unique_ptr<CryptoBackend> createMonocypherBackend();
   return createMonocypherBackend();
 #elif defined(HAVE_LIBSODIUM)
-  std::unique_ptr<CryptoBackend> createSodiumBackend();
   return createSodiumBackend();
 #else
   return std::make_unique<CryptoBackendNull>();

@@ -66,6 +66,13 @@ flatpak install --system myereader app/com.bigrangatech.MyEreader/x86_64/master
   Fix: `flatpak remote-ls --system myereader` and verify the repo exports refs.
 - **Remote exists in both user and system installs**  
   Fix: remove one: `flatpak remote-delete --user myereader` or `--system`.
+- **“Invalid id myereader: Names must contain at least 2 periods”**  
+  Cause: using the remote name as the app id.  
+  Fix: update/install by app id:  
+  `flatpak update com.bigrangatech.MyEreader`  
+  `flatpak install --system myereader app/com.bigrangatech.MyEreader/x86_64/master`
+- **“Remote found in multiple installations”**  
+  Fix: add `--user` or `--system` to `remote-add`, `remote-ls`, `remote-info`, `remote-delete`.
 - **Appstream/GPG errors**  
   Appstream is optional. You can install/update by ref even without appstream.
 

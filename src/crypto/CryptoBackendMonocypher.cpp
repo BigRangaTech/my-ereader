@@ -137,6 +137,7 @@ public:
     const int rc = crypto_argon2_checked(reinterpret_cast<uint8_t *>(key.data()),
                                          static_cast<uint32_t>(key.size()),
                                          workArea.data(),
+                                         workArea.size() * sizeof(uint64_t),
                                          config,
                                          inputs,
                                          crypto_argon2_no_extras);

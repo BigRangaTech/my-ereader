@@ -32,6 +32,7 @@
 - Store only a verifier; never store the raw passphrase
 - Keep decrypted keys in memory only for the active session
 - Optional: store passphrase in OS keychain for auto-unlock
+- Flatpak: use the Secret portal to wrap the passphrase with a host-provided secret; store only encrypted material in `config/vault.ini` when libsecret is unavailable
 - Provide a manual lock action and auto-lock after inactivity
 
 ## Notes

@@ -491,13 +491,32 @@ QVariantList LibraryModel::exportLibrarySync() const {
   return payload;
 }
 
-int LibraryModel::importLibrarySync(const QVariantList &payload) {
+int LibraryModel::importLibrarySync(const QVariantList &payload, const QString &conflictPolicy) {
   int applied = 0;
   QMetaObject::invokeMethod(dbWorker(), "importLibrarySync",
                             Qt::BlockingQueuedConnection,
                             Q_RETURN_ARG(int, applied),
-                            Q_ARG(QVariantList, payload));
+                            Q_ARG(QVariantList, payload),
+                            Q_ARG(QString, conflictPolicy));
   return applied;
+}
+
+bool LibraryModel::hasFileHash(const QString &fileHash) const {
+  bool exists = false;
+  QMetaObject::invokeMethod(dbWorker(), "hasFileHash",
+                            Qt::BlockingQueuedConnection,
+                            Q_RETURN_ARG(bool, exists),
+                            Q_ARG(QString, fileHash));
+  return exists;
+}
+
+QString LibraryModel::pathForHash(const QString &fileHash) const {
+  QString path;
+  QMetaObject::invokeMethod(dbWorker(), "pathForHash",
+                            Qt::BlockingQueuedConnection,
+                            Q_RETURN_ARG(QString, path),
+                            Q_ARG(QString, fileHash));
+  return path;
 }
 
 bool LibraryModel::ready() const { return m_ready; }

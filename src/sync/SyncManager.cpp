@@ -5,6 +5,7 @@
 #include <QCryptographicHash>
 #include <QDateTime>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QHostAddress>
 #include <QHostInfo>
@@ -12,7 +13,9 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QRandomGenerator>
+#include <QSet>
 #include <QSettings>
+#include <QStandardPaths>
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QTimer>
@@ -104,6 +107,16 @@ QObject *SyncManager::libraryModel() const {
   return m_libraryModel;
 }
 
+QString SyncManager::conflictPolicy() const { return m_conflictPolicy; }
+bool SyncManager::transferEnabled() const { return m_transferEnabled; }
+int SyncManager::transferMaxMb() const { return m_transferMaxMb; }
+bool SyncManager::transferActive() const { return m_transferActive; }
+int SyncManager::transferTotal() const { return m_transferTotal; }
+int SyncManager::transferDone() const { return m_transferDone; }
+bool SyncManager::uploadActive() const { return m_uploadActive; }
+int SyncManager::uploadTotal() const { return m_uploadTotal; }
+int SyncManager::uploadDone() const { return m_uploadDone; }
+
 void SyncManager::setDeviceName(const QString &name) {
   const QString trimmed = name.trimmed();
   if (trimmed.isEmpty() || m_deviceName == trimmed) {
@@ -160,6 +173,34 @@ void SyncManager::setLibraryModel(QObject *model) {
   }
   m_libraryModel = qobject_cast<LibraryModel *>(model);
   emit libraryModelChanged();
+}
+
+void SyncManager::setConflictPolicy(const QString &policy) {
+  const QString normalized = policy.trimmed().toLower();
+  if (normalized.isEmpty() || m_conflictPolicy == normalized) {
+    return;
+  }
+  m_conflictPolicy = normalized;
+  saveSettings();
+  emit conflictPolicyChanged();
+}
+
+void SyncManager::setTransferEnabled(bool enabled) {
+  if (m_transferEnabled == enabled) {
+    return;
+  }
+  m_transferEnabled = enabled;
+  saveSettings();
+  emit transferEnabledChanged();
+}
+
+void SyncManager::setTransferMaxMb(int mb) {
+  if (mb < 1 || mb > 1024 || m_transferMaxMb == mb) {
+    return;
+  }
+  m_transferMaxMb = mb;
+  saveSettings();
+  emit transferMaxMbChanged();
 }
 
 void SyncManager::startDiscovery() {
@@ -276,24 +317,44 @@ void SyncManager::syncNow(const QString &deviceId) {
     return;
   }
   const auto info = m_paired.value(trimmed);
+  qInfo() << "SyncManager: starting sync to" << info.name << info.address << info.port;
   auto *socket = new QTcpSocket(this);
   connect(socket, &QTcpSocket::connected, this, [this, socket, info]() {
+    m_transferActive = false;
+    m_transferTotal = 0;
+    m_transferDone = 0;
+    emit transferProgressChanged();
+    qInfo() << "SyncManager: connected to" << info.name;
     const QVariantList annotations = annotationPayload();
     const QVariantList library = libraryPayload();
+    QJsonArray hashes;
+    for (const auto &entry : library) {
+      const QString hash = entry.toMap().value("file_hash").toString();
+      if (!hash.isEmpty()) {
+        hashes.append(hash);
+      }
+    }
     QJsonObject payload{
         {"type", "sync_request"},
         {"id", m_deviceId},
         {"token", info.token},
         {"annotations", QJsonDocument::fromVariant(annotations).array()},
         {"library", QJsonDocument::fromVariant(library).array()},
+        {"have_hashes", hashes},
+        {"transfer_enabled", m_transferEnabled},
+        {"transfer_max_mb", m_transferMaxMb},
     };
     socket->write(QJsonDocument(payload).toJson(QJsonDocument::Compact));
+    qInfo() << "SyncManager: sent sync_request (notes" << annotations.size()
+            << "meta" << library.size() << "have" << hashes.size()
+            << "transfer" << m_transferEnabled << "maxMb" << m_transferMaxMb << ")";
     setStatus("Syncing with " + info.name);
   });
   connect(socket, &QTcpSocket::readyRead, this, [this, socket, info]() {
     const QByteArray data = socket->readAll();
     const auto doc = QJsonDocument::fromJson(data);
     if (!doc.isObject()) {
+      qWarning() << "SyncManager: invalid sync_response payload";
       setStatus("Sync failed");
       socket->disconnectFromHost();
       socket->deleteLater();
@@ -301,6 +362,7 @@ void SyncManager::syncNow(const QString &deviceId) {
     }
     const auto obj = doc.object();
     if (obj.value("type").toString() != "sync_response") {
+      qWarning() << "SyncManager: unexpected response type" << obj.value("type").toString();
       setStatus("Sync failed");
       socket->disconnectFromHost();
       socket->deleteLater();
@@ -308,18 +370,85 @@ void SyncManager::syncNow(const QString &deviceId) {
     }
     const QJsonArray annotations = obj.value("annotations").toArray();
     const QJsonArray library = obj.value("library").toArray();
+    const QJsonArray files = obj.value("files").toArray();
+    qInfo() << "SyncManager: received sync_response (notes" << annotations.size()
+            << "meta" << library.size() << "files" << files.size() << ")";
     const int added = applyAnnotationPayload(annotations.toVariantList());
     const int metaUpdated = applyLibraryPayload(library.toVariantList());
+    int filesAdded = 0;
+    m_transferTotal = files.size();
+    m_transferDone = 0;
+    m_transferActive = m_transferTotal > 0;
+    emit transferProgressChanged();
+    for (const auto &fileEntry : files) {
+      const QVariantMap map = fileEntry.toObject().toVariantMap();
+      const QString hash = map.value("file_hash").toString();
+      const QString name = map.value("name").toString();
+      const QString format = map.value("format").toString();
+      const QByteArray data = QByteArray::fromBase64(map.value("data").toByteArray());
+      if (hash.isEmpty() || data.isEmpty()) {
+        qWarning() << "SyncManager: skipped file with missing hash/data" << name;
+        m_transferDone++;
+        emit transferProgressChanged();
+        continue;
+      }
+      const QByteArray digest = QCryptographicHash::hash(data, QCryptographicHash::Sha256).toHex();
+      if (QString::fromLatin1(digest) != hash) {
+        qWarning() << "SyncManager: checksum mismatch for" << name << "expected" << hash;
+        m_transferDone++;
+        emit transferProgressChanged();
+        continue;
+      }
+      if (m_libraryModel && m_libraryModel->hasFileHash(hash)) {
+        qInfo() << "SyncManager: already have file" << name;
+        m_transferDone++;
+        emit transferProgressChanged();
+        continue;
+      }
+      const QString base = syncInboxDir();
+      QDir().mkpath(base);
+      const QString fileName =
+          name.isEmpty() ? (hash.left(12) + "." + format) : name;
+      const QString filePath = QDir(base).filePath(fileName);
+      QFile file(filePath);
+      if (!file.open(QIODevice::WriteOnly)) {
+        qWarning() << "SyncManager: failed to write file" << filePath;
+        m_transferDone++;
+        emit transferProgressChanged();
+        continue;
+      }
+      file.write(data);
+      file.close();
+      if (m_libraryModel) {
+        if (m_libraryModel->addBook(filePath)) {
+          filesAdded++;
+          qInfo() << "SyncManager: imported file" << filePath;
+        } else {
+          qWarning() << "SyncManager: failed to import" << filePath;
+        }
+      }
+      m_transferDone++;
+      emit transferProgressChanged();
+    }
+    m_transferActive = false;
+    emit transferProgressChanged();
     PairedInfo updated = info;
     updated.lastSync = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
     m_paired.insert(updated.id, updated);
     savePairedDevices();
     updateDevice(updated.id, updated.name, updated.address, updated.port, true);
-    setStatus(QString("Synced with %1 (%2 notes, %3 meta)").arg(info.name).arg(added).arg(metaUpdated));
+    setStatus(QString("Synced with %1 (%2 notes, %3 meta, %4 files)")
+                  .arg(info.name)
+                  .arg(added)
+                  .arg(metaUpdated)
+                  .arg(filesAdded));
+    qInfo() << "SyncManager: sync complete" << info.name << "notes" << added
+            << "meta" << metaUpdated << "files" << filesAdded;
     socket->disconnectFromHost();
     socket->deleteLater();
   });
   connect(socket, &QTcpSocket::errorOccurred, this, [this, socket](QAbstractSocket::SocketError) {
+    qWarning() << "SyncManager: sync socket error";
     setStatus("Sync failed");
     socket->deleteLater();
   });
@@ -354,6 +483,9 @@ void SyncManager::loadSettings() {
   }
   m_discoveryPort = m_settings->value("network/discovery_port", 45454).toInt();
   m_listenPort = m_settings->value("network/listen_port", 45455).toInt();
+  m_conflictPolicy = m_settings->value("sync/conflict_policy", "newer").toString();
+  m_transferEnabled = m_settings->value("sync/transfer_enabled", true).toBool();
+  m_transferMaxMb = m_settings->value("sync/transfer_max_mb", 50).toInt();
   loadPairedDevices();
   m_settings->sync();
 }
@@ -364,6 +496,9 @@ void SyncManager::saveSettings() {
   m_settings->setValue("device/pin", m_pin);
   m_settings->setValue("network/discovery_port", m_discoveryPort);
   m_settings->setValue("network/listen_port", m_listenPort);
+  m_settings->setValue("sync/conflict_policy", m_conflictPolicy);
+  m_settings->setValue("sync/transfer_enabled", m_transferEnabled);
+  m_settings->setValue("sync/transfer_max_mb", m_transferMaxMb);
   m_settings->sync();
 }
 
@@ -414,6 +549,7 @@ void SyncManager::ensureServer() {
             const QString remoteName = obj.value("name").toString();
             const int remotePort = obj.value("port").toInt();
             if (pin.isEmpty() || pin != m_pin) {
+              qWarning() << "SyncManager: pairing rejected for" << remoteName;
               QJsonObject resp{{"type", "pair_reject"}};
               socket->write(QJsonDocument(resp).toJson(QJsonDocument::Compact));
               socket->disconnectFromHost();
@@ -441,6 +577,7 @@ void SyncManager::ensureServer() {
             socket->disconnectFromHost();
             socket->deleteLater();
             setStatus("Paired with " + remoteName);
+            qInfo() << "SyncManager: paired with" << remoteName;
             return;
           }
           if (type == "sync_request") {
@@ -448,20 +585,96 @@ void SyncManager::ensureServer() {
             const QString token = obj.value("token").toString();
             if (remoteId.isEmpty() || !m_paired.contains(remoteId) ||
                 m_paired.value(remoteId).token != token) {
+              qWarning() << "SyncManager: sync_request unauthorized from" << remoteId;
               QJsonObject resp{{"type", "sync_error"}, {"error", "unauthorized"}};
               socket->write(QJsonDocument(resp).toJson(QJsonDocument::Compact));
               socket->disconnectFromHost();
               socket->deleteLater();
               return;
             }
+            m_uploadActive = false;
+            m_uploadTotal = 0;
+            m_uploadDone = 0;
+            emit uploadProgressChanged();
             const QJsonArray annotations = obj.value("annotations").toArray();
             const QJsonArray library = obj.value("library").toArray();
+            const QJsonArray haveHashes = obj.value("have_hashes").toArray();
+            const bool transferAllowed = obj.value("transfer_enabled").toBool(false);
+            const int maxMb = obj.value("transfer_max_mb").toInt(m_transferMaxMb);
+            qInfo() << "SyncManager: sync_request from" << remoteId
+                    << "notes" << annotations.size()
+                    << "meta" << library.size()
+                    << "transfer" << transferAllowed
+                    << "maxMb" << maxMb;
             const int added = applyAnnotationPayload(annotations.toVariantList());
             const int metaUpdated = applyLibraryPayload(library.toVariantList());
+            QJsonArray files;
+            if (transferAllowed && m_transferEnabled && m_libraryModel) {
+              const qint64 maxBytes = static_cast<qint64>(maxMb) * 1024 * 1024;
+              qint64 totalBytes = 0;
+              QSet<QString> haveSet;
+              for (const auto &v : haveHashes) {
+                const QString hash = v.toString();
+                if (!hash.isEmpty()) {
+                  haveSet.insert(hash);
+                }
+              }
+              const QVariantList localLibrary = libraryPayload();
+              m_uploadTotal = localLibrary.size();
+              m_uploadDone = 0;
+              m_uploadActive = m_uploadTotal > 0;
+              emit uploadProgressChanged();
+              for (const auto &entry : localLibrary) {
+                const QVariantMap map = entry.toMap();
+                const QString hash = map.value("file_hash").toString();
+                if (hash.isEmpty() || haveSet.contains(hash)) {
+                  m_uploadDone++;
+                  emit uploadProgressChanged();
+                  continue;
+                }
+                const QString path = m_libraryModel->pathForHash(hash);
+                if (path.isEmpty() || !QFileInfo::exists(path)) {
+                  qWarning() << "SyncManager: missing file for hash" << hash;
+                  m_uploadDone++;
+                  emit uploadProgressChanged();
+                  continue;
+                }
+                QFile file(path);
+                if (!file.open(QIODevice::ReadOnly)) {
+                  qWarning() << "SyncManager: failed to read" << path;
+                  m_uploadDone++;
+                  emit uploadProgressChanged();
+                  continue;
+                }
+                const QByteArray data = file.readAll();
+                file.close();
+                if (data.isEmpty()) {
+                  m_uploadDone++;
+                  emit uploadProgressChanged();
+                  continue;
+                }
+                if (totalBytes + data.size() > maxBytes) {
+                  qInfo() << "SyncManager: transfer size limit reached";
+                  break;
+                }
+                QVariantMap fileEntry;
+                fileEntry.insert("file_hash", hash);
+                fileEntry.insert("name", QFileInfo(path).fileName());
+                fileEntry.insert("format", QFileInfo(path).suffix().toLower());
+                fileEntry.insert("data", data.toBase64());
+                files.append(QJsonDocument::fromVariant(fileEntry).object());
+                totalBytes += data.size();
+                m_uploadDone++;
+                emit uploadProgressChanged();
+              }
+              m_uploadActive = false;
+              emit uploadProgressChanged();
+            }
             QJsonObject resp{
                 {"type", "sync_response"},
                 {"annotations", QJsonDocument::fromVariant(annotationPayload()).array()},
                 {"library", QJsonDocument::fromVariant(libraryPayload()).array()},
+                {"files", files},
                 {"added", added},
                 {"meta_updated", metaUpdated}};
             socket->write(QJsonDocument(resp).toJson(QJsonDocument::Compact));
@@ -473,6 +686,8 @@ void SyncManager::ensureServer() {
             savePairedDevices();
             updateDevice(remoteId, updated.name, updated.address, updated.port, true);
             setStatus("Synced with " + updated.name);
+            qInfo() << "SyncManager: sync_response sent to" << updated.name
+                    << "notes" << added << "meta" << metaUpdated << "files" << files.size();
             return;
           }
           socket->disconnectFromHost();
@@ -660,5 +875,12 @@ int SyncManager::applyLibraryPayload(const QVariantList &payload) {
   if (!m_libraryModel) {
     return 0;
   }
-  return m_libraryModel->importLibrarySync(payload);
+  return m_libraryModel->importLibrarySync(payload, m_conflictPolicy);
+}
+
+QString SyncManager::syncInboxDir() const {
+  const QString base = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+  QDir dir(base);
+  dir.mkpath("sync_inbox");
+  return dir.filePath("sync_inbox");
 }

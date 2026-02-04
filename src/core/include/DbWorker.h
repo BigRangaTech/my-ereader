@@ -57,7 +57,9 @@ public slots:
   QVariantList exportAnnotationSync();
   int importAnnotationSync(const QVariantList &payload);
   QVariantList exportLibrarySync();
-  int importLibrarySync(const QVariantList &payload);
+  int importLibrarySync(const QVariantList &payload, const QString &conflictPolicy);
+  bool hasFileHash(const QString &fileHash);
+  QString pathForHash(const QString &fileHash);
 
 signals:
   void openFinished(bool ok, const QString &error);

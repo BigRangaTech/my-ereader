@@ -29,6 +29,7 @@
 ## Phase 3: Sync + TTS
 - [x] LAN pairing
 - [x] Delta sync for library metadata + annotations
+- [x] Optional book file transfer (size-capped)
 - [x] TTS controls + playback
 
 ## Phase 4: Performance + polish

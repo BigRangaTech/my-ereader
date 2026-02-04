@@ -597,7 +597,7 @@ QVariantList DbWorker::exportLibrarySync() {
   return list;
 }
 
-int DbWorker::importLibrarySync(const QVariantList &payload) {
+int DbWorker::importLibrarySync(const QVariantList &payload, const QString &conflictPolicy) {
   if (!m_db.isOpen() || payload.isEmpty()) {
     return 0;
   }
@@ -626,8 +626,14 @@ int DbWorker::importLibrarySync(const QVariantList &payload) {
     const QString remoteUpdated = map.value("updated_at").toString();
     const qint64 localTime = QDateTime::fromString(localUpdated, Qt::ISODate).toMSecsSinceEpoch();
     const qint64 remoteTime = QDateTime::fromString(remoteUpdated, Qt::ISODate).toMSecsSinceEpoch();
-    if (remoteTime <= 0 || remoteTime <= localTime) {
+    const QString policy = conflictPolicy.trimmed().toLower();
+    if (policy == "prefer_local") {
       continue;
+    }
+    if (policy != "prefer_remote") {
+      if (remoteTime <= 0 || remoteTime <= localTime) {
+        continue;
+      }
     }
 
     update.addBindValue(map.value("title").toString());
@@ -649,6 +655,32 @@ int DbWorker::importLibrarySync(const QVariantList &payload) {
                                             m_filterTag, m_filterCollection, nullptr));
   }
   return applied;
+}
+
+bool DbWorker::hasFileHash(const QString &fileHash) {
+  if (!m_db.isOpen() || fileHash.trimmed().isEmpty()) {
+    return false;
+  }
+  QSqlQuery query(m_db);
+  query.prepare("SELECT id FROM library_items WHERE file_hash = ? LIMIT 1");
+  query.addBindValue(fileHash);
+  if (!query.exec()) {
+    return false;
+  }
+  return query.next();
+}
+
+QString DbWorker::pathForHash(const QString &fileHash) {
+  if (!m_db.isOpen() || fileHash.trimmed().isEmpty()) {
+    return {};
+  }
+  QSqlQuery query(m_db);
+  query.prepare("SELECT path FROM library_items WHERE file_hash = ? LIMIT 1");
+  query.addBindValue(fileHash);
+  if (!query.exec() || !query.next()) {
+    return {};
+  }
+  return query.value(0).toString();
 }
 
 bool DbWorker::openDatabase(const QString &dbPath, QString *error) {
