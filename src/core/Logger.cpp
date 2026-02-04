@@ -8,6 +8,8 @@
 #include <QMutex>
 #include <QStandardPaths>
 
+#include "include/AppPaths.h"
+
 namespace {
 QMutex g_logMutex;
 QFile g_logFile;
@@ -62,7 +64,9 @@ QString Logger::logDirectory() {
       break;
     }
   }
-  return QCoreApplication::applicationDirPath();
+  QDir dataDir(AppPaths::dataRoot());
+  dataDir.mkpath("logs");
+  return dataDir.filePath("logs");
 }
 
 QString Logger::logFilePath() {

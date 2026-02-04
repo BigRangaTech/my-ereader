@@ -140,6 +140,7 @@ QByteArray portalSecret(QString *outToken, QString *error) {
     qWarning() << "KeychainStore: portal interface invalid";
     return {};
   }
+  qInfo() << "KeychainStore: portal interface ok";
 
   int fds[2];
   if (::pipe(fds) != 0) {
@@ -160,6 +161,7 @@ QByteArray portalSecret(QString *outToken, QString *error) {
     options.insert("token", token);
   }
 
+  qInfo() << "KeychainStore: portal RetrieveSecret" << "token" << token << "bus" << QDBusConnection::sessionBus().baseService();
   QDBusPendingCall call = portal.asyncCall("RetrieveSecret", QVariant::fromValue(writeFd), options);
   QDBusPendingCallWatcher watcher(call);
   QEventLoop loop;
@@ -167,7 +169,7 @@ QByteArray portalSecret(QString *outToken, QString *error) {
   retrieveTimer.setSingleShot(true);
   QObject::connect(&retrieveTimer, &QTimer::timeout, &loop, &QEventLoop::quit);
   QObject::connect(&watcher, &QDBusPendingCallWatcher::finished, &loop, &QEventLoop::quit);
-  retrieveTimer.start(3000);
+  retrieveTimer.start(15000);
   loop.exec();
 
   if (retrieveTimer.isActive()) {
@@ -197,6 +199,7 @@ QByteArray portalSecret(QString *outToken, QString *error) {
   int responseCode = 1;
   QVariantMap results;
   const QDBusObjectPath requestPath = reply.value();
+  qInfo() << "KeychainStore: portal request path" << requestPath.path();
   if (requestPath.path().isEmpty()) {
     if (error) {
       *error = "Secret portal returned empty request path";
@@ -219,8 +222,9 @@ QByteArray portalSecret(QString *outToken, QString *error) {
                                         "Response",
                                         &responseWatcher,
                                         SLOT(onResponse(uint,QVariantMap)));
+  qInfo() << "KeychainStore: waiting for portal response";
   QObject::connect(&responseTimer, &QTimer::timeout, &responseLoop, &QEventLoop::quit);
-  responseTimer.start(3000);
+  responseTimer.start(15000);
   responseLoop.exec();
 
   if (!responseTimer.isActive()) {
