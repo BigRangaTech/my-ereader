@@ -54,6 +54,20 @@ QString portalConfigPath() {
   return AppPaths::configFile("vault.ini");
 }
 
+bool portalAvailable() {
+  if (!QCoreApplication::instance()) {
+    return false;
+  }
+  if (!QDBusConnection::sessionBus().isConnected()) {
+    return false;
+  }
+  QDBusInterface portal("org.freedesktop.portal.Desktop",
+                        "/org/freedesktop/portal/desktop",
+                        "org.freedesktop.portal.Secret",
+                        QDBusConnection::sessionBus());
+  return portal.isValid();
+}
+
 bool portalDataPresent() {
   QSettings settings(portalConfigPath(), QSettings::IniFormat);
   const QString token = settings.value("portal/token").toString();
@@ -261,8 +275,8 @@ bool KeychainStore::isAvailable() const {
   qInfo() << "KeychainStore: libsecret available";
   return true;
 #else
-  const bool available = portalDataPresent();
-  qInfo() << "KeychainStore: portal data present" << available;
+  const bool available = portalDataPresent() || portalAvailable();
+  qInfo() << "KeychainStore: portal available" << available;
   return available;
 #endif
 }

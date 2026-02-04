@@ -65,14 +65,6 @@ ApplicationWindow {
   }
   onActiveFocusItemChanged: markActivity()
   onActiveChanged: {
-    if (!active && vault.state === VaultController.Unlocked && sessionPassphrase.length > 0) {
-      if (vault.lock(sessionPassphrase)) {
-        autoUnlockArmed = settings.rememberPassphrase
-        if (!settings.rememberPassphrase) {
-          sessionPassphrase = ""
-        }
-      }
-    }
     if (active) {
       markActivity()
     }
