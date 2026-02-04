@@ -799,6 +799,36 @@ bool DbWorker::ensureSchema(QString *error) {
   return true;
 }
 
+bool DbWorker::attachDatabase(const QString &path, const QString &schema, QString *error) {
+  if (!m_db.isOpen()) {
+    if (error) {
+      *error = "Database not open";
+    }
+    return false;
+  }
+  QSqlQuery query(m_db);
+  QString escapedPath = path;
+  escapedPath.replace("'", "''");
+  const QString sql = QString("ATTACH DATABASE '%1' AS %2")
+                          .arg(escapedPath)
+                          .arg(schema);
+  if (!query.exec(sql)) {
+    if (error) {
+      *error = query.lastError().text();
+    }
+    return false;
+  }
+  return true;
+}
+
+void DbWorker::detachDatabase(const QString &schema) {
+  if (!m_db.isOpen()) {
+    return;
+  }
+  QSqlQuery query(m_db);
+  query.exec(QString("DETACH DATABASE %1").arg(schema));
+}
+
 bool DbWorker::ensureColumn(const QString &table,
                             const QString &column,
                             const QString &type,
@@ -1132,32 +1162,58 @@ void *DbWorker::sqliteHandle() const {
 }
 
 bool DbWorker::deserializeToMemory(const QByteArray &dbBytes, QString *error) {
-  sqlite3 *db = static_cast<sqlite3 *>(sqliteHandle());
-  if (!db) {
-    if (error) {
-      *error = "SQLite handle missing";
-    }
-    return false;
-  }
   if (dbBytes.isEmpty()) {
     if (error) {
       *error = "Decrypted database is empty";
     }
     return false;
   }
-  unsigned char *buffer = static_cast<unsigned char *>(sqlite3_malloc(dbBytes.size()));
-  if (!buffer) {
+
+  QTemporaryFile temp(QDir(AppPaths::dataRoot()).filePath("vault-import-XXXXXX.db"));
+  temp.setAutoRemove(false);
+  if (!temp.open()) {
     if (error) {
-      *error = "Memory allocation failed";
+      *error = "Failed to create temp SQLite file";
     }
     return false;
   }
-  memcpy(buffer, dbBytes.constData(), static_cast<size_t>(dbBytes.size()));
-  const int rc = sqlite3_deserialize(db, "main", buffer, dbBytes.size(), dbBytes.size(),
-                                     SQLITE_DESERIALIZE_FREEONCLOSE);
-  if (rc != SQLITE_OK) {
+  const QString tempPath = temp.fileName();
+  temp.write(dbBytes);
+  temp.flush();
+  temp.close();
+
+  QString attachError;
+  const bool attachOk = attachDatabase(tempPath, "vault_import", &attachError);
+  if (!attachOk) {
     if (error) {
-      *error = QString("SQLite deserialize failed (%1)").arg(rc);
+      *error = attachError.isEmpty() ? "Failed to attach temp vault" : attachError;
+    }
+    QFile::remove(tempPath);
+    return false;
+  }
+
+  QSqlQuery query(m_db);
+  bool ok = true;
+  ok = ok && query.exec("PRAGMA foreign_keys=OFF");
+  ok = ok && query.exec("BEGIN IMMEDIATE");
+  ok = ok && query.exec("DROP TABLE IF EXISTS library_items");
+  ok = ok && query.exec("DROP TABLE IF EXISTS annotations");
+  ok = ok && query.exec("CREATE TABLE library_items AS SELECT * FROM vault_import.library_items");
+  ok = ok && query.exec("CREATE TABLE annotations AS SELECT * FROM vault_import.annotations");
+  ok = ok && query.exec("COMMIT");
+
+  QString lastError;
+  if (!ok) {
+    lastError = query.lastError().text();
+    query.exec("ROLLBACK");
+  }
+
+  detachDatabase("vault_import");
+  QFile::remove(tempPath);
+
+  if (!ok) {
+    if (error) {
+      *error = lastError.isEmpty() ? "Failed to import vault" : lastError;
     }
     return false;
   }
@@ -1178,7 +1234,9 @@ QByteArray DbWorker::serializeFromMemory(QString *error) {
     const QString tempPath = temp.fileName();
     temp.close();
     QSqlQuery vacuum(m_db);
-    const QString sql = QString("VACUUM INTO '%1'").arg(tempPath.replace("'", "''"));
+    QString escapedPath = tempPath;
+    escapedPath.replace("'", "''");
+    const QString sql = QString("VACUUM INTO '%1'").arg(escapedPath);
     if (!vacuum.exec(sql)) {
       if (error) {
         *error = QString("SQLite handle missing and VACUUM INTO failed: %1").arg(vacuum.lastError().text());

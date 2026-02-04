@@ -78,6 +78,8 @@ private:
   bool openDatabase(const QString &dbPath, QString *error);
   bool ensureSchema(QString *error);
   bool ensureColumn(const QString &table, const QString &column, const QString &type, QString *error);
+  bool attachDatabase(const QString &path, const QString &schema, QString *error);
+  void detachDatabase(const QString &schema);
   bool ensureAnnotationUuids(QString *error);
   bool ensureLibraryUpdatedAt(QString *error);
   QVector<LibraryItem> fetchLibrary(QString *error);

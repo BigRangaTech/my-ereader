@@ -621,10 +621,16 @@ ApplicationWindow {
     target: qmlTts
     ignoreUnknownSignals: true
     function onAvailableVoicesChanged() {
-      if (tts.useQml) {
-        tts.refreshQmlVoices()
-      }
+    if (tts.useQml) {
+      tts.refreshQmlVoices()
     }
+
+    if (vault.state === VaultController.NeedsSetup && !setupDialog.visible) {
+      setupDialog.open()
+    } else if (vault.state === VaultController.Locked && !unlockDialog.visible) {
+      unlockDialog.open()
+    }
+  }
     function onVoicesChanged() {
       if (tts.useQml) {
         tts.refreshQmlVoices()

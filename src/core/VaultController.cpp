@@ -46,6 +46,7 @@ void VaultController::setLibraryModel(QObject *model) {
 }
 
 void VaultController::initialize() {
+  qInfo() << "VaultController: initialize" << m_vaultPath;
   const QString base = appDataDir();
   QDir baseDir(base);
   if (!baseDir.exists()) {
