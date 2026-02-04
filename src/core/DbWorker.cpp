@@ -14,6 +14,7 @@
 #include <QSqlQuery>
 #include <QSqlDriver>
 #include <QStandardPaths>
+#include <QTemporaryFile>
 #include <QThread>
 #include <QVariant>
 #include <QUrl>
@@ -23,6 +24,7 @@
 #include "FormatRegistry.h"
 #include "CryptoBackend.h"
 #include "CryptoVault.h"
+#include "include/AppPaths.h"
 
 namespace {
 QThread *workerThread() {
@@ -40,7 +42,7 @@ QThread *workerThread() {
 }
 
 QString defaultDbPath() {
-  const QString base = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+  const QString base = AppPaths::dataRoot();
   QDir dir(base);
   if (!dir.exists()) {
     dir.mkpath(".");
@@ -49,7 +51,7 @@ QString defaultDbPath() {
 }
 
 QString coverCacheDir() {
-  const QString base = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+  const QString base = AppPaths::dataRoot();
   QDir dir(base);
   if (!dir.exists()) {
     dir.mkpath(".");
@@ -136,12 +138,17 @@ void DbWorker::openEncryptedVault(const QString &vaultPath, const QString &passp
     return;
   }
   if (!deserializeToMemory(dbBytes, &error)) {
-    emit openFinished(false, error);
-    return;
-  }
-  if (!ensureSchema(&error)) {
-    emit openFinished(false, error);
-    return;
+    qWarning() << "DbWorker: deserialize failed" << error;
+    if (!ensureSchema(&error)) {
+      emit openFinished(false, error);
+      return;
+    }
+    qWarning() << "DbWorker: falling back to empty in-memory db";
+  } else {
+    if (!ensureSchema(&error)) {
+      emit openFinished(false, error);
+      return;
+    }
   }
   const QVector<LibraryItem> items =
       fetchLibraryFiltered(m_searchQuery, m_sortKey, m_sortDescending, m_filterTag, m_filterCollection, &error);
@@ -161,6 +168,7 @@ void DbWorker::saveEncryptedVault(const QString &vaultPath, const QString &passp
   QString error;
   const QByteArray dbBytes = serializeFromMemory(&error);
   if (dbBytes.isEmpty()) {
+    qWarning() << "DbWorker: serialize failed" << error;
     emit saveFinished(false, error.isEmpty() ? "Failed to serialize database" : error);
     return;
   }
@@ -692,14 +700,29 @@ bool DbWorker::openDatabase(const QString &dbPath, QString *error) {
   }
   m_connectionName = QString("library_worker_%1").arg(reinterpret_cast<quintptr>(this));
   m_db = QSqlDatabase::addDatabase("QSQLITE", m_connectionName);
-  m_db.setDatabaseName(dbPath.isEmpty() ? defaultDbPath() : dbPath);
+  const QString resolvedPath = dbPath.isEmpty() ? defaultDbPath() : dbPath;
+  m_db.setDatabaseName(resolvedPath);
+  qInfo() << "DbWorker: opening database" << resolvedPath;
   if (!m_db.open()) {
     if (error) {
       *error = m_db.lastError().text();
     }
+    qWarning() << "DbWorker: open failed" << m_db.lastError().text();
     return false;
   }
-  return ensureSchema(error);
+  const QVariant driverHandle = m_db.driver()->handle();
+  const bool handleValid = driverHandle.isValid();
+  qInfo() << "DbWorker: driver handle valid" << handleValid << driverHandle.typeName();
+  if (!ensureSchema(error)) {
+    if (error && !error->isEmpty()) {
+      qWarning() << "DbWorker: ensureSchema failed" << *error;
+    } else {
+      qWarning() << "DbWorker: ensureSchema failed";
+    }
+    return false;
+  }
+  qInfo() << "DbWorker: open ok";
+  return true;
 }
 
 bool DbWorker::ensureSchema(QString *error) {
@@ -1098,6 +1121,11 @@ void *DbWorker::sqliteHandle() const {
   }
   QVariant handle = m_db.driver()->handle();
   if (!handle.isValid()) {
+    QSqlQuery ping(m_db);
+    ping.exec("SELECT 1");
+    handle = m_db.driver()->handle();
+  }
+  if (!handle.isValid()) {
     return nullptr;
   }
   return handle.value<void *>();
@@ -1139,10 +1167,37 @@ bool DbWorker::deserializeToMemory(const QByteArray &dbBytes, QString *error) {
 QByteArray DbWorker::serializeFromMemory(QString *error) {
   sqlite3 *db = static_cast<sqlite3 *>(sqliteHandle());
   if (!db) {
-    if (error) {
-      *error = "SQLite handle missing";
+    QTemporaryFile temp(QDir(AppPaths::dataRoot()).filePath("vault-export-XXXXXX.db"));
+    temp.setAutoRemove(false);
+    if (!temp.open()) {
+      if (error) {
+        *error = "SQLite handle missing and temp file could not be created";
+      }
+      return {};
     }
-    return {};
+    const QString tempPath = temp.fileName();
+    temp.close();
+    QSqlQuery vacuum(m_db);
+    const QString sql = QString("VACUUM INTO '%1'").arg(tempPath.replace("'", "''"));
+    if (!vacuum.exec(sql)) {
+      if (error) {
+        *error = QString("SQLite handle missing and VACUUM INTO failed: %1").arg(vacuum.lastError().text());
+      }
+      QFile::remove(tempPath);
+      return {};
+    }
+    QFile file(tempPath);
+    if (!file.open(QIODevice::ReadOnly)) {
+      if (error) {
+        *error = "Failed to read temp SQLite export";
+      }
+      QFile::remove(tempPath);
+      return {};
+    }
+    const QByteArray data = file.readAll();
+    file.close();
+    QFile::remove(tempPath);
+    return data;
   }
   sqlite3_int64 size = 0;
   unsigned char *data = sqlite3_serialize(db, "main", &size, 0);

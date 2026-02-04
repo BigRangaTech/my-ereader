@@ -194,15 +194,15 @@ ApplicationWindow {
     hoverEnabled: true
     acceptedButtons: Qt.AllButtons
     propagateComposedEvents: true
-    onPressed: {
+    onPressed: function(mouse) {
       root.markActivity()
       mouse.accepted = false
     }
-    onReleased: {
+    onReleased: function(mouse) {
       root.markActivity()
       mouse.accepted = false
     }
-    onPositionChanged: {
+    onPositionChanged: function(mouse) {
       root.markActivity()
       mouse.accepted = false
     }
@@ -1375,7 +1375,7 @@ ApplicationWindow {
     id: formatWarningDialog
     title: "Format unavailable"
     modal: true
-    standardButtons: Dialog.Ok
+    standardButtons: Dialog.NoButton
     width: 460
     height: 200
 
@@ -1417,40 +1417,66 @@ ApplicationWindow {
     height: 260
 
     property string errorText: ""
+    property bool noPassphrase: false
 
     onOpened: {
       errorText = ""
       passField.text = ""
       confirmField.text = ""
+      noPassphrase = false
     }
 
-    onAccepted: {
-      const strength = passphraseScore(passField.text)
-      if (passField.text.length < 6) {
-        errorText = "Passphrase must be at least 6 characters"
-        return
+    function handleAccept() {
+      console.log("Setup dialog accepted")
+      var chosenPass = passField.text
+      if (!noPassphrase) {
+        const strength = passphraseScore(passField.text)
+        if (passField.text.length < 6) {
+          errorText = "Passphrase must be at least 6 characters"
+          return
+        }
+        if (strength <= 2) {
+          errorText = "Passphrase is too weak"
+          return
+        }
+        if (passField.text !== confirmField.text) {
+          errorText = "Passphrases do not match"
+          return
+        }
+      } else {
+        chosenPass = ""
       }
-      if (strength <= 2) {
-        errorText = "Passphrase is too weak"
-        return
-      }
-      if (passField.text !== confirmField.text) {
-        errorText = "Passphrases do not match"
-        return
-      }
-      if (vault.setupNew(passField.text)) {
-        sessionPassphrase = passField.text
+      const setupOk = vault.setupNew(chosenPass)
+      console.log("Vault setup", setupOk, "error", vault.lastError)
+      if (setupOk) {
+        sessionPassphrase = chosenPass
         autoUnlockArmed = false
-        if (vault.unlock(passField.text)) {
+        const unlockOk = vault.unlock(chosenPass)
+        console.log("Vault unlock after setup", unlockOk, "error", vault.lastError)
+        if (unlockOk) {
           markActivity()
         }
         if (settings.rememberPassphrase && vault.keychainAvailable) {
-          vault.storePassphrase(passField.text)
+          vault.storePassphrase(chosenPass)
         }
         markActivity()
         setupDialog.close()
       } else {
         errorText = vault.lastError
+      }
+    }
+
+    footer: RowLayout {
+      width: parent.width
+      spacing: 10
+      Button {
+        text: "Cancel"
+        onClicked: setupDialog.close()
+      }
+      Item { Layout.fillWidth: true }
+      Button {
+        text: "Create"
+        onClicked: setupDialog.handleAccept()
       }
     }
 
@@ -1474,6 +1500,7 @@ ApplicationWindow {
           id: passField
           echoMode: TextInput.Password
           placeholderText: "Passphrase"
+          enabled: !setupDialog.noPassphrase
           onTextChanged: setupDialog.errorText = ""
         }
 
@@ -1481,12 +1508,37 @@ ApplicationWindow {
           id: confirmField
           echoMode: TextInput.Password
           placeholderText: "Confirm passphrase"
+          enabled: !setupDialog.noPassphrase
           onTextChanged: setupDialog.errorText = ""
+        }
+
+        CheckBox {
+          id: noPassphraseCheck
+          text: "No passphrase (not recommended)"
+          checked: setupDialog.noPassphrase
+          onToggled: {
+            setupDialog.noPassphrase = checked
+            setupDialog.errorText = ""
+            if (checked) {
+              passField.text = ""
+              confirmField.text = ""
+            }
+          }
+        }
+
+        Text {
+          visible: setupDialog.noPassphrase
+          text: "Warning: anyone with access to your vault file can open your library."
+          color: theme.accent
+          font.pixelSize: 12
+          font.family: root.uiFont
+          wrapMode: Text.WordWrap
         }
 
         RowLayout {
           Layout.fillWidth: true
           spacing: 8
+          visible: !setupDialog.noPassphrase
 
           Rectangle {
             Layout.fillWidth: true
@@ -1516,6 +1568,32 @@ ApplicationWindow {
           font.pixelSize: 12
           font.family: root.uiFont
         }
+
+        RowLayout {
+          Layout.fillWidth: true
+          spacing: 10
+
+          Text {
+            text: "Remember passphrase"
+            color: theme.textMuted
+            font.pixelSize: 12
+            font.family: root.uiFont
+          }
+
+          CheckBox {
+            checked: settings.rememberPassphrase
+            enabled: vault.keychainAvailable
+            onToggled: settings.rememberPassphrase = checked
+          }
+
+          Text {
+            text: vault.keychainAvailable ? (settings.rememberPassphrase ? "Stored in keychain" : "Prompt each time")
+                                          : "Keychain unavailable"
+            color: theme.textMuted
+            font.pixelSize: 12
+            font.family: root.uiFont
+          }
+        }
       }
     }
   }
@@ -1524,29 +1602,49 @@ ApplicationWindow {
     id: unlockDialog
     title: "Unlock Library"
     modal: true
-    standardButtons: Dialog.Ok
+    standardButtons: Dialog.NoButton
     closePolicy: Popup.NoAutoClose
     width: 460
     height: 220
 
     property string errorText: ""
+    property bool noPassphrase: false
 
     onOpened: {
       errorText = ""
       unlockField.text = ""
+      noPassphrase = false
     }
 
-    onAccepted: {
-      if (vault.unlock(unlockField.text)) {
-        sessionPassphrase = unlockField.text
+    function handleAccept() {
+      console.log("Unlock dialog accepted")
+      const pass = noPassphrase ? "" : unlockField.text
+      const unlockOk = vault.unlock(pass)
+      console.log("Vault unlock", unlockOk, "error", vault.lastError)
+      if (unlockOk) {
+        sessionPassphrase = pass
         autoUnlockArmed = false
         markActivity()
         if (settings.rememberPassphrase && vault.keychainAvailable) {
-          vault.storePassphrase(unlockField.text)
+          vault.storePassphrase(pass)
         }
         unlockDialog.close()
       } else {
         errorText = vault.lastError
+      }
+    }
+
+    footer: RowLayout {
+      width: parent.width
+      spacing: 10
+      Button {
+        text: "Cancel"
+        onClicked: unlockDialog.close()
+      }
+      Item { Layout.fillWidth: true }
+      Button {
+        text: "Unlock"
+        onClicked: unlockDialog.handleAccept()
       }
     }
 
@@ -1570,6 +1668,19 @@ ApplicationWindow {
           id: unlockField
           echoMode: TextInput.Password
           placeholderText: "Passphrase"
+          enabled: !unlockDialog.noPassphrase
+        }
+
+        CheckBox {
+          text: "Unlock without passphrase"
+          checked: unlockDialog.noPassphrase
+          onToggled: {
+            unlockDialog.noPassphrase = checked
+            unlockDialog.errorText = ""
+            if (checked) {
+              unlockField.text = ""
+            }
+          }
         }
 
         Text {
@@ -1577,6 +1688,32 @@ ApplicationWindow {
           color: theme.accent
           font.pixelSize: 12
           font.family: root.uiFont
+        }
+
+        RowLayout {
+          Layout.fillWidth: true
+          spacing: 10
+
+          Text {
+            text: "Remember passphrase"
+            color: theme.textMuted
+            font.pixelSize: 12
+            font.family: root.uiFont
+          }
+
+          CheckBox {
+            checked: settings.rememberPassphrase
+            enabled: vault.keychainAvailable
+            onToggled: settings.rememberPassphrase = checked
+          }
+
+          Text {
+            text: vault.keychainAvailable ? (settings.rememberPassphrase ? "Stored in keychain" : "Prompt each time")
+                                          : "Keychain unavailable"
+            color: theme.textMuted
+            font.pixelSize: 12
+            font.family: root.uiFont
+          }
         }
       }
     }
@@ -2195,19 +2332,23 @@ ApplicationWindow {
                 id: librarySearch
                 Layout.fillWidth: true
                 placeholderText: "Search library"
-                text: libraryPage.pendingSearch
+                text: libraryPage ? libraryPage.pendingSearch : ""
                 onTextChanged: {
-                  libraryPage.pendingSearch = text
-                  searchDebounce.restart()
+                  if (libraryPage) {
+                    libraryPage.pendingSearch = text
+                    searchDebounce.restart()
+                  }
                 }
               }
 
               Button {
                 text: "✕"
                 font.family: root.uiFont
-                enabled: libraryPage.pendingSearch.length > 0 || libraryModel.searchQuery.length > 0
+                enabled: librarySearch.text.length > 0 || libraryModel.searchQuery.length > 0
                 onClicked: {
-                  libraryPage.pendingSearch = ""
+                  if (libraryPage) {
+                    libraryPage.pendingSearch = ""
+                  }
                   librarySearch.text = ""
                   libraryModel.searchQuery = ""
                 }

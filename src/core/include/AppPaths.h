@@ -44,4 +44,23 @@ inline QString configFile(const QString &name) {
   return QDir(configRoot()).filePath(name);
 }
 
+inline QString dataRoot() {
+  const QString env = QProcessEnvironment::systemEnvironment().value("MYEREADER_DATA_DIR").trimmed();
+  if (!env.isEmpty()) {
+    QDir dir(env);
+    dir.mkpath(".");
+    return dir.absolutePath();
+  }
+  const QString root = repoRoot();
+  if (QFileInfo::exists(QDir(root).filePath("README.md"))) {
+    QDir dir(root);
+    dir.mkpath("data");
+    return dir.filePath("data");
+  }
+  const QString base = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+  QDir dir(base);
+  dir.mkpath(".");
+  return dir.absolutePath();
+}
+
 } // namespace AppPaths

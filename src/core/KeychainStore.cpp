@@ -123,6 +123,7 @@ QByteArray portalSecret(QString *outToken, QString *error) {
     if (error) {
       *error = "Secret portal unavailable";
     }
+    qWarning() << "KeychainStore: portal interface invalid";
     return {};
   }
 
@@ -161,6 +162,7 @@ QByteArray portalSecret(QString *outToken, QString *error) {
     if (error) {
       *error = "Secret portal timeout";
     }
+    qWarning() << "KeychainStore: portal RetrieveSecret timeout";
     ::close(fds[0]);
     ::close(fds[1]);
     return {};
@@ -171,6 +173,7 @@ QByteArray portalSecret(QString *outToken, QString *error) {
     if (error) {
       *error = reply.error().message();
     }
+    qWarning() << "KeychainStore: portal reply error" << reply.error().message();
     ::close(fds[0]);
     ::close(fds[1]);
     return {};
@@ -184,6 +187,7 @@ QByteArray portalSecret(QString *outToken, QString *error) {
     if (error) {
       *error = "Secret portal returned empty request path";
     }
+    qWarning() << "KeychainStore: portal returned empty request path";
     ::close(fds[0]);
     ::close(fds[1]);
     return {};
@@ -209,6 +213,7 @@ QByteArray portalSecret(QString *outToken, QString *error) {
     if (error) {
       *error = "Secret portal response timeout";
     }
+    qWarning() << "KeychainStore: portal response timeout";
   }
   if (responseCode == 0) {
     QFile readFile;
@@ -230,6 +235,7 @@ QByteArray portalSecret(QString *outToken, QString *error) {
     if (error) {
       *error = secret.isEmpty() ? "Secret portal returned no data" : "Secret portal denied";
     }
+    qWarning() << "KeychainStore: portal denied" << responseCode << "secret bytes" << secret.size();
     return {};
   }
 
@@ -244,15 +250,20 @@ QByteArray portalSecret(QString *outToken, QString *error) {
     }
   }
 
+  qInfo() << "KeychainStore: portal secret retrieved" << secret.size() << "bytes";
+
   return secret;
 }
 } // namespace
 
 bool KeychainStore::isAvailable() const {
 #ifdef HAVE_LIBSECRET
+  qInfo() << "KeychainStore: libsecret available";
   return true;
 #else
-  return portalDataPresent();
+  const bool available = portalDataPresent();
+  qInfo() << "KeychainStore: portal data present" << available;
+  return available;
 #endif
 }
 
@@ -388,6 +399,10 @@ bool KeychainStore::clearPassphrase(QString *error) {
   return true;
 #else
   if (!portalDataPresent()) {
+    if (error) {
+      *error = "No portal data stored";
+    }
+    qWarning() << "KeychainStore: no portal data stored";
     return {};
   }
   QSettings settings(portalConfigPath(), QSettings::IniFormat);

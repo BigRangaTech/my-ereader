@@ -8,10 +8,11 @@
 
 #include "LibraryModel.h"
 #include "KeychainStore.h"
+#include "include/AppPaths.h"
 
 namespace {
 QString appDataDir() {
-  return QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+  return AppPaths::dataRoot();
 }
 } // namespace
 
@@ -40,12 +41,24 @@ void VaultController::setLibraryModel(QObject *model) {
     return;
   }
   m_libraryModel = model;
+  qInfo() << "VaultController: library model set" << (m_libraryModel != nullptr);
   emit libraryModelChanged();
 }
 
 void VaultController::initialize() {
+  const QString base = appDataDir();
+  QDir baseDir(base);
+  if (!baseDir.exists()) {
+    if (!baseDir.mkpath(".")) {
+      setLastError("Failed to create app data directory");
+      setState(Error);
+      qWarning() << "VaultController: failed to create app data dir" << base;
+      return;
+    }
+  }
   const bool vaultExists = QFile::exists(m_vaultPath);
   if (!vaultExists) {
+    qInfo() << "VaultController: vault missing" << m_vaultPath;
     setState(NeedsSetup);
     qInfo() << "VaultController: needs setup";
     return;
@@ -55,6 +68,7 @@ void VaultController::initialize() {
 }
 
 bool VaultController::unlock(const QString &passphrase) {
+  qInfo() << "VaultController: unlock attempt" << m_vaultPath;
   if (!QFile::exists(m_vaultPath)) {
     setLastError("Vault not found");
     setState(NeedsSetup);
@@ -65,11 +79,13 @@ bool VaultController::unlock(const QString &passphrase) {
   if (!model) {
     setLastError("Library model not set");
     setState(Error);
+    qWarning() << "VaultController: missing library model";
     return false;
   }
   if (!model->openEncryptedVault(m_vaultPath, passphrase)) {
     setLastError(model->lastError());
     setState(Error);
+    qWarning() << "VaultController: unlock failed" << m_lastError;
     return false;
   }
   setLastError("");
@@ -79,20 +95,34 @@ bool VaultController::unlock(const QString &passphrase) {
 }
 
 bool VaultController::setupNew(const QString &passphrase) {
+  qInfo() << "VaultController: setup new vault" << m_vaultPath;
+  const QString base = appDataDir();
+  QDir baseDir(base);
+  if (!baseDir.exists()) {
+    if (!baseDir.mkpath(".")) {
+      setLastError("Failed to create app data directory");
+      setState(Error);
+      qWarning() << "VaultController: failed to create app data dir" << base;
+      return false;
+    }
+  }
   auto *model = qobject_cast<LibraryModel *>(m_libraryModel);
   if (!model) {
     setLastError("Library model not set");
     setState(Error);
+    qWarning() << "VaultController: missing library model";
     return false;
   }
   if (!model->openAt(":memory:")) {
     setLastError(model->lastError());
     setState(Error);
+    qWarning() << "VaultController: openAt failed" << m_lastError;
     return false;
   }
   if (!model->saveEncryptedVault(m_vaultPath, passphrase)) {
     setLastError(model->lastError());
     setState(Error);
+    qWarning() << "VaultController: saveEncryptedVault failed" << m_lastError;
     return false;
   }
   model->close();
@@ -139,12 +169,14 @@ bool VaultController::storePassphrase(const QString &passphrase) {
   KeychainStore store;
   if (!store.isAvailable()) {
     setLastError("Keychain unavailable");
+    qWarning() << "VaultController: keychain unavailable for store";
     return false;
   }
   QString error;
   const bool ok = store.storePassphrase(passphrase, &error);
   if (!ok) {
     setLastError(error);
+    qWarning() << "VaultController: storePassphrase failed" << error;
   }
   return ok;
 }
@@ -153,12 +185,14 @@ bool VaultController::clearStoredPassphrase() {
   KeychainStore store;
   if (!store.isAvailable()) {
     setLastError("Keychain unavailable");
+    qWarning() << "VaultController: keychain unavailable for clear";
     return false;
   }
   QString error;
   const bool ok = store.clearPassphrase(&error);
   if (!ok) {
     setLastError(error);
+    qWarning() << "VaultController: clearStoredPassphrase failed" << error;
   }
   return ok;
 }

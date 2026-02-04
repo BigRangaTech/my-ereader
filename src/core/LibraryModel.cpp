@@ -9,6 +9,7 @@
 #include <QSet>
 #include <QStandardPaths>
 
+#include "include/AppPaths.h"
 #include "DbWorker.h"
 
 LibraryModel::LibraryModel(QObject *parent) : QAbstractListModel(parent) {
@@ -18,9 +19,11 @@ LibraryModel::LibraryModel(QObject *parent) : QAbstractListModel(parent) {
             if (!ok) {
               setLastError(error);
               m_ready = false;
+              qWarning() << "LibraryModel: openFinished failed" << error;
             } else {
               setLastError("");
               m_ready = true;
+              qInfo() << "LibraryModel: openFinished ok";
             }
             emit readyChanged();
           });
@@ -129,7 +132,7 @@ QHash<int, QByteArray> LibraryModel::roleNames() const {
 }
 
 bool LibraryModel::openDefault() {
-  const QString baseDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+  const QString baseDir = AppPaths::dataRoot();
   if (baseDir.isEmpty()) {
     setLastError("No writable AppDataLocation available");
     qWarning() << "LibraryModel: no AppDataLocation";
@@ -175,6 +178,7 @@ bool LibraryModel::openAt(const QString &dbPath) {
 }
 
 bool LibraryModel::openEncryptedVault(const QString &vaultPath, const QString &passphrase) {
+  qInfo() << "LibraryModel: openEncryptedVault" << vaultPath;
   if (vaultPath.isEmpty()) {
     setLastError("Vault path is empty");
     return false;
@@ -198,6 +202,9 @@ bool LibraryModel::openEncryptedVault(const QString &vaultPath, const QString &p
   disconnect(conn);
   if (!ok) {
     setLastError(error);
+    qWarning() << "LibraryModel: openEncryptedVault failed" << error;
+  } else {
+    qInfo() << "LibraryModel: openEncryptedVault ok";
   }
   return ok;
 }
