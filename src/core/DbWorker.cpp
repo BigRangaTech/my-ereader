@@ -696,7 +696,9 @@ bool DbWorker::openDatabase(const QString &dbPath, QString *error) {
     m_db.close();
   }
   if (!m_connectionName.isEmpty()) {
-    QSqlDatabase::removeDatabase(m_connectionName);
+    const QString oldName = m_connectionName;
+    m_db = QSqlDatabase();
+    QSqlDatabase::removeDatabase(oldName);
   }
   m_connectionName = QString("library_worker_%1").arg(reinterpret_cast<quintptr>(this));
   m_db = QSqlDatabase::addDatabase("QSQLITE", m_connectionName);

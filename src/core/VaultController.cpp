@@ -64,7 +64,11 @@ void VaultController::initialize() {
     qInfo() << "VaultController: needs setup";
     return;
   }
-  setState(Locked);
+  if (m_state != Locked) {
+    setState(Locked);
+  } else {
+    emit stateChanged();
+  }
   qInfo() << "VaultController: locked";
 }
 

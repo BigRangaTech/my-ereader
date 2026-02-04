@@ -64,8 +64,6 @@ ApplicationWindow {
     }
   }
   onActiveFocusItemChanged: markActivity()
-  Keys.onPressed: markActivity()
-  Keys.onReleased: markActivity()
   onActiveChanged: {
     if (!active && vault.state === VaultController.Unlocked && sessionPassphrase.length > 0) {
       if (vault.lock(sessionPassphrase)) {
@@ -78,6 +76,14 @@ ApplicationWindow {
     if (active) {
       markActivity()
     }
+  }
+
+  Item {
+    id: keyActivitySink
+    anchors.fill: parent
+    focus: true
+    Keys.onPressed: markActivity()
+    Keys.onReleased: markActivity()
   }
 
   QtObject {
@@ -2333,6 +2339,7 @@ ApplicationWindow {
             RowLayout {
               spacing: 6
               Layout.preferredWidth: 260
+              visible: libraryPage !== null
 
               TextField {
                 id: librarySearch
