@@ -27,6 +27,13 @@
 #ifdef HAVE_LIBSECRET
 #include <QDebug>
 
+#ifdef signals
+#undef signals
+#endif
+#ifdef slots
+#undef slots
+#endif
+
 extern "C" {
 #include <libsecret/secret.h>
 }
@@ -42,7 +49,7 @@ const SecretSchema *schema() {
       {
           {"application", SECRET_SCHEMA_ATTRIBUTE_STRING},
           {"vault", SECRET_SCHEMA_ATTRIBUTE_STRING},
-          {nullptr, 0},
+          {nullptr, static_cast<SecretSchemaAttributeType>(0)},
       }};
   return &kSchema;
 }
@@ -83,8 +90,7 @@ public:
   int *responseCode = nullptr;
   QVariantMap *results = nullptr;
 
-public slots:
-  void onResponse(uint code, const QVariantMap &result) {
+  Q_SLOT void onResponse(uint code, const QVariantMap &result) {
     if (responseCode) {
       *responseCode = static_cast<int>(code);
     }
@@ -95,7 +101,7 @@ public slots:
       loop->quit();
     }
   }
-};
+}; 
 
 QByteArray deriveKey(const QByteArray &secret, int keyBytes) {
   QByteArray seed = secret + QByteArrayLiteral("my-ereader-key-v1");

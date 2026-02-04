@@ -204,6 +204,8 @@ void SyncManager::setTransferMaxMb(int mb) {
 }
 
 void SyncManager::startDiscovery() {
+  qInfo() << "SyncManager: start discovery" << "enabled" << m_enabled
+          << "discovering" << m_discovering << "port" << m_discoveryPort;
   if (!m_enabled) {
     setStatus("Sync disabled");
     return;
@@ -216,6 +218,7 @@ void SyncManager::startDiscovery() {
 }
 
 void SyncManager::stopDiscovery() {
+  qInfo() << "SyncManager: stop discovery";
   setDiscovering(false);
   if (m_discoveryTimer) {
     m_discoveryTimer->stop();
@@ -488,6 +491,12 @@ void SyncManager::loadSettings() {
   m_transferMaxMb = m_settings->value("sync/transfer_max_mb", 50).toInt();
   loadPairedDevices();
   m_settings->sync();
+  qInfo() << "SyncManager: settings loaded"
+          << "deviceId" << m_deviceId
+          << "deviceName" << m_deviceName
+          << "enabled" << m_enabled
+          << "discoverPort" << m_discoveryPort
+          << "listenPort" << m_listenPort;
 }
 
 void SyncManager::saveSettings() {
@@ -509,9 +518,15 @@ void SyncManager::ensureUdpSocket() {
   m_udp = new QUdpSocket(this);
   if (!m_udp->bind(QHostAddress::AnyIPv4, static_cast<quint16>(m_discoveryPort),
                    QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint)) {
+    qWarning() << "SyncManager: discovery bind failed"
+               << m_udp->errorString()
+               << "port" << m_discoveryPort;
     setStatus("Discovery bind failed");
     return;
   }
+  qInfo() << "SyncManager: discovery socket bound"
+          << "port" << m_discoveryPort
+          << "local" << m_udp->localAddress().toString();
   connect(m_udp, &QUdpSocket::readyRead, this, [this]() {
     while (m_udp->hasPendingDatagrams()) {
       QHostAddress sender;
@@ -519,6 +534,10 @@ void SyncManager::ensureUdpSocket() {
       QByteArray buffer;
       buffer.resize(static_cast<int>(m_udp->pendingDatagramSize()));
       m_udp->readDatagram(buffer.data(), buffer.size(), &sender, &port);
+      qInfo() << "SyncManager: datagram received"
+              << "from" << sender.toString()
+              << "port" << port
+              << "bytes" << buffer.size();
       handleDatagram(sender, port, buffer);
     }
   });
@@ -705,7 +724,16 @@ void SyncManager::ensureServer() {
 
 void SyncManager::sendDiscovery() {
   if (!m_udp || !m_enabled) {
+    qWarning() << "SyncManager: sendDiscovery skipped"
+               << "udp" << (m_udp != nullptr)
+               << "enabled" << m_enabled;
     return;
+  }
+  if (m_deviceId.trimmed().isEmpty()) {
+    m_deviceId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    m_settings->setValue("device/id", m_deviceId);
+    m_settings->sync();
+    qWarning() << "SyncManager: deviceId missing, regenerated" << m_deviceId;
   }
   QJsonObject payload{
       {"type", "discover"},
@@ -715,11 +743,24 @@ void SyncManager::sendDiscovery() {
       {"time", QDateTime::currentDateTimeUtc().toString(Qt::ISODate)}
   };
   const QByteArray data = QJsonDocument(payload).toJson(QJsonDocument::Compact);
-  m_udp->writeDatagram(data, QHostAddress::Broadcast, static_cast<quint16>(m_discoveryPort));
+  const qint64 written = m_udp->writeDatagram(data, QHostAddress::Broadcast,
+                                              static_cast<quint16>(m_discoveryPort));
+  if (written < 0) {
+    qWarning() << "SyncManager: sendDiscovery failed"
+               << m_udp->errorString()
+               << "port" << m_discoveryPort;
+  } else {
+    qInfo() << "SyncManager: sent discovery"
+            << "bytes" << written
+            << "port" << m_discoveryPort;
+  }
 }
 
 void SyncManager::sendAnnounce(const QHostAddress &address, quint16 port) {
   if (!m_udp || !m_enabled) {
+    qWarning() << "SyncManager: sendAnnounce skipped"
+               << "udp" << (m_udp != nullptr)
+               << "enabled" << m_enabled;
     return;
   }
   QJsonObject payload{
@@ -730,12 +771,26 @@ void SyncManager::sendAnnounce(const QHostAddress &address, quint16 port) {
       {"time", QDateTime::currentDateTimeUtc().toString(Qt::ISODate)}
   };
   const QByteArray data = QJsonDocument(payload).toJson(QJsonDocument::Compact);
-  m_udp->writeDatagram(data, address, port);
+  const qint64 written = m_udp->writeDatagram(data, address, port);
+  if (written < 0) {
+    qWarning() << "SyncManager: sendAnnounce failed"
+               << m_udp->errorString()
+               << "to" << address.toString()
+               << "port" << port;
+  } else {
+    qInfo() << "SyncManager: sent announce"
+            << "to" << address.toString()
+            << "port" << port
+            << "bytes" << written;
+  }
 }
 
 void SyncManager::handleDatagram(const QHostAddress &address, quint16 port, const QByteArray &payload) {
   const auto doc = QJsonDocument::fromJson(payload);
   if (!doc.isObject()) {
+    qWarning() << "SyncManager: datagram ignored (not object)"
+               << "from" << address.toString()
+               << "port" << port;
     return;
   }
   const auto obj = doc.object();
@@ -744,13 +799,27 @@ void SyncManager::handleDatagram(const QHostAddress &address, quint16 port, cons
   const QString name = obj.value("name").toString();
   const int remotePort = obj.value("port").toInt();
   if (id.isEmpty() || id == m_deviceId) {
+    qInfo() << "SyncManager: datagram ignored (self/empty id)"
+            << "type" << type
+            << "from" << address.toString()
+            << "payload" << QString::fromUtf8(payload);
     return;
   }
+  qInfo() << "SyncManager: datagram"
+          << "type" << type
+          << "id" << id
+          << "name" << name
+          << "addr" << address.toString()
+          << "port" << remotePort;
   if (type == "discover") {
     updateDevice(id, name, address.toString(), remotePort, true);
     sendAnnounce(address, port);
   } else if (type == "announce") {
     updateDevice(id, name, address.toString(), remotePort, true);
+  } else {
+    qWarning() << "SyncManager: datagram ignored (unknown type)"
+               << type
+               << "from" << address.toString();
   }
 }
 
@@ -775,6 +844,13 @@ void SyncManager::updateDevice(const QString &id,
   if (discovered) {
     emit devicesChanged();
   }
+  qInfo() << "SyncManager: device updated"
+          << "id" << id
+          << "name" << info.name
+          << "address" << info.address
+          << "port" << info.port
+          << "paired" << info.paired
+          << "devices" << m_devices.size();
 }
 
 void SyncManager::pruneDevices() {
