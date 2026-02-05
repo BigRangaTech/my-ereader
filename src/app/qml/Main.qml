@@ -121,6 +121,7 @@ ApplicationWindow {
            deleteBooksDialog.visible || formatWarningDialog.visible ||
            setupDialog.visible || unlockDialog.visible || lockDialog.visible ||
            updateDialog.visible || restartDialog.visible ||
+           keyboardDialog.visible || formatSettingsDialog.visible ||
            settingsDialog.visible || aboutDialog.visible
   }
 
@@ -3728,6 +3729,273 @@ ApplicationWindow {
   }
 
   Dialog {
+    id: keyboardDialog
+    title: "Keyboard Shortcuts"
+    modal: true
+    standardButtons: Dialog.Close
+    width: Math.min(640, root.width - 80)
+    height: Math.min(520, root.height - 80)
+
+    contentItem: Rectangle {
+      color: theme.panel
+      radius: 16
+
+      ScrollView {
+        anchors.fill: parent
+        anchors.margins: 12
+
+        ColumnLayout {
+          width: parent.width
+          spacing: 12
+
+          Text {
+            text: "Library"
+            color: theme.textPrimary
+            font.pixelSize: 18
+            font.family: root.uiFont
+          }
+
+          Repeater {
+            model: [
+              { keys: "Ctrl+O", action: "Open book" },
+              { keys: "Ctrl+Shift+O", action: "Open multiple books" },
+              { keys: "Ctrl+Alt+O", action: "Import folder" },
+              { keys: "Ctrl+F", action: "Focus search" }
+            ]
+            delegate: RowLayout {
+              Layout.fillWidth: true
+              spacing: 12
+
+              Text {
+                text: modelData.keys
+                color: theme.textPrimary
+                font.pixelSize: 13
+                font.family: root.uiFont
+                Layout.preferredWidth: 180
+              }
+
+              Text {
+                text: modelData.action
+                color: theme.textMuted
+                font.pixelSize: 13
+                font.family: root.uiFont
+                Layout.fillWidth: true
+                wrapMode: Text.Wrap
+              }
+            }
+          }
+
+          Rectangle {
+            Layout.fillWidth: true
+            height: 1
+            color: theme.panelHighlight
+          }
+
+          Text {
+            text: "Reader"
+            color: theme.textPrimary
+            font.pixelSize: 18
+            font.family: root.uiFont
+          }
+
+          Repeater {
+            model: [
+              { keys: "Esc", action: "Close current book" },
+              { keys: "Right / Page Down / Space", action: "Next page or chapter" },
+              { keys: "Left / Page Up / Backspace", action: "Previous page or chapter" },
+              { keys: "Home", action: "Jump to start" },
+              { keys: "End", action: "Jump to end" }
+            ]
+            delegate: RowLayout {
+              Layout.fillWidth: true
+              spacing: 12
+
+              Text {
+                text: modelData.keys
+                color: theme.textPrimary
+                font.pixelSize: 13
+                font.family: root.uiFont
+                Layout.preferredWidth: 180
+              }
+
+              Text {
+                text: modelData.action
+                color: theme.textMuted
+                font.pixelSize: 13
+                font.family: root.uiFont
+                Layout.fillWidth: true
+                wrapMode: Text.Wrap
+              }
+            }
+          }
+
+          Rectangle {
+            Layout.fillWidth: true
+            height: 1
+            color: theme.panelHighlight
+          }
+
+          Text {
+            text: "Text & Zoom"
+            color: theme.textPrimary
+            font.pixelSize: 18
+            font.family: root.uiFont
+          }
+
+          Repeater {
+            model: [
+              { keys: "+ / =", action: "Increase text size or zoom in images" },
+              { keys: "-", action: "Decrease text size or zoom out images" },
+              { keys: "0", action: "Reset image zoom to page fit" }
+            ]
+            delegate: RowLayout {
+              Layout.fillWidth: true
+              spacing: 12
+
+              Text {
+                text: modelData.keys
+                color: theme.textPrimary
+                font.pixelSize: 13
+                font.family: root.uiFont
+                Layout.preferredWidth: 180
+              }
+
+              Text {
+                text: modelData.action
+                color: theme.textMuted
+                font.pixelSize: 13
+                font.family: root.uiFont
+                Layout.fillWidth: true
+                wrapMode: Text.Wrap
+              }
+            }
+          }
+
+          Rectangle {
+            Layout.fillWidth: true
+            height: 1
+            color: theme.panelHighlight
+          }
+
+          Text {
+            text: "Text To Speech"
+            color: theme.textPrimary
+            font.pixelSize: 18
+            font.family: root.uiFont
+          }
+
+          Repeater {
+            model: [
+              { keys: "Ctrl+Shift+S", action: "Toggle speak / stop" }
+            ]
+            delegate: RowLayout {
+              Layout.fillWidth: true
+              spacing: 12
+
+              Text {
+                text: modelData.keys
+                color: theme.textPrimary
+                font.pixelSize: 13
+                font.family: root.uiFont
+                Layout.preferredWidth: 180
+              }
+
+              Text {
+                text: modelData.action
+                color: theme.textMuted
+                font.pixelSize: 13
+                font.family: root.uiFont
+                Layout.fillWidth: true
+                wrapMode: Text.Wrap
+              }
+            }
+          }
+
+          Text {
+            text: "Shortcuts are disabled while a modal dialog is open."
+            color: theme.textMuted
+            font.pixelSize: 12
+            font.family: root.uiFont
+            wrapMode: Text.Wrap
+          }
+        }
+      }
+    }
+  }
+
+  Dialog {
+    id: formatSettingsDialog
+    title: "Format Settings"
+    modal: true
+    standardButtons: Dialog.Close
+    width: Math.min(640, root.width - 80)
+    height: Math.min(520, root.height - 80)
+
+    contentItem: Rectangle {
+      color: theme.panel
+      radius: 16
+
+      ScrollView {
+        anchors.fill: parent
+        anchors.margins: 12
+
+        ColumnLayout {
+          width: parent.width
+          spacing: 12
+
+          Text {
+            text: "Per-format settings are stored in these files."
+            color: theme.textPrimary
+            font.pixelSize: 14
+            font.family: root.uiFont
+            wrapMode: Text.Wrap
+          }
+
+          Repeater {
+            model: [
+              { label: "EPUB", key: "epub" },
+              { label: "FB2", key: "fb2" },
+              { label: "TXT", key: "txt" },
+              { label: "MOBI/AZW/PRC", key: "mobi" },
+              { label: "PDF", key: "pdf" },
+              { label: "CBZ", key: "cbz" },
+              { label: "CBR", key: "cbr" },
+              { label: "DJVU", key: "djvu" }
+            ]
+            delegate: ColumnLayout {
+              Layout.fillWidth: true
+              spacing: 4
+
+              Text {
+                text: modelData.label
+                color: theme.textPrimary
+                font.pixelSize: 13
+                font.family: root.uiFont
+              }
+
+              Text {
+                text: settings.formatSettingsPath(modelData.key)
+                color: theme.textMuted
+                font.pixelSize: 12
+                font.family: root.uiFont
+                wrapMode: Text.Wrap
+              }
+            }
+          }
+
+          Text {
+            text: "Most options are available in the main Settings dialog."
+            color: theme.textMuted
+            font.pixelSize: 12
+            font.family: root.uiFont
+            wrapMode: Text.Wrap
+          }
+        }
+      }
+    }
+  }
+
+  Dialog {
     id: settingsDialog
     title: "Settings"
     modal: true
@@ -4396,6 +4664,231 @@ ApplicationWindow {
             Layout.fillWidth: true
             height: 1
             color: theme.panelHighlight
+          }
+
+          Text {
+            text: "EPUB"
+            color: theme.textPrimary
+            font.pixelSize: 20
+            font.family: root.uiFont
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Font size"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 12
+              to: 36
+              stepSize: 1
+              value: settings.epubFontSize
+              onMoved: settings.epubFontSize = Math.round(value)
+            }
+
+            SpinBox {
+              from: 12
+              to: 36
+              value: settings.epubFontSize
+              editable: true
+              onValueModified: settings.epubFontSize = value
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Line height"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 1.0
+              to: 2.0
+              stepSize: 0.05
+              value: settings.epubLineHeight
+              onMoved: settings.epubLineHeight = Math.round(value * 100) / 100
+            }
+
+            Text {
+              text: settings.epubLineHeight.toFixed(2)
+              color: theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 48
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Show images"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            CheckBox {
+              checked: settings.epubShowImages
+              onToggled: settings.epubShowImages = checked
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Text align"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            ComboBox {
+              Layout.fillWidth: true
+              model: ["left", "justify", "center", "right"]
+              currentIndex: Math.max(0, model.indexOf(settings.epubTextAlign))
+              onActivated: settings.epubTextAlign = model[currentIndex]
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Paragraph spacing"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 0.0
+              to: 3.0
+              stepSize: 0.05
+              value: settings.epubParagraphSpacing
+              onMoved: settings.epubParagraphSpacing = Math.round(value * 100) / 100
+            }
+
+            Text {
+              text: settings.epubParagraphSpacing.toFixed(2)
+              color: theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 48
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Paragraph indent"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 0.0
+              to: 3.0
+              stepSize: 0.05
+              value: settings.epubParagraphIndent
+              onMoved: settings.epubParagraphIndent = Math.round(value * 100) / 100
+            }
+
+            Text {
+              text: settings.epubParagraphIndent.toFixed(2)
+              color: theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 48
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Image max width"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 10
+              to: 100
+              stepSize: 5
+              value: settings.epubImageMaxWidth
+              onMoved: settings.epubImageMaxWidth = Math.round(value)
+            }
+
+            Text {
+              text: settings.epubImageMaxWidth + "%"
+              color: theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 48
+            }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Image spacing"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 120
+            }
+
+            Slider {
+              Layout.fillWidth: true
+              from: 0.0
+              to: 4.0
+              stepSize: 0.05
+              value: settings.epubImageSpacing
+              onMoved: settings.epubImageSpacing = Math.round(value * 100) / 100
+            }
+
+            Text {
+              text: settings.epubImageSpacing.toFixed(2)
+              color: theme.textPrimary
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 48
+            }
           }
 
           Text {
