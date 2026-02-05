@@ -165,6 +165,18 @@ QUrl ReaderController::currentImageUrl() const {
   }
   return QUrl(path);
 }
+
+QUrl ReaderController::imageUrlAt(int index) const {
+  if (index < 0 || index >= m_imagePaths.size()) {
+    return {};
+  }
+  const QString path = m_imagePaths.at(index);
+  QFileInfo info(path);
+  if (info.isAbsolute()) {
+    return QUrl::fromLocalFile(path);
+  }
+  return QUrl(path);
+}
 int ReaderController::imageReloadToken() const { return m_imageReloadToken; }
 QString ReaderController::currentCoverPath() const { return m_coverPath; }
 QUrl ReaderController::currentCoverUrl() const {
@@ -242,7 +254,8 @@ bool ReaderController::applyDocument(std::unique_ptr<FormatDocument> document,
     qInfo() << "ReaderController: loaded" << m_imagePaths.size()
             << "image(s), first:" << firstImage
             << "exists:" << QFileInfo::exists(firstImage);
-    const int warmCount = std::min(preRenderPagesForFormat(m_currentFormat), m_imagePaths.size());
+    const int warmCount = std::min(preRenderPagesForFormat(m_currentFormat),
+                                   static_cast<int>(m_imagePaths.size()));
     for (int i = 0; i < warmCount; ++i) {
       m_document->ensureImage(i);
     }

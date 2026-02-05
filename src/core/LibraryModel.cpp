@@ -67,9 +67,16 @@ LibraryModel::LibraryModel(QObject *parent) : QAbstractListModel(parent) {
               setLastError("");
             }
           });
-  connect(worker, &DbWorker::annotationsChanged, this, [this]() {
-    QMetaObject::invokeMethod(dbWorker(), "loadLibrary", Qt::QueuedConnection);
-  });
+  connect(worker, &DbWorker::annotationCountChanged, this,
+          [this](int libraryItemId, int count) {
+            for (int i = 0; i < m_items.size(); ++i) {
+              if (m_items.at(i).id == libraryItemId) {
+                m_items[i].annotationCount = count;
+                emit dataChanged(index(i), index(i), {AnnotationCountRole});
+                break;
+              }
+            }
+          });
 }
 
 LibraryModel::~LibraryModel() {

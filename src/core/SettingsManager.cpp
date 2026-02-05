@@ -24,6 +24,22 @@ QString normalizeTextAlign(const QString &value) {
   }
   return "left";
 }
+
+QString normalizeFitMode(const QString &value) {
+  const QString normalized = value.trimmed().toLower();
+  if (normalized == "page" || normalized == "width" || normalized == "height") {
+    return normalized;
+  }
+  return "page";
+}
+
+QString normalizeReadingDirection(const QString &value) {
+  const QString normalized = value.trimmed().toLower();
+  if (normalized == "ltr" || normalized == "rtl") {
+    return normalized;
+  }
+  return "ltr";
+}
 } // namespace
 
 SettingsManager::SettingsManager(QObject *parent)
@@ -131,9 +147,35 @@ double SettingsManager::comicMinZoom() const { return m_comicMinZoom; }
 double SettingsManager::comicMaxZoom() const { return m_comicMaxZoom; }
 QString SettingsManager::comicSortMode() const { return m_comicSortMode; }
 bool SettingsManager::comicSortDescending() const { return m_comicSortDescending; }
+QString SettingsManager::comicDefaultFitMode() const { return m_comicDefaultFitMode; }
+bool SettingsManager::comicRememberFitMode() const { return m_comicRememberFitMode; }
+QString SettingsManager::comicReadingDirection() const { return m_comicReadingDirection; }
+bool SettingsManager::comicResetZoomOnPageChange() const { return m_comicResetZoomOnPageChange; }
+double SettingsManager::comicZoomStep() const { return m_comicZoomStep; }
+bool SettingsManager::comicSmoothScaling() const { return m_comicSmoothScaling; }
+bool SettingsManager::comicTwoPageSpread() const { return m_comicTwoPageSpread; }
+bool SettingsManager::comicSpreadInPortrait() const { return m_comicSpreadInPortrait; }
 
 QString SettingsManager::formatSettingsPath(const QString &format) const {
   return resolveFormatSettingsPath(format);
+}
+
+QString SettingsManager::comicFitModeForPath(const QString &path) const {
+  if (path.isEmpty()) {
+    return {};
+  }
+  const QByteArray hash = QCryptographicHash::hash(path.toUtf8(), QCryptographicHash::Sha1).toHex();
+  return m_settings.value(QString("reader/comic_fit/%1").arg(QString::fromUtf8(hash))).toString();
+}
+
+void SettingsManager::setComicFitModeForPath(const QString &path, const QString &mode) {
+  if (path.isEmpty()) {
+    return;
+  }
+  const QString normalized = normalizeFitMode(mode);
+  const QByteArray hash = QCryptographicHash::hash(path.toUtf8(), QCryptographicHash::Sha1).toHex();
+  m_settings.setValue(QString("reader/comic_fit/%1").arg(QString::fromUtf8(hash)), normalized);
+  m_settings.sync();
 }
 
 void SettingsManager::setReadingFontSize(int value) {
@@ -861,6 +903,81 @@ void SettingsManager::setComicSortDescending(bool value) {
   emit comicSortDescendingChanged();
 }
 
+void SettingsManager::setComicDefaultFitMode(const QString &value) {
+  const QString normalized = normalizeFitMode(value);
+  if (m_comicDefaultFitMode == normalized) {
+    return;
+  }
+  m_comicDefaultFitMode = normalized;
+  saveComicValue("view/default_fit_mode", normalized);
+  emit comicDefaultFitModeChanged();
+}
+
+void SettingsManager::setComicRememberFitMode(bool value) {
+  if (m_comicRememberFitMode == value) {
+    return;
+  }
+  m_comicRememberFitMode = value;
+  saveComicValue("view/remember_fit_mode", value);
+  emit comicRememberFitModeChanged();
+}
+
+void SettingsManager::setComicReadingDirection(const QString &value) {
+  const QString normalized = normalizeReadingDirection(value);
+  if (m_comicReadingDirection == normalized) {
+    return;
+  }
+  m_comicReadingDirection = normalized;
+  saveComicValue("view/reading_direction", normalized);
+  emit comicReadingDirectionChanged();
+}
+
+void SettingsManager::setComicResetZoomOnPageChange(bool value) {
+  if (m_comicResetZoomOnPageChange == value) {
+    return;
+  }
+  m_comicResetZoomOnPageChange = value;
+  saveComicValue("view/reset_zoom_on_page_change", value);
+  emit comicResetZoomOnPageChangeChanged();
+}
+
+void SettingsManager::setComicZoomStep(double value) {
+  value = clampDouble(value, 0.05, 0.5);
+  if (qFuzzyCompare(m_comicZoomStep, value)) {
+    return;
+  }
+  m_comicZoomStep = value;
+  saveComicValue("view/zoom_step", value);
+  emit comicZoomStepChanged();
+}
+
+void SettingsManager::setComicSmoothScaling(bool value) {
+  if (m_comicSmoothScaling == value) {
+    return;
+  }
+  m_comicSmoothScaling = value;
+  saveComicValue("view/smooth_scaling", value);
+  emit comicSmoothScalingChanged();
+}
+
+void SettingsManager::setComicTwoPageSpread(bool value) {
+  if (m_comicTwoPageSpread == value) {
+    return;
+  }
+  m_comicTwoPageSpread = value;
+  saveComicValue("view/two_page_spread", value);
+  emit comicTwoPageSpreadChanged();
+}
+
+void SettingsManager::setComicSpreadInPortrait(bool value) {
+  if (m_comicSpreadInPortrait == value) {
+    return;
+  }
+  m_comicSpreadInPortrait = value;
+  saveComicValue("view/spread_in_portrait", value);
+  emit comicSpreadInPortraitChanged();
+}
+
 void SettingsManager::resetDefaults() {
   setReadingFontSize(20);
   setReadingLineHeight(1.4);
@@ -928,6 +1045,14 @@ void SettingsManager::resetDefaults() {
   setDjvuImageFormat("ppm");
   setDjvuExtractText(true);
   setDjvuRotation(0);
+  setComicDefaultFitMode("page");
+  setComicRememberFitMode(false);
+  setComicReadingDirection("ltr");
+  setComicResetZoomOnPageChange(false);
+  setComicZoomStep(0.1);
+  setComicSmoothScaling(false);
+  setComicTwoPageSpread(false);
+  setComicSpreadInPortrait(false);
   setComicMinZoom(0.5);
   setComicMaxZoom(4.0);
   setComicSortMode("path");
@@ -999,6 +1124,14 @@ void SettingsManager::resetMobiDefaults() {
 }
 
 void SettingsManager::resetComicDefaults() {
+  setComicDefaultFitMode("page");
+  setComicRememberFitMode(false);
+  setComicReadingDirection("ltr");
+  setComicResetZoomOnPageChange(false);
+  setComicZoomStep(0.1);
+  setComicSmoothScaling(false);
+  setComicTwoPageSpread(false);
+  setComicSpreadInPortrait(false);
   setComicMinZoom(0.5);
   setComicMaxZoom(4.0);
   setComicSortMode("path");
@@ -1172,6 +1305,22 @@ void SettingsManager::loadFromSettings() {
     m_djvuRotation = 0;
   }
 
+  m_comicDefaultFitMode =
+      normalizeFitMode(readFormatValue("cbz", "view/default_fit_mode", "page").toString());
+  m_comicRememberFitMode =
+      readFormatValue("cbz", "view/remember_fit_mode", false).toBool();
+  m_comicReadingDirection =
+      normalizeReadingDirection(readFormatValue("cbz", "view/reading_direction", "ltr").toString());
+  m_comicResetZoomOnPageChange =
+      readFormatValue("cbz", "view/reset_zoom_on_page_change", false).toBool();
+  m_comicZoomStep =
+      clampDouble(readFormatValue("cbz", "view/zoom_step", 0.1).toDouble(), 0.05, 0.5);
+  m_comicSmoothScaling =
+      readFormatValue("cbz", "view/smooth_scaling", false).toBool();
+  m_comicTwoPageSpread =
+      readFormatValue("cbz", "view/two_page_spread", false).toBool();
+  m_comicSpreadInPortrait =
+      readFormatValue("cbz", "view/spread_in_portrait", false).toBool();
   m_comicMinZoom =
       clampDouble(readFormatValue("cbz", "zoom/min", m_settings.value("comics/min_zoom", 0.5)).toDouble(), 0.2, 7.0);
   m_comicMaxZoom =
@@ -1249,6 +1398,14 @@ void SettingsManager::loadFromSettings() {
   saveFormatValue("djvu", "render/format", m_djvuImageFormat);
   saveFormatValue("djvu", "render/extract_text", m_djvuExtractText);
   saveFormatValue("djvu", "render/rotation", m_djvuRotation);
+  saveComicValue("view/default_fit_mode", m_comicDefaultFitMode);
+  saveComicValue("view/remember_fit_mode", m_comicRememberFitMode);
+  saveComicValue("view/reading_direction", m_comicReadingDirection);
+  saveComicValue("view/reset_zoom_on_page_change", m_comicResetZoomOnPageChange);
+  saveComicValue("view/zoom_step", m_comicZoomStep);
+  saveComicValue("view/smooth_scaling", m_comicSmoothScaling);
+  saveComicValue("view/two_page_spread", m_comicTwoPageSpread);
+  saveComicValue("view/spread_in_portrait", m_comicSpreadInPortrait);
   saveComicValue("zoom/min", m_comicMinZoom);
   saveComicValue("zoom/max", m_comicMaxZoom);
   saveComicValue("render/sort_mode", m_comicSortMode);
@@ -1316,6 +1473,14 @@ void SettingsManager::loadFromSettings() {
   emit djvuImageFormatChanged();
   emit djvuExtractTextChanged();
   emit djvuRotationChanged();
+  emit comicDefaultFitModeChanged();
+  emit comicRememberFitModeChanged();
+  emit comicReadingDirectionChanged();
+  emit comicResetZoomOnPageChangeChanged();
+  emit comicZoomStepChanged();
+  emit comicSmoothScalingChanged();
+  emit comicTwoPageSpreadChanged();
+  emit comicSpreadInPortraitChanged();
   emit comicMinZoomChanged();
   emit comicMaxZoomChanged();
   emit comicSortModeChanged();

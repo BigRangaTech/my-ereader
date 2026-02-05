@@ -65,6 +65,7 @@ signals:
   void openFinished(bool ok, const QString &error);
   void saveFinished(bool ok, const QString &error);
   void libraryLoaded(const QVector<LibraryItem> &items);
+  void annotationCountChanged(int libraryItemId, int count);
   void annotationsLoaded(int libraryItemId, const QVector<AnnotationItem> &items);
   void addBookFinished(bool ok, const QString &error);
   void updateBookFinished(bool ok, const QString &error);
@@ -72,7 +73,6 @@ signals:
   void addAnnotationFinished(bool ok, const QString &error);
   void updateAnnotationFinished(bool ok, const QString &error);
   void deleteAnnotationFinished(bool ok, const QString &error);
-  void annotationsChanged();
 
 private:
   bool openDatabase(const QString &dbPath, QString *error);
@@ -90,6 +90,7 @@ private:
                                             const QString &filterCollection,
                                             QString *error);
   QVector<AnnotationItem> fetchAnnotations(int libraryItemId, QString *error);
+  int annotationCountFor(int libraryItemId);
   bool insertLibraryItem(const LibraryItem &item, QString *error);
   LibraryItem makeItemFromFile(const QString &filePath);
   QString computeFileHash(const QString &filePath);

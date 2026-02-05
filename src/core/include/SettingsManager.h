@@ -75,6 +75,14 @@ class SettingsManager : public QObject {
   Q_PROPERTY(double comicMaxZoom READ comicMaxZoom WRITE setComicMaxZoom NOTIFY comicMaxZoomChanged)
   Q_PROPERTY(QString comicSortMode READ comicSortMode WRITE setComicSortMode NOTIFY comicSortModeChanged)
   Q_PROPERTY(bool comicSortDescending READ comicSortDescending WRITE setComicSortDescending NOTIFY comicSortDescendingChanged)
+  Q_PROPERTY(QString comicDefaultFitMode READ comicDefaultFitMode WRITE setComicDefaultFitMode NOTIFY comicDefaultFitModeChanged)
+  Q_PROPERTY(bool comicRememberFitMode READ comicRememberFitMode WRITE setComicRememberFitMode NOTIFY comicRememberFitModeChanged)
+  Q_PROPERTY(QString comicReadingDirection READ comicReadingDirection WRITE setComicReadingDirection NOTIFY comicReadingDirectionChanged)
+  Q_PROPERTY(bool comicResetZoomOnPageChange READ comicResetZoomOnPageChange WRITE setComicResetZoomOnPageChange NOTIFY comicResetZoomOnPageChangeChanged)
+  Q_PROPERTY(double comicZoomStep READ comicZoomStep WRITE setComicZoomStep NOTIFY comicZoomStepChanged)
+  Q_PROPERTY(bool comicSmoothScaling READ comicSmoothScaling WRITE setComicSmoothScaling NOTIFY comicSmoothScalingChanged)
+  Q_PROPERTY(bool comicTwoPageSpread READ comicTwoPageSpread WRITE setComicTwoPageSpread NOTIFY comicTwoPageSpreadChanged)
+  Q_PROPERTY(bool comicSpreadInPortrait READ comicSpreadInPortrait WRITE setComicSpreadInPortrait NOTIFY comicSpreadInPortraitChanged)
   Q_PROPERTY(QString settingsPath READ settingsPath CONSTANT)
   Q_PROPERTY(QString iconPath READ iconPath CONSTANT)
 
@@ -151,9 +159,19 @@ public:
   double comicMaxZoom() const;
   QString comicSortMode() const;
   bool comicSortDescending() const;
+  QString comicDefaultFitMode() const;
+  bool comicRememberFitMode() const;
+  QString comicReadingDirection() const;
+  bool comicResetZoomOnPageChange() const;
+  double comicZoomStep() const;
+  bool comicSmoothScaling() const;
+  bool comicTwoPageSpread() const;
+  bool comicSpreadInPortrait() const;
   QString settingsPath() const;
   QString iconPath() const;
   Q_INVOKABLE QString formatSettingsPath(const QString &format) const;
+  Q_INVOKABLE QString comicFitModeForPath(const QString &path) const;
+  Q_INVOKABLE void setComicFitModeForPath(const QString &path, const QString &mode);
 
   void setReadingFontSize(int value);
   void setReadingLineHeight(double value);
@@ -225,6 +243,14 @@ public:
   void setComicMaxZoom(double value);
   void setComicSortMode(const QString &value);
   void setComicSortDescending(bool value);
+  void setComicDefaultFitMode(const QString &value);
+  void setComicRememberFitMode(bool value);
+  void setComicReadingDirection(const QString &value);
+  void setComicResetZoomOnPageChange(bool value);
+  void setComicZoomStep(double value);
+  void setComicSmoothScaling(bool value);
+  void setComicTwoPageSpread(bool value);
+  void setComicSpreadInPortrait(bool value);
 
   Q_INVOKABLE void resetDefaults();
   Q_INVOKABLE void resetPdfDefaults();
@@ -309,6 +335,14 @@ signals:
   void comicMaxZoomChanged();
   void comicSortModeChanged();
   void comicSortDescendingChanged();
+  void comicDefaultFitModeChanged();
+  void comicRememberFitModeChanged();
+  void comicReadingDirectionChanged();
+  void comicResetZoomOnPageChangeChanged();
+  void comicZoomStepChanged();
+  void comicSmoothScalingChanged();
+  void comicTwoPageSpreadChanged();
+  void comicSpreadInPortraitChanged();
 
 private:
   void loadFromSettings();
@@ -392,4 +426,12 @@ private:
   double m_comicMaxZoom = 4.0;
   QString m_comicSortMode = "path";
   bool m_comicSortDescending = false;
+  QString m_comicDefaultFitMode = "page";
+  bool m_comicRememberFitMode = false;
+  QString m_comicReadingDirection = "ltr";
+  bool m_comicResetZoomOnPageChange = false;
+  double m_comicZoomStep = 0.1;
+  bool m_comicSmoothScaling = false;
+  bool m_comicTwoPageSpread = false;
+  bool m_comicSpreadInPortrait = false;
 };

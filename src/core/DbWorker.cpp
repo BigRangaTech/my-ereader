@@ -15,6 +15,7 @@
 #include <QSqlDriver>
 #include <QStandardPaths>
 #include <QTemporaryFile>
+#include <QSet>
 #include <QThread>
 #include <QVariant>
 #include <QUrl>
@@ -441,7 +442,7 @@ void DbWorker::addAnnotation(int libraryItemId,
   }
   emit addAnnotationFinished(true, "");
   loadAnnotations(libraryItemId);
-  emit annotationsChanged();
+  emit annotationCountChanged(libraryItemId, annotationCountFor(libraryItemId));
 }
 
 void DbWorker::updateAnnotation(int annotationId,
@@ -472,7 +473,7 @@ void DbWorker::updateAnnotation(int annotationId,
   }
   emit updateAnnotationFinished(true, "");
   loadAnnotations(libraryItemId);
-  emit annotationsChanged();
+  emit annotationCountChanged(libraryItemId, annotationCountFor(libraryItemId));
 }
 
 void DbWorker::deleteAnnotation(int annotationId, int libraryItemId) {
@@ -489,7 +490,7 @@ void DbWorker::deleteAnnotation(int annotationId, int libraryItemId) {
   }
   emit deleteAnnotationFinished(true, "");
   loadAnnotations(libraryItemId);
-  emit annotationsChanged();
+  emit annotationCountChanged(libraryItemId, annotationCountFor(libraryItemId));
 }
 
 QVariantList DbWorker::exportAnnotationSync() {
@@ -526,6 +527,7 @@ int DbWorker::importAnnotationSync(const QVariantList &payload) {
     return 0;
   }
   int added = 0;
+  QSet<int> touchedIds;
   QSqlQuery findItem(m_db);
   QSqlQuery check(m_db);
   QSqlQuery insert(m_db);
@@ -568,11 +570,14 @@ int DbWorker::importAnnotationSync(const QVariantList &payload) {
                             : createdAt);
     if (insert.exec()) {
       added++;
+      touchedIds.insert(libraryItemId);
     }
     insert.finish();
   }
   if (added > 0) {
-    emit annotationsChanged();
+    for (const int id : touchedIds) {
+      emit annotationCountChanged(id, annotationCountFor(id));
+    }
   }
   return added;
 }
@@ -796,6 +801,46 @@ bool DbWorker::ensureSchema(QString *error) {
     return false;
   }
   if (!ensureAnnotationUuids(error)) {
+    return false;
+  }
+  auto ensureIndex = [&](const QString &sql) -> bool {
+    QSqlQuery indexQuery(m_db);
+    if (!indexQuery.exec(sql)) {
+      if (error) {
+        *error = indexQuery.lastError().text();
+      }
+      return false;
+    }
+    return true;
+  };
+  if (!ensureIndex("CREATE INDEX IF NOT EXISTS idx_library_items_title ON library_items(title COLLATE NOCASE)")) {
+    return false;
+  }
+  if (!ensureIndex("CREATE INDEX IF NOT EXISTS idx_library_items_authors ON library_items(authors COLLATE NOCASE)")) {
+    return false;
+  }
+  if (!ensureIndex("CREATE INDEX IF NOT EXISTS idx_library_items_series ON library_items(series COLLATE NOCASE)")) {
+    return false;
+  }
+  if (!ensureIndex("CREATE INDEX IF NOT EXISTS idx_library_items_publisher ON library_items(publisher COLLATE NOCASE)")) {
+    return false;
+  }
+  if (!ensureIndex("CREATE INDEX IF NOT EXISTS idx_library_items_collection ON library_items(collection COLLATE NOCASE)")) {
+    return false;
+  }
+  if (!ensureIndex("CREATE INDEX IF NOT EXISTS idx_library_items_format ON library_items(format COLLATE NOCASE)")) {
+    return false;
+  }
+  if (!ensureIndex("CREATE INDEX IF NOT EXISTS idx_library_items_added_at ON library_items(added_at)")) {
+    return false;
+  }
+  if (!ensureIndex("CREATE INDEX IF NOT EXISTS idx_library_items_updated_at ON library_items(updated_at)")) {
+    return false;
+  }
+  if (!ensureIndex("CREATE INDEX IF NOT EXISTS idx_library_items_file_hash ON library_items(file_hash)")) {
+    return false;
+  }
+  if (!ensureIndex("CREATE INDEX IF NOT EXISTS idx_annotations_library_item ON annotations(library_item_id)")) {
     return false;
   }
   return true;
@@ -1061,6 +1106,19 @@ QVector<AnnotationItem> DbWorker::fetchAnnotations(int libraryItemId, QString *e
     *error = query.lastError().text();
   }
   return items;
+}
+
+int DbWorker::annotationCountFor(int libraryItemId) {
+  if (!m_db.isOpen() || libraryItemId <= 0) {
+    return 0;
+  }
+  QSqlQuery query(m_db);
+  query.prepare("SELECT COUNT(*) FROM annotations WHERE library_item_id = ?");
+  query.addBindValue(libraryItemId);
+  if (!query.exec() || !query.next()) {
+    return 0;
+  }
+  return query.value(0).toInt();
 }
 
 bool DbWorker::insertLibraryItem(const LibraryItem &item, QString *error) {

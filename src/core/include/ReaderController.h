@@ -49,6 +49,7 @@ public:
   Q_INVOKABLE bool nextImage();
   Q_INVOKABLE bool prevImage();
   Q_INVOKABLE bool goToImage(int index);
+  Q_INVOKABLE QUrl imageUrlAt(int index) const;
 
   QString currentTitle() const;
   QString currentText() const;

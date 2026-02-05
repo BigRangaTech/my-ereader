@@ -34,7 +34,7 @@
 
 ## Phase 4: Performance + polish
 - [x] Caching and pre-render
-- [ ] Large library optimizations
+- [x] Large library optimizations
 - [ ] UI refinement and accessibility
 
 ## Phase 5: Security hardening

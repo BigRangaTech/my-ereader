@@ -17,6 +17,69 @@ ApplicationWindow {
   readonly property string uiFont: "Space Grotesk"
   readonly property string readingFont: "Literata"
   readonly property string monoFont: "JetBrains Mono"
+  property var imageReaderItem: readerContent.item
+  readonly property real uiBaseWidth: 1920
+  readonly property real uiBaseHeight: 1080
+  readonly property real uiMinWidth: 854
+  readonly property real uiMinHeight: 480
+  readonly property real uiMaxWidth: 3840
+  readonly property real uiMaxHeight: 2160
+  readonly property real uiScale: Math.min(
+    Math.max(uiMinWidth, Math.min(uiMaxWidth, width)) / uiBaseWidth,
+    Math.max(uiMinHeight, Math.min(uiMaxHeight, height)) / uiBaseHeight
+  )
+
+  Binding {
+    target: root.contentItem
+    property: "scale"
+    value: root.uiScale
+  }
+
+  Binding {
+    target: root.contentItem
+    property: "transformOrigin"
+    value: Item.TopLeft
+  }
+
+  Binding {
+    target: root.contentItem
+    property: "width"
+    value: root.width / root.uiScale
+  }
+
+  Binding {
+    target: root.contentItem
+    property: "height"
+    value: root.height / root.uiScale
+  }
+
+  Binding {
+    target: root.overlay
+    property: "scale"
+    value: root.uiScale
+    when: root.overlay && root.overlay.parent !== root.contentItem
+  }
+
+  Binding {
+    target: root.overlay
+    property: "transformOrigin"
+    value: Item.TopLeft
+    when: root.overlay && root.overlay.parent !== root.contentItem
+  }
+
+  Binding {
+    target: root.overlay
+    property: "width"
+    value: root.width / root.uiScale
+    when: root.overlay && root.overlay.parent !== root.contentItem
+  }
+
+  Binding {
+    target: root.overlay
+    property: "height"
+    value: root.height / root.uiScale
+    when: root.overlay && root.overlay.parent !== root.contentItem
+  }
   function fileUrl(path) {
     if (!path || path.length === 0) return ""
     if (path.startsWith("file:") || path.startsWith("qrc:")) return path
@@ -147,12 +210,39 @@ ApplicationWindow {
     setTextFontSizeFor(reader.currentFormat, current + delta)
   }
 
+  function comicIsRtl() {
+    return settings.comicReadingDirection === "rtl"
+  }
+
+  function comicSpreadStep() {
+    if (imageReaderItem && imageReaderItem.spreadActive === true) {
+      return 2
+    }
+    return 1
+  }
+
+  function advanceComicImage(direction) {
+    if (reader.imageCount <= 0) return false
+    const step = comicSpreadStep()
+    const delta = direction * (comicIsRtl() ? -1 : 1) * step
+    const target = Math.max(0, Math.min(reader.imageCount - 1, reader.currentImageIndex + delta))
+    reader.goToImage(target)
+    return true
+  }
+
+  function jumpComicImageToEdge(direction) {
+    if (reader.imageCount <= 0) return false
+    const target = direction > 0
+          ? (reader.imageCount - 1)
+          : 0
+    reader.goToImage(target)
+    return true
+  }
+
   function advanceReader(direction) {
     if (!reader.currentPath || reader.currentPath.length === 0) return false
     if (reader.hasImages && reader.imageCount > 0) {
-      if (direction > 0) reader.nextImage()
-      else reader.prevImage()
-      return true
+      return advanceComicImage(direction)
     }
     if (reader.chapterCount > 0) {
       if (direction > 0) reader.nextChapter()
@@ -165,8 +255,7 @@ ApplicationWindow {
   function jumpToEdge(direction) {
     if (!reader.currentPath || reader.currentPath.length === 0) return false
     if (reader.hasImages && reader.imageCount > 0) {
-      reader.goToImage(direction > 0 ? (reader.imageCount - 1) : 0)
-      return true
+      return jumpComicImageToEdge(direction)
     }
     if (reader.chapterCount > 0) {
       reader.goToChapter(direction > 0 ? (reader.chapterCount - 1) : 0)
@@ -235,22 +324,27 @@ ApplicationWindow {
       case Qt.Key_Plus:
       case Qt.Key_Equal:
         if (reader.hasImages) {
-          imageReader.zoom = imageReader.clampZoom(imageReader.zoom + 0.1)
+          if (imageReaderItem) {
+            imageReaderItem.zoom = imageReaderItem.clampZoom(imageReaderItem.zoom + imageReaderItem.zoomStep)
+          }
         } else {
           adjustTextFont(1)
         }
         return true
       case Qt.Key_Minus:
         if (reader.hasImages) {
-          imageReader.zoom = imageReader.clampZoom(imageReader.zoom - 0.1)
+          if (imageReaderItem) {
+            imageReaderItem.zoom = imageReaderItem.clampZoom(imageReaderItem.zoom - imageReaderItem.zoomStep)
+          }
         } else {
           adjustTextFont(-1)
         }
         return true
       case Qt.Key_0:
         if (reader.hasImages) {
-          imageReader.fitMode = "page"
-          imageReader.zoom = 1.0
+          if (imageReaderItem) {
+            imageReaderItem.applyFitMode("page")
+          }
           return true
         }
         return false
@@ -2055,40 +2149,130 @@ ApplicationWindow {
     id: imageReader
 
     Item {
+      id: imageReaderView
       clip: true
       property real zoom: 1.0
       property real minZoom: settings.comicMinZoom
       property real maxZoom: settings.comicMaxZoom
+      property real zoomStep: settings.comicZoomStep
       property real pinchStartZoom: 1.0
       property string fitMode: "page" // page, width, height
       property real baseScale: 1.0
       property real sourceW: 1.0
       property real sourceH: 1.0
+      property real secondarySourceW: 0.0
+      property real secondarySourceH: 0.0
       property real effectiveScale: baseScale * zoom
+      property bool spreadEnabled: settings.comicTwoPageSpread
+      property bool spreadActive: spreadEnabled && reader.hasImages && reader.imageCount > 1
+                                 && (settings.comicSpreadInPortrait || imageFlick.width > imageFlick.height)
+      property bool secondaryAvailable: spreadActive && (reader.currentImageIndex + 1) < reader.imageCount
+      property int lastImageIndex: -1
+      property string lastPath: ""
+      property int spreadSpacing: 12
       function clampZoom(value) {
         return Math.max(minZoom, Math.min(maxZoom, value))
       }
+      function normalizeFitMode(value) {
+        if (value === "width" || value === "height" || value === "page") {
+          return value
+        }
+        return "page"
+      }
+      function applyFitMode(mode) {
+        fitMode = normalizeFitMode(mode)
+        zoom = 1.0
+        recomputeBase()
+        if (settings.comicRememberFitMode && reader.currentPath && reader.currentPath.length > 0) {
+          settings.setComicFitModeForPath(reader.currentPath, fitMode)
+        }
+      }
+      function canAdvance(direction) {
+        if (reader.imageCount <= 0) {
+          return false
+        }
+        const step = spreadActive ? 2 : 1
+        const delta = direction * (settings.comicReadingDirection === "rtl" ? -1 : 1) * step
+        const target = reader.currentImageIndex + delta
+        return target >= 0 && target < reader.imageCount
+      }
+      function loadFitModeForBook() {
+        var mode = settings.comicDefaultFitMode
+        if (settings.comicRememberFitMode && reader.currentPath && reader.currentPath.length > 0) {
+          var stored = settings.comicFitModeForPath(reader.currentPath)
+          if (stored && stored.length > 0) {
+            mode = stored
+          }
+        }
+        fitMode = normalizeFitMode(mode)
+        zoom = 1.0
+        recomputeBase()
+      }
       function recomputeBase() {
         if (imageItem.sourceSize.width <= 0 || imageItem.sourceSize.height <= 0) {
-          baseScale = 1.0
           sourceW = Math.max(1, imageItem.sourceSize.width)
           sourceH = Math.max(1, imageItem.sourceSize.height)
-          return
-        }
-        sourceW = imageItem.sourceSize.width
-        sourceH = imageItem.sourceSize.height
-        if (fitMode === "width") {
-          baseScale = imageFlick.width / sourceW
-        } else if (fitMode === "height") {
-          baseScale = imageFlick.height / sourceH
         } else {
-          baseScale = Math.min(imageFlick.width / sourceW, imageFlick.height / sourceH)
+          sourceW = imageItem.sourceSize.width
+          sourceH = imageItem.sourceSize.height
+        }
+
+        if (secondaryAvailable) {
+          if (imageItemSecondary.sourceSize.width <= 0 || imageItemSecondary.sourceSize.height <= 0) {
+            secondarySourceW = Math.max(1, imageItemSecondary.sourceSize.width)
+            secondarySourceH = Math.max(1, imageItemSecondary.sourceSize.height)
+          } else {
+            secondarySourceW = imageItemSecondary.sourceSize.width
+            secondarySourceH = imageItemSecondary.sourceSize.height
+          }
+        } else {
+          secondarySourceW = 0
+          secondarySourceH = 0
+        }
+
+        var spreadW = sourceW + (secondaryAvailable ? secondarySourceW : 0)
+        var spreadH = Math.max(sourceH, secondarySourceH)
+        if (spreadW <= 0) spreadW = sourceW
+        if (spreadH <= 0) spreadH = sourceH
+
+        var spacing = secondaryAvailable ? spreadSpacing : 0
+        var availableW = Math.max(1, imageFlick.width - spacing)
+        var availableH = Math.max(1, imageFlick.height)
+        if (fitMode === "width") {
+          baseScale = availableW / spreadW
+        } else if (fitMode === "height") {
+          baseScale = availableH / spreadH
+        } else {
+          baseScale = Math.min(availableW / spreadW, availableH / spreadH)
         }
       }
       anchors.fill: parent
 
       onWidthChanged: recomputeBase()
       onHeightChanged: recomputeBase()
+      onSpreadActiveChanged: recomputeBase()
+
+      Connections {
+        target: reader
+        function onCurrentChanged() {
+          if (!reader.hasImages) {
+            return
+          }
+          if (reader.currentPath !== imageReaderView.lastPath) {
+            imageReaderView.lastPath = reader.currentPath
+            imageReaderView.lastImageIndex = reader.currentImageIndex
+            imageReaderView.loadFitModeForBook()
+            return
+          }
+          if (reader.currentImageIndex !== imageReaderView.lastImageIndex) {
+            imageReaderView.lastImageIndex = reader.currentImageIndex
+            if (settings.comicResetZoomOnPageChange) {
+              imageReaderView.zoom = 1.0
+            }
+            imageReaderView.recomputeBase()
+          }
+        }
+      }
 
       ColumnLayout {
         anchors.fill: parent
@@ -2108,51 +2292,39 @@ ApplicationWindow {
 
             Button {
               text: "Prev"
-              onClicked: reader.prevImage()
-              enabled: reader.currentImageIndex > 0
+              onClicked: root.advanceComicImage(-1)
+              enabled: canAdvance(-1)
             }
 
             Button {
               text: "Next"
-              onClicked: reader.nextImage()
-              enabled: reader.currentImageIndex + 1 < reader.imageCount
+              onClicked: root.advanceComicImage(1)
+              enabled: canAdvance(1)
             }
 
             Button {
               text: "Fit Page"
-              onClicked: {
-                fitMode = "page"
-                zoom = 1.0
-                recomputeBase()
-              }
+              onClicked: applyFitMode("page")
             }
 
             Button {
               text: "Fit Width"
-              onClicked: {
-                fitMode = "width"
-                zoom = 1.0
-                recomputeBase()
-              }
+              onClicked: applyFitMode("width")
             }
 
             Button {
               text: "Fit Height"
-              onClicked: {
-                fitMode = "height"
-                zoom = 1.0
-                recomputeBase()
-              }
+              onClicked: applyFitMode("height")
             }
 
             Button {
               text: "-"
-              onClicked: zoom = clampZoom(zoom - 0.1)
+              onClicked: zoom = clampZoom(zoom - zoomStep)
             }
 
             Button {
               text: "+"
-              onClicked: zoom = clampZoom(zoom + 0.1)
+              onClicked: zoom = clampZoom(zoom + zoomStep)
             }
 
             Text {
@@ -2187,7 +2359,12 @@ ApplicationWindow {
 
             Text {
               text: reader.imageCount > 0
-                    ? qsTr("%1 / %2").arg(reader.currentImageIndex + 1).arg(reader.imageCount)
+                    ? ((imageReaderItem && imageReaderItem.spreadActive === true) && reader.currentImageIndex + 1 < reader.imageCount
+                       ? qsTr("%1-%2 / %3")
+                           .arg(reader.currentImageIndex + 1)
+                           .arg(reader.currentImageIndex + 2)
+                           .arg(reader.imageCount)
+                       : qsTr("%1 / %2").arg(reader.currentImageIndex + 1).arg(reader.imageCount))
                     : ""
               color: theme.textMuted
               font.pixelSize: 12
@@ -2200,14 +2377,14 @@ ApplicationWindow {
           id: imageFlick
           Layout.fillWidth: true
           Layout.fillHeight: true
-          contentWidth: Math.max(imageItem.width, width)
-          contentHeight: Math.max(imageItem.height, height)
+          contentWidth: Math.max(imageRow.width, width)
+          contentHeight: Math.max(imageRow.height, height)
           clip: true
 
           WheelHandler {
             acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
             onWheel: function(wheel) {
-              const step = wheel.angleDelta.y > 0 ? 0.1 : -0.1
+              const step = wheel.angleDelta.y > 0 ? zoomStep : -zoomStep
               zoom = clampZoom(zoom + step)
             }
           }
@@ -2222,12 +2399,10 @@ ApplicationWindow {
             acceptedButtons: Qt.LeftButton
             onDoubleTapped: {
               if (fitMode === "width") {
-                fitMode = "page"
+                applyFitMode("page")
               } else {
-                fitMode = "width"
+                applyFitMode("width")
               }
-              zoom = 1.0
-              recomputeBase()
             }
           }
 
@@ -2250,25 +2425,58 @@ ApplicationWindow {
             }
           }
 
-          Image {
-            id: imageItem
-            source: reader.currentImageUrl.toString().length > 0
-                    ? (reader.currentImageUrl.toString() + "?t=" + reader.imageReloadToken)
-                    : ""
-            fillMode: Image.PreserveAspectFit
-            asynchronous: true
-            cache: false
-            width: sourceW * effectiveScale
-            height: sourceH * effectiveScale
+          Row {
+            id: imageRow
+            spacing: spreadSpacing
+            layoutDirection: settings.comicReadingDirection === "rtl"
+                            ? Qt.RightToLeft
+                            : Qt.LeftToRight
             x: Math.max(0, (imageFlick.width - width) / 2)
             y: Math.max(0, (imageFlick.height - height) / 2)
-            onSourceChanged: recomputeBase()
-            onStatusChanged: {
-              if (status === Image.Error) {
-                console.warn("Image load failed", source, imageItem.errorString)
-              } else if (status === Image.Ready) {
-                console.info("Image loaded", source, sourceSize.width, sourceSize.height)
-                recomputeBase()
+
+            Image {
+              id: imageItem
+              source: reader.currentImageUrl.toString().length > 0
+                      ? (reader.currentImageUrl.toString() + "?t=" + reader.imageReloadToken)
+                      : ""
+              fillMode: Image.PreserveAspectFit
+              asynchronous: true
+              cache: false
+              smooth: settings.comicSmoothScaling
+              width: sourceW * effectiveScale
+              height: sourceH * effectiveScale
+              onSourceChanged: recomputeBase()
+              onStatusChanged: {
+                if (status === Image.Error) {
+                  console.warn("Image load failed", source, imageItem.errorString)
+                } else if (status === Image.Ready) {
+                  console.info("Image loaded", source, sourceSize.width, sourceSize.height)
+                  recomputeBase()
+                }
+              }
+            }
+
+            Image {
+              id: imageItemSecondary
+              source: secondaryAvailable
+                      ? (reader.imageUrlAt(reader.currentImageIndex + 1).toString()
+                         + "?t=" + reader.imageReloadToken)
+                      : ""
+              fillMode: Image.PreserveAspectFit
+              asynchronous: true
+              cache: false
+              smooth: settings.comicSmoothScaling
+              visible: secondaryAvailable
+              width: secondaryAvailable ? secondarySourceW * effectiveScale : 0
+              height: secondaryAvailable ? secondarySourceH * effectiveScale : 0
+              onSourceChanged: recomputeBase()
+              onStatusChanged: {
+                if (status === Image.Error) {
+                  console.warn("Image load failed", source, imageItemSecondary.errorString)
+                } else if (status === Image.Ready) {
+                  console.info("Image loaded", source, sourceSize.width, sourceSize.height)
+                  recomputeBase()
+                }
               }
             }
           }
@@ -2283,8 +2491,8 @@ ApplicationWindow {
               color: modelData.color || "#ffb347"
               rotation: pinStyle.rotation
               transformOrigin: Item.Center
-              x: imageItem.x + modelData.x * imageItem.width - width / 2
-              y: imageItem.y + modelData.y * imageItem.height - height / 2
+              x: imageRow.x + imageItem.x + modelData.x * imageItem.width - width / 2
+              y: imageRow.y + imageItem.y + modelData.y * imageItem.height - height / 2
               visible: imageItem.width > 0 && imageItem.height > 0
 
               MouseArea {
@@ -2808,6 +3016,7 @@ ApplicationWindow {
               anchors.fill: parent
               anchors.margins: 12
               model: libraryModel
+              reuseItems: true
               clip: true
               spacing: 8
               visible: viewMode === "list"
@@ -2989,6 +3198,7 @@ ApplicationWindow {
               anchors.fill: parent
               anchors.margins: 12
               model: libraryModel
+              reuseItems: true
               clip: true
               visible: viewMode === "grid"
               cellWidth: 232
@@ -5499,6 +5709,166 @@ ApplicationWindow {
                     font.pixelSize: 13
                     font.family: root.uiFont
                     Layout.preferredWidth: 48
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Default fit"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  ComboBox {
+                    Layout.fillWidth: true
+                    model: ["page", "width", "height"]
+                    currentIndex: Math.max(0, model.indexOf(settings.comicDefaultFitMode))
+                    onActivated: settings.comicDefaultFitMode = model[currentIndex]
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Remember per-book"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  CheckBox {
+                    checked: settings.comicRememberFitMode
+                    onToggled: settings.comicRememberFitMode = checked
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Reading direction"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  ComboBox {
+                    Layout.fillWidth: true
+                    model: ["ltr", "rtl"]
+                    currentIndex: Math.max(0, model.indexOf(settings.comicReadingDirection))
+                    onActivated: settings.comicReadingDirection = model[currentIndex]
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Reset zoom on page change"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  CheckBox {
+                    checked: settings.comicResetZoomOnPageChange
+                    onToggled: settings.comicResetZoomOnPageChange = checked
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Zoom step"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 0.05
+                    to: 0.5
+                    stepSize: 0.05
+                    value: settings.comicZoomStep
+                    onMoved: settings.comicZoomStep = Math.round(value * 100) / 100
+                  }
+
+                  Text {
+                    text: settings.comicZoomStep.toFixed(2)
+                    color: theme.textPrimary
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 48
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Smooth scaling"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  CheckBox {
+                    checked: settings.comicSmoothScaling
+                    onToggled: settings.comicSmoothScaling = checked
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Two-page spread"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  CheckBox {
+                    checked: settings.comicTwoPageSpread
+                    onToggled: settings.comicTwoPageSpread = checked
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Spread in portrait"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  CheckBox {
+                    checked: settings.comicSpreadInPortrait
+                    onToggled: settings.comicSpreadInPortrait = checked
                   }
                 }
 
