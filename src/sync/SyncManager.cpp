@@ -243,6 +243,9 @@ void SyncManager::requestPairing(const QString &deviceId) {
   const auto device = m_devices.value(deviceId);
   auto *socket = new QTcpSocket(this);
   connect(socket, &QTcpSocket::connected, this, [this, socket, device]() {
+    qInfo() << "SyncManager: pairing connect"
+            << "to" << device.address
+            << "port" << device.port;
     QJsonObject payload{
         {"type", "pair_request"},
         {"id", m_deviceId},
@@ -258,6 +261,7 @@ void SyncManager::requestPairing(const QString &deviceId) {
     const auto doc = QJsonDocument::fromJson(data);
     if (!doc.isObject()) {
       setStatus("Pairing failed");
+      qWarning() << "SyncManager: pairing failed (invalid response)";
       socket->disconnectFromHost();
       socket->deleteLater();
       return;
@@ -265,6 +269,9 @@ void SyncManager::requestPairing(const QString &deviceId) {
     const auto obj = doc.object();
     if (obj.value("type").toString() != "pair_ok") {
       setStatus("Pairing rejected");
+      qWarning() << "SyncManager: pairing rejected"
+                 << obj.value("type").toString()
+                 << obj.value("error").toString();
       socket->disconnectFromHost();
       socket->deleteLater();
       return;
@@ -273,13 +280,18 @@ void SyncManager::requestPairing(const QString &deviceId) {
     PairedInfo info;
     info.id = remoteId;
     info.name = obj.value("name").toString();
-    info.address = obj.value("address").toString();
+    info.address = socket->peerAddress().toString();
     info.port = obj.value("port").toInt();
     info.token = obj.value("token").toString();
     m_paired.insert(remoteId, info);
     savePairedDevices();
     updateDevice(remoteId, info.name, info.address, info.port, true);
     setStatus("Paired with " + info.name);
+    qInfo() << "SyncManager: paired with"
+            << info.name
+            << "id" << remoteId
+            << "address" << info.address
+            << "port" << info.port;
     socket->disconnectFromHost();
     socket->deleteLater();
   });
@@ -451,7 +463,11 @@ void SyncManager::syncNow(const QString &deviceId) {
     socket->deleteLater();
   });
   connect(socket, &QTcpSocket::errorOccurred, this, [this, socket](QAbstractSocket::SocketError) {
-    qWarning() << "SyncManager: sync socket error";
+    qWarning() << "SyncManager: sync socket error"
+               << socket->errorString()
+               << "state" << socket->state()
+               << "peer" << socket->peerAddress().toString()
+               << "port" << socket->peerPort();
     setStatus("Sync failed");
     socket->deleteLater();
   });
@@ -552,6 +568,9 @@ void SyncManager::ensureServer() {
     connect(m_server, &QTcpServer::newConnection, this, [this]() {
       while (m_server->hasPendingConnections()) {
         auto *socket = m_server->nextPendingConnection();
+        qInfo() << "SyncManager: incoming connection"
+                << socket->peerAddress().toString()
+                << socket->peerPort();
         connect(socket, &QTcpSocket::readyRead, this, [this, socket]() {
           const QByteArray data = socket->readAll();
           const auto doc = QJsonDocument::fromJson(data);
@@ -604,7 +623,9 @@ void SyncManager::ensureServer() {
             const QString token = obj.value("token").toString();
             if (remoteId.isEmpty() || !m_paired.contains(remoteId) ||
                 m_paired.value(remoteId).token != token) {
-              qWarning() << "SyncManager: sync_request unauthorized from" << remoteId;
+              qWarning() << "SyncManager: sync_request unauthorized from" << remoteId
+                         << "paired" << m_paired.contains(remoteId)
+                         << "tokenMatch" << (m_paired.contains(remoteId) && m_paired.value(remoteId).token == token);
               QJsonObject resp{{"type", "sync_error"}, {"error", "unauthorized"}};
               socket->write(QJsonDocument(resp).toJson(QJsonDocument::Compact));
               socket->disconnectFromHost();
@@ -717,7 +738,13 @@ void SyncManager::ensureServer() {
   }
   if (!m_server->isListening()) {
     if (!m_server->listen(QHostAddress::AnyIPv4, static_cast<quint16>(m_listenPort))) {
+      qWarning() << "SyncManager: listen failed"
+                 << m_server->errorString()
+                 << "port" << m_listenPort;
       setStatus("Sync listen failed");
+    } else {
+      qInfo() << "SyncManager: listening"
+              << "port" << m_listenPort;
     }
   }
 }
@@ -859,6 +886,11 @@ void SyncManager::pruneDevices() {
   auto it = m_devices.begin();
   while (it != m_devices.end()) {
     if (it->lastSeen > 0 && it->lastSeen < cutoff && !it->paired) {
+      qInfo() << "SyncManager: pruned device"
+              << it->id
+              << it->name
+              << it->address
+              << it->port;
       it = m_devices.erase(it);
       changed = true;
     } else {
@@ -875,6 +907,7 @@ void SyncManager::loadPairedDevices() {
   m_devices.clear();
   m_settings->beginGroup("paired");
   const QStringList groups = m_settings->childGroups();
+  qInfo() << "SyncManager: load paired devices" << groups.size();
   for (const auto &group : groups) {
     m_settings->beginGroup(group);
     PairedInfo info;
@@ -895,6 +928,11 @@ void SyncManager::loadPairedDevices() {
     device.lastSync = info.lastSync;
     m_devices.insert(info.id, device);
     m_settings->endGroup();
+    qInfo() << "SyncManager: paired device loaded"
+            << info.id
+            << info.name
+            << info.address
+            << info.port;
   }
   m_settings->endGroup();
   if (!m_devices.isEmpty()) {
@@ -916,6 +954,7 @@ void SyncManager::savePairedDevices() {
   }
   m_settings->endGroup();
   m_settings->sync();
+  qInfo() << "SyncManager: saved paired devices" << m_paired.size();
 }
 
 void SyncManager::setDiscovering(bool discovering) {

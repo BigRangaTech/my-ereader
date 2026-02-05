@@ -87,6 +87,11 @@ Then updates are simply:
 flatpak update
 ```
 
+### LAN sync note (mobile hotspots)
+Many mobile hotspots isolate clients, which blocks peer-to-peer discovery and pairing.
+If devices can’t see each other, switch to a regular router or enable “allow client
+communication/AP isolation off” in the hotspot settings.
+
 ### DjVuLibre (optional vendor)
 DJVU rendering uses DjVuLibre CLI tools (`ddjvu`, `djvused`, `djvutxt`). You can install them
 system-wide or vendor them under `third_party/install/djvulibre/bin` using:
