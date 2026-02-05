@@ -74,7 +74,12 @@ ApplicationWindow {
     id: keyActivitySink
     anchors.fill: parent
     focus: true
-    Keys.onPressed: markActivity()
+    Keys.onPressed: (event) => {
+      markActivity()
+      if (handleGlobalKey(event)) {
+        event.accepted = true
+      }
+    }
     Keys.onReleased: markActivity()
   }
 
@@ -105,6 +110,151 @@ ApplicationWindow {
       if (vault.unlock(sessionPassphrase)) {
         autoUnlockArmed = false
       }
+    }
+  }
+
+  function isModalOpen() {
+    return fileDialog.visible || bulkFileDialog.visible || folderDialog.visible ||
+           exportAnnotationsDialog.visible || annotationDialog.visible ||
+           deleteAnnotationDialog.visible || editBookDialog.visible ||
+           deleteBookDialog.visible || bulkTagsDialog.visible ||
+           deleteBooksDialog.visible || formatWarningDialog.visible ||
+           setupDialog.visible || unlockDialog.visible || lockDialog.visible ||
+           updateDialog.visible || restartDialog.visible ||
+           settingsDialog.visible || aboutDialog.visible
+  }
+
+  function isTextInputFocused() {
+    var item = root.activeFocusItem
+    if (!item) return false
+    return item.hasOwnProperty("cursorPosition") ||
+           item.hasOwnProperty("inputMethodComposing") ||
+           item.hasOwnProperty("selectionStart")
+  }
+
+  function setTextFontSizeFor(format, size) {
+    var value = Math.max(8, Math.min(48, size))
+    if (format === "epub") settings.epubFontSize = value
+    else if (format === "fb2") settings.fb2FontSize = value
+    else if (format === "txt") settings.txtFontSize = value
+    else if (format === "mobi" || format === "azw" || format === "azw3" || format === "azw4" || format === "prc") settings.mobiFontSize = value
+    else settings.readingFontSize = value
+  }
+
+  function adjustTextFont(delta) {
+    var current = textFontSizeFor(reader.currentFormat)
+    setTextFontSizeFor(reader.currentFormat, current + delta)
+  }
+
+  function advanceReader(direction) {
+    if (!reader.currentPath || reader.currentPath.length === 0) return false
+    if (reader.hasImages && reader.imageCount > 0) {
+      if (direction > 0) reader.nextImage()
+      else reader.prevImage()
+      return true
+    }
+    if (reader.chapterCount > 0) {
+      if (direction > 0) reader.nextChapter()
+      else reader.prevChapter()
+      return true
+    }
+    return false
+  }
+
+  function jumpToEdge(direction) {
+    if (!reader.currentPath || reader.currentPath.length === 0) return false
+    if (reader.hasImages && reader.imageCount > 0) {
+      reader.goToImage(direction > 0 ? (reader.imageCount - 1) : 0)
+      return true
+    }
+    if (reader.chapterCount > 0) {
+      reader.goToChapter(direction > 0 ? (reader.chapterCount - 1) : 0)
+      return true
+    }
+    return false
+  }
+
+  function handleGlobalKey(event) {
+    if (isModalOpen()) return false
+    const ctrl = (event.modifiers & Qt.ControlModifier) !== 0
+    const shift = (event.modifiers & Qt.ShiftModifier) !== 0
+    const alt = (event.modifiers & Qt.AltModifier) !== 0
+
+    if (!ctrl && !shift && !alt && isTextInputFocused()) {
+      return false
+    }
+
+    if (ctrl && !alt && !shift && event.key === Qt.Key_O) {
+      fileDialog.open()
+      return true
+    }
+    if (ctrl && shift && event.key === Qt.Key_O) {
+      bulkFileDialog.open()
+      return true
+    }
+    if (ctrl && alt && event.key === Qt.Key_O) {
+      folderDialog.open()
+      return true
+    }
+    if (ctrl && event.key === Qt.Key_F) {
+      if (librarySearch.visible) {
+        librarySearch.forceActiveFocus()
+        librarySearch.selectAll()
+        return true
+      }
+    }
+    if (ctrl && shift && event.key === Qt.Key_S) {
+      if (tts.speaking) {
+        tts.stop()
+      } else if (tts.available && reader.ttsAllowed) {
+        tts.speak(reader.currentPlainText)
+      }
+      return true
+    }
+
+    switch (event.key) {
+      case Qt.Key_Escape:
+        if (reader.currentPath && reader.currentPath.length > 0) {
+          reader.close()
+          return true
+        }
+        return false
+      case Qt.Key_Right:
+      case Qt.Key_PageDown:
+      case Qt.Key_Space:
+        return advanceReader(1)
+      case Qt.Key_Left:
+      case Qt.Key_PageUp:
+      case Qt.Key_Backspace:
+        return advanceReader(-1)
+      case Qt.Key_Home:
+        return jumpToEdge(-1)
+      case Qt.Key_End:
+        return jumpToEdge(1)
+      case Qt.Key_Plus:
+      case Qt.Key_Equal:
+        if (reader.hasImages) {
+          imageReader.zoom = imageReader.clampZoom(imageReader.zoom + 0.1)
+        } else {
+          adjustTextFont(1)
+        }
+        return true
+      case Qt.Key_Minus:
+        if (reader.hasImages) {
+          imageReader.zoom = imageReader.clampZoom(imageReader.zoom - 0.1)
+        } else {
+          adjustTextFont(-1)
+        }
+        return true
+      case Qt.Key_0:
+        if (reader.hasImages) {
+          imageReader.fitMode = "page"
+          imageReader.zoom = 1.0
+          return true
+        }
+        return false
+      default:
+        return false
     }
   }
 
@@ -3650,6 +3800,31 @@ ApplicationWindow {
             color: theme.panelHighlight
           }
 
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+              text: "Keyboard shortcuts"
+              color: theme.textMuted
+              font.pixelSize: 13
+              font.family: root.uiFont
+              Layout.preferredWidth: 160
+            }
+
+            Button {
+              text: "Open"
+              font.family: root.uiFont
+              onClicked: keyboardDialog.open()
+            }
+
+            Button {
+              text: "Format settings"
+              font.family: root.uiFont
+              onClicked: formatSettingsDialog.open()
+            }
+          }
+
           Text {
             text: "Sync"
             color: theme.textPrimary
@@ -4221,231 +4396,6 @@ ApplicationWindow {
             Layout.fillWidth: true
             height: 1
             color: theme.panelHighlight
-          }
-
-          Text {
-            text: "EPUB"
-            color: theme.textPrimary
-            font.pixelSize: 20
-            font.family: root.uiFont
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Font size"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 12
-              to: 36
-              stepSize: 1
-              value: settings.epubFontSize
-              onMoved: settings.epubFontSize = Math.round(value)
-            }
-
-            SpinBox {
-              from: 12
-              to: 36
-              value: settings.epubFontSize
-              editable: true
-              onValueModified: settings.epubFontSize = value
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Line height"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 1.0
-              to: 2.0
-              stepSize: 0.05
-              value: settings.epubLineHeight
-              onMoved: settings.epubLineHeight = Math.round(value * 100) / 100
-            }
-
-            Text {
-              text: settings.epubLineHeight.toFixed(2)
-              color: theme.textPrimary
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 48
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Show images"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            CheckBox {
-              checked: settings.epubShowImages
-              onToggled: settings.epubShowImages = checked
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Text align"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            ComboBox {
-              Layout.fillWidth: true
-              model: ["left", "justify", "center", "right"]
-              currentIndex: Math.max(0, model.indexOf(settings.epubTextAlign))
-              onActivated: settings.epubTextAlign = model[currentIndex]
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Paragraph spacing"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 0.0
-              to: 3.0
-              stepSize: 0.05
-              value: settings.epubParagraphSpacing
-              onMoved: settings.epubParagraphSpacing = Math.round(value * 100) / 100
-            }
-
-            Text {
-              text: settings.epubParagraphSpacing.toFixed(2)
-              color: theme.textPrimary
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 48
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Paragraph indent"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 0.0
-              to: 3.0
-              stepSize: 0.05
-              value: settings.epubParagraphIndent
-              onMoved: settings.epubParagraphIndent = Math.round(value * 100) / 100
-            }
-
-            Text {
-              text: settings.epubParagraphIndent.toFixed(2)
-              color: theme.textPrimary
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 48
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Image max width"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 10
-              to: 100
-              stepSize: 5
-              value: settings.epubImageMaxWidth
-              onMoved: settings.epubImageMaxWidth = Math.round(value)
-            }
-
-            Text {
-              text: settings.epubImageMaxWidth + "%"
-              color: theme.textPrimary
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 48
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Image spacing"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 0.0
-              to: 4.0
-              stepSize: 0.05
-              value: settings.epubImageSpacing
-              onMoved: settings.epubImageSpacing = Math.round(value * 100) / 100
-            }
-
-            Text {
-              text: settings.epubImageSpacing.toFixed(2)
-              color: theme.textPrimary
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 48
-            }
           }
 
           Text {

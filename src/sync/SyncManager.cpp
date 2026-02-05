@@ -14,6 +14,7 @@
 #include <QJsonObject>
 #include <QRandomGenerator>
 #include <QSet>
+#include <QSharedPointer>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QTcpServer>
@@ -25,6 +26,13 @@
 namespace {
 QString resolveSyncSettingsPath() {
   return AppPaths::configFile("sync.ini");
+}
+
+QString normalizeAddress(const QString &address) {
+  if (address.startsWith("::ffff:")) {
+    return address.mid(7);
+  }
+  return address;
 }
 
 QString randomPin() {
@@ -242,6 +250,7 @@ void SyncManager::requestPairing(const QString &deviceId) {
 
   const auto device = m_devices.value(deviceId);
   auto *socket = new QTcpSocket(this);
+  auto gotResponse = QSharedPointer<bool>::create(false);
   connect(socket, &QTcpSocket::connected, this, [this, socket, device]() {
     qInfo() << "SyncManager: pairing connect"
             << "to" << device.address
@@ -256,7 +265,7 @@ void SyncManager::requestPairing(const QString &deviceId) {
     const QByteArray data = QJsonDocument(payload).toJson(QJsonDocument::Compact);
     socket->write(data);
   });
-  connect(socket, &QTcpSocket::readyRead, this, [this, socket, deviceId]() {
+  connect(socket, &QTcpSocket::readyRead, this, [this, socket, deviceId, gotResponse]() {
     const QByteArray data = socket->readAll();
     const auto doc = QJsonDocument::fromJson(data);
     if (!doc.isObject()) {
@@ -276,11 +285,12 @@ void SyncManager::requestPairing(const QString &deviceId) {
       socket->deleteLater();
       return;
     }
+    *gotResponse = true;
     const QString remoteId = obj.value("id").toString();
     PairedInfo info;
     info.id = remoteId;
     info.name = obj.value("name").toString();
-    info.address = socket->peerAddress().toString();
+    info.address = normalizeAddress(socket->peerAddress().toString());
     info.port = obj.value("port").toInt();
     info.token = obj.value("token").toString();
     m_paired.insert(remoteId, info);
@@ -295,8 +305,19 @@ void SyncManager::requestPairing(const QString &deviceId) {
     socket->disconnectFromHost();
     socket->deleteLater();
   });
-  connect(socket, &QTcpSocket::errorOccurred, this, [this, socket](QAbstractSocket::SocketError) {
+  connect(socket, &QTcpSocket::errorOccurred, this, [this, socket, gotResponse](QAbstractSocket::SocketError) {
+    qWarning() << "SyncManager: pairing socket error"
+               << socket->errorString()
+               << "peer" << socket->peerAddress().toString()
+               << "port" << socket->peerPort();
     setStatus("Pairing failed");
+    socket->deleteLater();
+  });
+  connect(socket, &QTcpSocket::disconnected, this, [this, socket, gotResponse]() {
+    if (!*gotResponse) {
+      qWarning() << "SyncManager: pairing socket closed without response";
+      setStatus("Pairing failed");
+    }
     socket->deleteLater();
   });
   socket->connectToHost(device.address, device.port);
@@ -309,10 +330,10 @@ void SyncManager::unpair(const QString &deviceId) {
   m_paired.remove(deviceId);
   savePairedDevices();
   if (m_devices.contains(deviceId)) {
-    auto device = m_devices.value(deviceId);
-    device.paired = false;
-    m_devices.insert(deviceId, device);
-    emit devicesChanged();
+  auto device = m_devices.value(deviceId);
+  device.paired = false;
+  m_devices.insert(deviceId, device);
+  emit devicesChanged();
   }
   setStatus("Unpaired");
 }
@@ -366,18 +387,42 @@ void SyncManager::syncNow(const QString &deviceId) {
     setStatus("Syncing with " + info.name);
   });
   connect(socket, &QTcpSocket::readyRead, this, [this, socket, info]() {
-    const QByteArray data = socket->readAll();
-    const auto doc = QJsonDocument::fromJson(data);
-    if (!doc.isObject()) {
-      qWarning() << "SyncManager: invalid sync_response payload";
+    QByteArray buffer = socket->property("syncBuffer").toByteArray();
+    buffer.append(socket->readAll());
+    socket->setProperty("syncBuffer", buffer);
+
+    const qint64 maxBytes = static_cast<qint64>(m_transferMaxMb) * 1024 * 1024;
+    if (maxBytes > 0 && buffer.size() > maxBytes) {
+      qWarning() << "SyncManager: sync_response exceeded limit"
+                 << buffer.size() << "bytes (max" << maxBytes << ")";
       setStatus("Sync failed");
       socket->disconnectFromHost();
       socket->deleteLater();
       return;
     }
+
+    QJsonParseError parseError{};
+    const auto doc = QJsonDocument::fromJson(buffer, &parseError);
+    if (doc.isNull() || !doc.isObject()) {
+      if (parseError.error != QJsonParseError::NoError) {
+        qWarning() << "SyncManager: waiting for full sync_response"
+                   << parseError.errorString()
+                   << "bytes" << buffer.size();
+      }
+      return;
+    }
     const auto obj = doc.object();
-    if (obj.value("type").toString() != "sync_response") {
-      qWarning() << "SyncManager: unexpected response type" << obj.value("type").toString();
+    const QString type = obj.value("type").toString();
+    if (type == "sync_error") {
+      qWarning() << "SyncManager: sync_error"
+                 << obj.value("error").toString();
+      setStatus("Sync failed");
+      socket->disconnectFromHost();
+      socket->deleteLater();
+      return;
+    }
+    if (type != "sync_response") {
+      qWarning() << "SyncManager: unexpected response type" << type;
       setStatus("Sync failed");
       socket->disconnectFromHost();
       socket->deleteLater();
@@ -504,7 +549,7 @@ void SyncManager::loadSettings() {
   m_listenPort = m_settings->value("network/listen_port", 45455).toInt();
   m_conflictPolicy = m_settings->value("sync/conflict_policy", "newer").toString();
   m_transferEnabled = m_settings->value("sync/transfer_enabled", true).toBool();
-  m_transferMaxMb = m_settings->value("sync/transfer_max_mb", 50).toInt();
+  m_transferMaxMb = m_settings->value("sync/transfer_max_mb", 5120).toInt();
   loadPairedDevices();
   m_settings->sync();
   qInfo() << "SyncManager: settings loaded"
@@ -586,10 +631,18 @@ void SyncManager::ensureServer() {
             const QString remoteId = obj.value("id").toString();
             const QString remoteName = obj.value("name").toString();
             const int remotePort = obj.value("port").toInt();
+            qInfo() << "SyncManager: pair_request from"
+                    << remoteName
+                    << remoteId
+                    << socket->peerAddress().toString()
+                    << "port" << remotePort
+                    << "pinMatch" << (!pin.isEmpty() && pin == m_pin);
             if (pin.isEmpty() || pin != m_pin) {
               qWarning() << "SyncManager: pairing rejected for" << remoteName;
               QJsonObject resp{{"type", "pair_reject"}};
               socket->write(QJsonDocument(resp).toJson(QJsonDocument::Compact));
+              socket->flush();
+              socket->waitForBytesWritten(500);
               socket->disconnectFromHost();
               socket->deleteLater();
               return;
@@ -612,6 +665,8 @@ void SyncManager::ensureServer() {
                 {"port", m_listenPort},
                 {"token", token}};
             socket->write(QJsonDocument(resp).toJson(QJsonDocument::Compact));
+            socket->flush();
+            socket->waitForBytesWritten(500);
             socket->disconnectFromHost();
             socket->deleteLater();
             setStatus("Paired with " + remoteName);
@@ -626,12 +681,21 @@ void SyncManager::ensureServer() {
               qWarning() << "SyncManager: sync_request unauthorized from" << remoteId
                          << "paired" << m_paired.contains(remoteId)
                          << "tokenMatch" << (m_paired.contains(remoteId) && m_paired.value(remoteId).token == token);
-              QJsonObject resp{{"type", "sync_error"}, {"error", "unauthorized"}};
-              socket->write(QJsonDocument(resp).toJson(QJsonDocument::Compact));
+            QJsonObject resp{{"type", "sync_error"}, {"error", "unauthorized"}};
+            socket->write(QJsonDocument(resp).toJson(QJsonDocument::Compact));
+            if (socket->bytesToWrite() > 0) {
+              connect(socket, &QTcpSocket::bytesWritten, socket, [socket]() {
+                if (socket->bytesToWrite() == 0) {
+                  socket->disconnectFromHost();
+                  socket->deleteLater();
+                }
+              });
+            } else {
               socket->disconnectFromHost();
               socket->deleteLater();
-              return;
             }
+            return;
+          }
             m_uploadActive = false;
             m_uploadTotal = 0;
             m_uploadDone = 0;
@@ -718,8 +782,17 @@ void SyncManager::ensureServer() {
                 {"added", added},
                 {"meta_updated", metaUpdated}};
             socket->write(QJsonDocument(resp).toJson(QJsonDocument::Compact));
-            socket->disconnectFromHost();
-            socket->deleteLater();
+            if (socket->bytesToWrite() > 0) {
+              connect(socket, &QTcpSocket::bytesWritten, socket, [socket]() {
+                if (socket->bytesToWrite() == 0) {
+                  socket->disconnectFromHost();
+                  socket->deleteLater();
+                }
+              });
+            } else {
+              socket->disconnectFromHost();
+              socket->deleteLater();
+            }
             PairedInfo updated = m_paired.value(remoteId);
             updated.lastSync = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
             m_paired.insert(remoteId, updated);
@@ -858,7 +931,7 @@ void SyncManager::updateDevice(const QString &id,
   DeviceInfo info = m_devices.value(id);
   info.id = id;
   info.name = name.isEmpty() ? info.name : name;
-  info.address = address;
+  info.address = normalizeAddress(address);
   info.port = port;
   info.lastSeen = QDateTime::currentMSecsSinceEpoch();
   info.paired = m_paired.contains(id);
