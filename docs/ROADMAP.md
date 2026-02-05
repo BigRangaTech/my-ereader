@@ -5,7 +5,7 @@
 - [x] Library database schema
 - [x] Format provider interface
 - [x] Simple TXT reader
-- [ ] Desktop update script (git pull --ff-only)
+- [x] Desktop update script (git pull --ff-only)
 
 ## Phase 1: Core reading
 - [x] EPUB provider
@@ -33,7 +33,7 @@
 - [x] TTS controls + playback
 
 ## Phase 4: Performance + polish
-- [ ] Caching and pre-render
+- [x] Caching and pre-render
 - [ ] Large library optimizations
 - [ ] UI refinement and accessibility
 

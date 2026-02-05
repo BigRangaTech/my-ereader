@@ -5,13 +5,33 @@
 #include <QDebug>
 #include <QMetaObject>
 #include <QPointer>
+#include <QSettings>
+#include <algorithm>
 
 #include "AsyncUtil.h"
+#include "include/AppPaths.h"
 
 namespace {
 bool isMobiFormat(const QString &format) {
   const QString f = format.trimmed().toLower();
   return f == "mobi" || f == "azw" || f == "azw3" || f == "azw4" || f == "prc";
+}
+
+int clampInt(int value, int minValue, int maxValue) {
+  return std::max(minValue, std::min(maxValue, value));
+}
+
+int preRenderPagesForFormat(const QString &format) {
+  QString key = format.trimmed().toLower();
+  if (key.isEmpty()) {
+    return 2;
+  }
+  if (key == "djv") {
+    key = "djvu";
+  }
+  const QString path = AppPaths::configFile(QString("%1.ini").arg(key));
+  QSettings settings(path, QSettings::IniFormat);
+  return clampInt(settings.value("render/pre_render_pages", 2).toInt(), 1, 12);
 }
 } // namespace
 
@@ -222,8 +242,10 @@ bool ReaderController::applyDocument(std::unique_ptr<FormatDocument> document,
     qInfo() << "ReaderController: loaded" << m_imagePaths.size()
             << "image(s), first:" << firstImage
             << "exists:" << QFileInfo::exists(firstImage);
-    m_document->ensureImage(0);
-    m_document->ensureImage(1);
+    const int warmCount = std::min(preRenderPagesForFormat(m_currentFormat), m_imagePaths.size());
+    for (int i = 0; i < warmCount; ++i) {
+      m_document->ensureImage(i);
+    }
   } else {
     m_currentImageIndex = -1;
     m_imageReloadToken = 0;

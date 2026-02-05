@@ -48,6 +48,7 @@ class SettingsManager : public QObject {
   Q_PROPERTY(int pdfDpi READ pdfDpi WRITE setPdfDpi NOTIFY pdfDpiChanged)
   Q_PROPERTY(int pdfCacheLimit READ pdfCacheLimit WRITE setPdfCacheLimit NOTIFY pdfCacheLimitChanged)
   Q_PROPERTY(int pdfPrefetchDistance READ pdfPrefetchDistance WRITE setPdfPrefetchDistance NOTIFY pdfPrefetchDistanceChanged)
+  Q_PROPERTY(int pdfPreRenderPages READ pdfPreRenderPages WRITE setPdfPreRenderPages NOTIFY pdfPreRenderPagesChanged)
   Q_PROPERTY(QString pdfPrefetchStrategy READ pdfPrefetchStrategy WRITE setPdfPrefetchStrategy NOTIFY pdfPrefetchStrategyChanged)
   Q_PROPERTY(QString pdfCachePolicy READ pdfCachePolicy WRITE setPdfCachePolicy NOTIFY pdfCachePolicyChanged)
   Q_PROPERTY(QString pdfRenderPreset READ pdfRenderPreset WRITE setPdfRenderPreset NOTIFY pdfRenderPresetChanged)
@@ -65,6 +66,7 @@ class SettingsManager : public QObject {
   Q_PROPERTY(int djvuDpi READ djvuDpi WRITE setDjvuDpi NOTIFY djvuDpiChanged)
   Q_PROPERTY(int djvuCacheLimit READ djvuCacheLimit WRITE setDjvuCacheLimit NOTIFY djvuCacheLimitChanged)
   Q_PROPERTY(int djvuPrefetchDistance READ djvuPrefetchDistance WRITE setDjvuPrefetchDistance NOTIFY djvuPrefetchDistanceChanged)
+  Q_PROPERTY(int djvuPreRenderPages READ djvuPreRenderPages WRITE setDjvuPreRenderPages NOTIFY djvuPreRenderPagesChanged)
   Q_PROPERTY(QString djvuCachePolicy READ djvuCachePolicy WRITE setDjvuCachePolicy NOTIFY djvuCachePolicyChanged)
   Q_PROPERTY(QString djvuImageFormat READ djvuImageFormat WRITE setDjvuImageFormat NOTIFY djvuImageFormatChanged)
   Q_PROPERTY(bool djvuExtractText READ djvuExtractText WRITE setDjvuExtractText NOTIFY djvuExtractTextChanged)
@@ -122,6 +124,7 @@ public:
   int pdfDpi() const;
   int pdfCacheLimit() const;
   int pdfPrefetchDistance() const;
+  int pdfPreRenderPages() const;
   QString pdfPrefetchStrategy() const;
   QString pdfCachePolicy() const;
   QString pdfRenderPreset() const;
@@ -139,6 +142,7 @@ public:
   int djvuDpi() const;
   int djvuCacheLimit() const;
   int djvuPrefetchDistance() const;
+  int djvuPreRenderPages() const;
   QString djvuCachePolicy() const;
   QString djvuImageFormat() const;
   bool djvuExtractText() const;
@@ -194,6 +198,7 @@ public:
   void setPdfDpi(int value);
   void setPdfCacheLimit(int value);
   void setPdfPrefetchDistance(int value);
+  void setPdfPreRenderPages(int value);
   void setPdfPrefetchStrategy(const QString &value);
   void setPdfCachePolicy(const QString &value);
   void setPdfRenderPreset(const QString &value);
@@ -211,6 +216,7 @@ public:
   void setDjvuDpi(int value);
   void setDjvuCacheLimit(int value);
   void setDjvuPrefetchDistance(int value);
+  void setDjvuPreRenderPages(int value);
   void setDjvuCachePolicy(const QString &value);
   void setDjvuImageFormat(const QString &value);
   void setDjvuExtractText(bool value);
@@ -276,6 +282,7 @@ signals:
   void pdfDpiChanged();
   void pdfCacheLimitChanged();
   void pdfPrefetchDistanceChanged();
+  void pdfPreRenderPagesChanged();
   void pdfPrefetchStrategyChanged();
   void pdfCachePolicyChanged();
   void pdfRenderPresetChanged();
@@ -293,6 +300,7 @@ signals:
   void djvuDpiChanged();
   void djvuCacheLimitChanged();
   void djvuPrefetchDistanceChanged();
+  void djvuPreRenderPagesChanged();
   void djvuCachePolicyChanged();
   void djvuImageFormatChanged();
   void djvuExtractTextChanged();
@@ -357,6 +365,7 @@ private:
   int m_pdfDpi = 120;
   int m_pdfCacheLimit = 30;
   int m_pdfPrefetchDistance = 1;
+  int m_pdfPreRenderPages = 2;
   QString m_pdfPrefetchStrategy = "symmetric";
   QString m_pdfCachePolicy = "fifo";
   QString m_pdfRenderPreset = "custom";
@@ -374,6 +383,7 @@ private:
   int m_djvuDpi = 120;
   int m_djvuCacheLimit = 30;
   int m_djvuPrefetchDistance = 1;
+  int m_djvuPreRenderPages = 2;
   QString m_djvuCachePolicy = "fifo";
   QString m_djvuImageFormat = "ppm";
   bool m_djvuExtractText = true;

@@ -5130,6 +5130,36 @@ ApplicationWindow {
                   spacing: 12
 
                   Text {
+                    text: "Pre-render pages"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 1
+                    to: 12
+                    stepSize: 1
+                    value: settings.pdfPreRenderPages
+                    onMoved: settings.pdfPreRenderPages = Math.round(value)
+                  }
+
+                  SpinBox {
+                    from: 1
+                    to: 12
+                    value: settings.pdfPreRenderPages
+                    editable: true
+                    onValueModified: settings.pdfPreRenderPages = value
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
                     text: "Prefetch strategy"
                     color: theme.textMuted
                     font.pixelSize: 13
@@ -5644,6 +5674,36 @@ ApplicationWindow {
                     value: settings.djvuPrefetchDistance
                     editable: true
                     onValueModified: settings.djvuPrefetchDistance = value
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Pre-render pages"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 1
+                    to: 12
+                    stepSize: 1
+                    value: settings.djvuPreRenderPages
+                    onMoved: settings.djvuPreRenderPages = Math.round(value)
+                  }
+
+                  SpinBox {
+                    from: 1
+                    to: 12
+                    value: settings.djvuPreRenderPages
+                    editable: true
+                    onValueModified: settings.djvuPreRenderPages = value
                   }
                 }
 

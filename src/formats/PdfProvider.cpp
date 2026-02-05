@@ -552,9 +552,6 @@ std::unique_ptr<FormatDocument> PdfProvider::open(const QString &path, QString *
   state->progressive = pdfSettings.progressive;
   state->progressiveDpi = pdfSettings.progressiveDpi;
 
-  auto pdfDoc = std::make_unique<PdfDocument>(title, pages.join("\n\n"), state);
-  pdfDoc->ensureImage(0);
-  pdfDoc->ensureImage(1);
-  return pdfDoc;
+  return std::make_unique<PdfDocument>(title, pages.join("\n\n"), state);
 #endif
 }

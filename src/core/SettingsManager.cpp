@@ -104,6 +104,7 @@ double SettingsManager::mobiImageSpacing() const { return m_mobiImageSpacing; }
 int SettingsManager::pdfDpi() const { return m_pdfDpi; }
 int SettingsManager::pdfCacheLimit() const { return m_pdfCacheLimit; }
 int SettingsManager::pdfPrefetchDistance() const { return m_pdfPrefetchDistance; }
+int SettingsManager::pdfPreRenderPages() const { return m_pdfPreRenderPages; }
 QString SettingsManager::pdfPrefetchStrategy() const { return m_pdfPrefetchStrategy; }
 QString SettingsManager::pdfCachePolicy() const { return m_pdfCachePolicy; }
 QString SettingsManager::pdfRenderPreset() const { return m_pdfRenderPreset; }
@@ -121,6 +122,7 @@ int SettingsManager::pdfProgressiveDpi() const { return m_pdfProgressiveDpi; }
 int SettingsManager::djvuDpi() const { return m_djvuDpi; }
 int SettingsManager::djvuCacheLimit() const { return m_djvuCacheLimit; }
 int SettingsManager::djvuPrefetchDistance() const { return m_djvuPrefetchDistance; }
+int SettingsManager::djvuPreRenderPages() const { return m_djvuPreRenderPages; }
 QString SettingsManager::djvuCachePolicy() const { return m_djvuCachePolicy; }
 QString SettingsManager::djvuImageFormat() const { return m_djvuImageFormat; }
 bool SettingsManager::djvuExtractText() const { return m_djvuExtractText; }
@@ -556,6 +558,16 @@ void SettingsManager::setPdfPrefetchDistance(int value) {
   emit pdfPrefetchDistanceChanged();
 }
 
+void SettingsManager::setPdfPreRenderPages(int value) {
+  value = clampInt(value, 1, 12);
+  if (m_pdfPreRenderPages == value) {
+    return;
+  }
+  m_pdfPreRenderPages = value;
+  saveFormatValue("pdf", "render/pre_render_pages", value);
+  emit pdfPreRenderPagesChanged();
+}
+
 void SettingsManager::setPdfPrefetchStrategy(const QString &value) {
   QString normalized = value.trimmed().toLower();
   if (normalized != "forward" && normalized != "symmetric" && normalized != "backward") {
@@ -748,6 +760,16 @@ void SettingsManager::setDjvuPrefetchDistance(int value) {
   emit djvuPrefetchDistanceChanged();
 }
 
+void SettingsManager::setDjvuPreRenderPages(int value) {
+  value = clampInt(value, 1, 12);
+  if (m_djvuPreRenderPages == value) {
+    return;
+  }
+  m_djvuPreRenderPages = value;
+  saveFormatValue("djvu", "render/pre_render_pages", value);
+  emit djvuPreRenderPagesChanged();
+}
+
 void SettingsManager::setDjvuCachePolicy(const QString &value) {
   QString normalized = value.trimmed().toLower();
   if (normalized != "fifo" && normalized != "lru") {
@@ -883,6 +905,7 @@ void SettingsManager::resetDefaults() {
   setPdfDpi(120);
   setPdfCacheLimit(30);
   setPdfPrefetchDistance(1);
+  setPdfPreRenderPages(2);
   setPdfPrefetchStrategy("symmetric");
   setPdfCachePolicy("fifo");
   setPdfRenderPreset("custom");
@@ -900,6 +923,7 @@ void SettingsManager::resetDefaults() {
   setDjvuDpi(120);
   setDjvuCacheLimit(30);
   setDjvuPrefetchDistance(1);
+  setDjvuPreRenderPages(2);
   setDjvuCachePolicy("fifo");
   setDjvuImageFormat("ppm");
   setDjvuExtractText(true);
@@ -916,6 +940,7 @@ void SettingsManager::resetPdfDefaults() {
   setPdfCacheLimit(30);
   setPdfCachePolicy("fifo");
   setPdfPrefetchDistance(1);
+  setPdfPreRenderPages(2);
   setPdfPrefetchStrategy("symmetric");
   setPdfProgressiveRendering(false);
   setPdfProgressiveDpi(72);
@@ -984,6 +1009,7 @@ void SettingsManager::resetDjvuDefaults() {
   setDjvuDpi(120);
   setDjvuCacheLimit(30);
   setDjvuPrefetchDistance(1);
+  setDjvuPreRenderPages(2);
   setDjvuCachePolicy("fifo");
   setDjvuImageFormat("ppm");
   setDjvuExtractText(true);
@@ -1064,6 +1090,8 @@ void SettingsManager::loadFromSettings() {
       clampInt(readFormatValue("pdf", "render/cache_limit", m_settings.value("pdf/cache_limit", 30)).toInt(), 5, 120);
   m_pdfPrefetchDistance =
       clampInt(readFormatValue("pdf", "render/prefetch_distance", 1).toInt(), 0, 6);
+  m_pdfPreRenderPages =
+      clampInt(readFormatValue("pdf", "render/pre_render_pages", 2).toInt(), 1, 12);
   m_pdfPrefetchStrategy =
       readFormatValue("pdf", "render/prefetch_strategy", "symmetric").toString().toLower();
   if (m_pdfPrefetchStrategy != "forward" && m_pdfPrefetchStrategy != "symmetric" &&
@@ -1123,6 +1151,8 @@ void SettingsManager::loadFromSettings() {
       clampInt(readFormatValue("djvu", "render/cache_limit", 30).toInt(), 5, 120);
   m_djvuPrefetchDistance =
       clampInt(readFormatValue("djvu", "render/prefetch_distance", 1).toInt(), 0, 6);
+  m_djvuPreRenderPages =
+      clampInt(readFormatValue("djvu", "render/pre_render_pages", 2).toInt(), 1, 12);
   m_djvuCachePolicy =
       readFormatValue("djvu", "render/cache_policy", "fifo").toString().toLower();
   if (m_djvuCachePolicy != "fifo" && m_djvuCachePolicy != "lru") {
@@ -1196,6 +1226,7 @@ void SettingsManager::loadFromSettings() {
   saveFormatValue("pdf", "render/dpi", m_pdfDpi);
   saveFormatValue("pdf", "render/cache_limit", m_pdfCacheLimit);
   saveFormatValue("pdf", "render/prefetch_distance", m_pdfPrefetchDistance);
+  saveFormatValue("pdf", "render/pre_render_pages", m_pdfPreRenderPages);
   saveFormatValue("pdf", "render/prefetch_strategy", m_pdfPrefetchStrategy);
   saveFormatValue("pdf", "render/cache_policy", m_pdfCachePolicy);
   saveFormatValue("pdf", "render/preset", m_pdfRenderPreset);
@@ -1213,6 +1244,7 @@ void SettingsManager::loadFromSettings() {
   saveFormatValue("djvu", "render/dpi", m_djvuDpi);
   saveFormatValue("djvu", "render/cache_limit", m_djvuCacheLimit);
   saveFormatValue("djvu", "render/prefetch_distance", m_djvuPrefetchDistance);
+  saveFormatValue("djvu", "render/pre_render_pages", m_djvuPreRenderPages);
   saveFormatValue("djvu", "render/cache_policy", m_djvuCachePolicy);
   saveFormatValue("djvu", "render/format", m_djvuImageFormat);
   saveFormatValue("djvu", "render/extract_text", m_djvuExtractText);
@@ -1261,6 +1293,7 @@ void SettingsManager::loadFromSettings() {
   emit pdfDpiChanged();
   emit pdfCacheLimitChanged();
   emit pdfPrefetchDistanceChanged();
+  emit pdfPreRenderPagesChanged();
   emit pdfPrefetchStrategyChanged();
   emit pdfCachePolicyChanged();
   emit pdfRenderPresetChanged();
@@ -1278,6 +1311,7 @@ void SettingsManager::loadFromSettings() {
   emit djvuDpiChanged();
   emit djvuCacheLimitChanged();
   emit djvuPrefetchDistanceChanged();
+  emit djvuPreRenderPagesChanged();
   emit djvuCachePolicyChanged();
   emit djvuImageFormatChanged();
   emit djvuExtractTextChanged();
