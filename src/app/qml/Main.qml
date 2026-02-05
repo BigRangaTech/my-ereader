@@ -3928,67 +3928,1847 @@ ApplicationWindow {
     title: "Format Settings"
     modal: true
     standardButtons: Dialog.Close
-    width: Math.min(640, root.width - 80)
-    height: Math.min(520, root.height - 80)
+    property int tabIndex: 0
+    width: Math.min(860, root.width - 80)
+    height: Math.min(720, root.height - 80)
 
     contentItem: Rectangle {
       color: theme.panel
       radius: 16
 
-      ScrollView {
+      ColumnLayout {
         anchors.fill: parent
         anchors.margins: 12
+        spacing: 12
 
-        ColumnLayout {
-          width: parent.width
-          spacing: 12
+        Text {
+          text: "Adjust per-format rendering and reading options."
+          color: theme.textPrimary
+          font.pixelSize: 14
+          font.family: root.uiFont
+          wrapMode: Text.Wrap
+        }
 
-          Text {
-            text: "Per-format settings are stored in these files."
-            color: theme.textPrimary
-            font.pixelSize: 14
-            font.family: root.uiFont
-            wrapMode: Text.Wrap
-          }
+        Flow {
+          Layout.fillWidth: true
+          spacing: 8
 
           Repeater {
-            model: [
-              { label: "EPUB", key: "epub" },
-              { label: "FB2", key: "fb2" },
-              { label: "TXT", key: "txt" },
-              { label: "MOBI/AZW/PRC", key: "mobi" },
-              { label: "PDF", key: "pdf" },
-              { label: "CBZ", key: "cbz" },
-              { label: "CBR", key: "cbr" },
-              { label: "DJVU", key: "djvu" }
-            ]
-            delegate: ColumnLayout {
-              Layout.fillWidth: true
-              spacing: 4
+            model: ["EPUB", "FB2", "TXT", "MOBI", "PDF", "Comics", "DJVU"]
+            delegate: Button {
+              id: formatTabButton
+              text: modelData
+              checkable: true
+              checked: formatSettingsDialog.tabIndex === index
+              onClicked: formatSettingsDialog.tabIndex = index
+              font.family: root.uiFont
+              padding: 6
+              leftPadding: 12
+              rightPadding: 12
 
-              Text {
-                text: modelData.label
-                color: theme.textPrimary
-                font.pixelSize: 13
-                font.family: root.uiFont
+              background: Rectangle {
+                radius: 10
+                color: formatTabButton.checked ? theme.accentAlt : theme.panelHighlight
+                border.color: formatTabButton.checked ? theme.accentAlt : theme.panelHighlight
               }
 
-              Text {
-                text: settings.formatSettingsPath(modelData.key)
-                color: theme.textMuted
+              contentItem: Text {
+                text: formatTabButton.text
+                color: formatTabButton.checked ? "#0f141a" : theme.textPrimary
                 font.pixelSize: 12
                 font.family: root.uiFont
-                wrapMode: Text.Wrap
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
               }
             }
           }
+        }
 
-          Text {
-            text: "Most options are available in the main Settings dialog."
-            color: theme.textMuted
-            font.pixelSize: 12
-            font.family: root.uiFont
-            wrapMode: Text.Wrap
+
+
+        ScrollView {
+          Layout.fillWidth: true
+          Layout.fillHeight: true
+          clip: true
+
+          ColumnLayout {
+            width: parent.width
+            spacing: 18
+            StackLayout {
+              Layout.fillWidth: true
+              currentIndex: formatSettingsDialog.tabIndex
+
+              ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 12
+                Text {
+                  text: "EPUB"
+                  color: theme.textPrimary
+                  font.pixelSize: 20
+                  font.family: root.uiFont
+                }
+
+                Text {
+                  text: "EPUB reading and layout."
+                  color: theme.textMuted
+                  font.pixelSize: 12
+                  font.family: root.uiFont
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Font size"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 12
+                    to: 36
+                    stepSize: 1
+                    value: settings.epubFontSize
+                    onMoved: settings.epubFontSize = Math.round(value)
+                  }
+
+                  SpinBox {
+                    from: 12
+                    to: 36
+                    value: settings.epubFontSize
+                    editable: true
+                    onValueModified: settings.epubFontSize = value
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Line height"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 1.0
+                    to: 2.0
+                    stepSize: 0.05
+                    value: settings.epubLineHeight
+                    onMoved: settings.epubLineHeight = Math.round(value * 100) / 100
+                  }
+
+                  Text {
+                    text: settings.epubLineHeight.toFixed(2)
+                    color: theme.textPrimary
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 48
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Show images"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  CheckBox {
+                    checked: settings.epubShowImages
+                    onToggled: settings.epubShowImages = checked
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Text align"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  ComboBox {
+                    Layout.fillWidth: true
+                    model: ["left", "justify", "center", "right"]
+                    currentIndex: Math.max(0, model.indexOf(settings.epubTextAlign))
+                    onActivated: settings.epubTextAlign = model[currentIndex]
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Paragraph spacing"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 0.0
+                    to: 3.0
+                    stepSize: 0.05
+                    value: settings.epubParagraphSpacing
+                    onMoved: settings.epubParagraphSpacing = Math.round(value * 100) / 100
+                  }
+
+                  Text {
+                    text: settings.epubParagraphSpacing.toFixed(2)
+                    color: theme.textPrimary
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 48
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Paragraph indent"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 0.0
+                    to: 3.0
+                    stepSize: 0.05
+                    value: settings.epubParagraphIndent
+                    onMoved: settings.epubParagraphIndent = Math.round(value * 100) / 100
+                  }
+
+                  Text {
+                    text: settings.epubParagraphIndent.toFixed(2)
+                    color: theme.textPrimary
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 48
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Image max width"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 10
+                    to: 100
+                    stepSize: 5
+                    value: settings.epubImageMaxWidth
+                    onMoved: settings.epubImageMaxWidth = Math.round(value)
+                  }
+
+                  Text {
+                    text: settings.epubImageMaxWidth + "%"
+                    color: theme.textPrimary
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 48
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Image spacing"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 0.0
+                    to: 4.0
+                    stepSize: 0.05
+                    value: settings.epubImageSpacing
+                    onMoved: settings.epubImageSpacing = Math.round(value * 100) / 100
+                  }
+
+                  Text {
+                    text: settings.epubImageSpacing.toFixed(2)
+                    color: theme.textPrimary
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 48
+                  }
+                }
+
+                Text {
+                  text: settings.formatSettingsPath("epub")
+                  color: theme.textMuted
+                  font.pixelSize: 11
+                  font.family: root.uiFont
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Button {
+                    text: "Reset EPUB"
+                    onClicked: settings.resetEpubDefaults()
+                    font.family: root.uiFont
+                  }
+
+                  Item { Layout.fillWidth: true }
+                }
+
+                Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
+              }
+
+              ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 12
+                Text {
+                  text: "FB2"
+                  color: theme.textPrimary
+                  font.pixelSize: 20
+                  font.family: root.uiFont
+                }
+
+                Text {
+                  text: "FB2 reading and layout."
+                  color: theme.textMuted
+                  font.pixelSize: 12
+                  font.family: root.uiFont
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Font size"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 12
+                    to: 36
+                    stepSize: 1
+                    value: settings.fb2FontSize
+                    onMoved: settings.fb2FontSize = Math.round(value)
+                  }
+
+                  SpinBox {
+                    from: 12
+                    to: 36
+                    value: settings.fb2FontSize
+                    editable: true
+                    onValueModified: settings.fb2FontSize = value
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Line height"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 1.0
+                    to: 2.0
+                    stepSize: 0.05
+                    value: settings.fb2LineHeight
+                    onMoved: settings.fb2LineHeight = Math.round(value * 100) / 100
+                  }
+
+                  Text {
+                    text: settings.fb2LineHeight.toFixed(2)
+                    color: theme.textPrimary
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 48
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Show images"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  CheckBox {
+                    checked: settings.fb2ShowImages
+                    onToggled: settings.fb2ShowImages = checked
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Text align"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  ComboBox {
+                    Layout.fillWidth: true
+                    model: ["left", "justify", "center", "right"]
+                    currentIndex: Math.max(0, model.indexOf(settings.fb2TextAlign))
+                    onActivated: settings.fb2TextAlign = model[currentIndex]
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Paragraph spacing"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 0.0
+                    to: 3.0
+                    stepSize: 0.05
+                    value: settings.fb2ParagraphSpacing
+                    onMoved: settings.fb2ParagraphSpacing = Math.round(value * 100) / 100
+                  }
+
+                  Text {
+                    text: settings.fb2ParagraphSpacing.toFixed(2)
+                    color: theme.textPrimary
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 48
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Paragraph indent"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 0.0
+                    to: 3.0
+                    stepSize: 0.05
+                    value: settings.fb2ParagraphIndent
+                    onMoved: settings.fb2ParagraphIndent = Math.round(value * 100) / 100
+                  }
+
+                  Text {
+                    text: settings.fb2ParagraphIndent.toFixed(2)
+                    color: theme.textPrimary
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 48
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Image max width"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 10
+                    to: 100
+                    stepSize: 5
+                    value: settings.fb2ImageMaxWidth
+                    onMoved: settings.fb2ImageMaxWidth = Math.round(value)
+                  }
+
+                  Text {
+                    text: settings.fb2ImageMaxWidth + "%"
+                    color: theme.textPrimary
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 48
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Image spacing"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 0.0
+                    to: 4.0
+                    stepSize: 0.05
+                    value: settings.fb2ImageSpacing
+                    onMoved: settings.fb2ImageSpacing = Math.round(value * 100) / 100
+                  }
+
+                  Text {
+                    text: settings.fb2ImageSpacing.toFixed(2)
+                    color: theme.textPrimary
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 48
+                  }
+                }
+
+                Text {
+                  text: settings.formatSettingsPath("fb2")
+                  color: theme.textMuted
+                  font.pixelSize: 11
+                  font.family: root.uiFont
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Button {
+                    text: "Reset FB2"
+                    onClicked: settings.resetFb2Defaults()
+                    font.family: root.uiFont
+                  }
+
+                  Item { Layout.fillWidth: true }
+                }
+
+                Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
+              }
+
+              ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 12
+                Text {
+                  text: "TXT"
+                  color: theme.textPrimary
+                  font.pixelSize: 20
+                  font.family: root.uiFont
+                }
+
+                Text {
+                  text: "Plain text rendering."
+                  color: theme.textMuted
+                  font.pixelSize: 12
+                  font.family: root.uiFont
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Font size"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 12
+                    to: 36
+                    stepSize: 1
+                    value: settings.txtFontSize
+                    onMoved: settings.txtFontSize = Math.round(value)
+                  }
+
+                  SpinBox {
+                    from: 12
+                    to: 36
+                    value: settings.txtFontSize
+                    editable: true
+                    onValueModified: settings.txtFontSize = value
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Line height"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 1.0
+                    to: 2.0
+                    stepSize: 0.05
+                    value: settings.txtLineHeight
+                    onMoved: settings.txtLineHeight = Math.round(value * 100) / 100
+                  }
+
+                  Text {
+                    text: settings.txtLineHeight.toFixed(2)
+                    color: theme.textPrimary
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 48
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Encoding"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  ComboBox {
+                    Layout.fillWidth: true
+                    model: ["auto", "utf-8", "utf-16le", "utf-16be", "utf-32le", "utf-32be", "latin1"]
+                    currentIndex: Math.max(0, model.indexOf(settings.txtEncoding))
+                    onActivated: settings.txtEncoding = model[currentIndex]
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Tab width"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 0
+                    to: 16
+                    stepSize: 1
+                    value: settings.txtTabWidth
+                    onMoved: settings.txtTabWidth = Math.round(value)
+                  }
+
+                  Text {
+                    text: settings.txtTabWidth.toString()
+                    color: theme.textPrimary
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 48
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Trim whitespace"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  CheckBox {
+                    checked: settings.txtTrimWhitespace
+                    onToggled: settings.txtTrimWhitespace = checked
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Auto chapters"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  CheckBox {
+                    checked: settings.txtAutoChapters
+                    onToggled: settings.txtAutoChapters = checked
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Monospace"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  CheckBox {
+                    checked: settings.txtMonospace
+                    onToggled: settings.txtMonospace = checked
+                  }
+                }
+
+                Text {
+                  text: settings.formatSettingsPath("txt")
+                  color: theme.textMuted
+                  font.pixelSize: 11
+                  font.family: root.uiFont
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Button {
+                    text: "Reset TXT"
+                    onClicked: settings.resetTxtDefaults()
+                    font.family: root.uiFont
+                  }
+
+                  Item { Layout.fillWidth: true }
+                }
+
+                Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
+              }
+
+              ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 12
+                Text {
+                  text: "MOBI/AZW/PRC"
+                  color: theme.textPrimary
+                  font.pixelSize: 20
+                  font.family: root.uiFont
+                }
+
+                Text {
+                  text: "Kindle-format rendering."
+                  color: theme.textMuted
+                  font.pixelSize: 12
+                  font.family: root.uiFont
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Font size"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 12
+                    to: 36
+                    stepSize: 1
+                    value: settings.mobiFontSize
+                    onMoved: settings.mobiFontSize = Math.round(value)
+                  }
+
+                  SpinBox {
+                    from: 12
+                    to: 36
+                    value: settings.mobiFontSize
+                    editable: true
+                    onValueModified: settings.mobiFontSize = value
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Line height"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 1.0
+                    to: 2.0
+                    stepSize: 0.05
+                    value: settings.mobiLineHeight
+                    onMoved: settings.mobiLineHeight = Math.round(value * 100) / 100
+                  }
+
+                  Text {
+                    text: settings.mobiLineHeight.toFixed(2)
+                    color: theme.textPrimary
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 48
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Show images"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  CheckBox {
+                    checked: settings.mobiShowImages
+                    onToggled: settings.mobiShowImages = checked
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Text align"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  ComboBox {
+                    Layout.fillWidth: true
+                    model: ["left", "justify", "center", "right"]
+                    currentIndex: Math.max(0, model.indexOf(settings.mobiTextAlign))
+                    onActivated: settings.mobiTextAlign = model[currentIndex]
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Paragraph spacing"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 0.0
+                    to: 3.0
+                    stepSize: 0.05
+                    value: settings.mobiParagraphSpacing
+                    onMoved: settings.mobiParagraphSpacing = Math.round(value * 100) / 100
+                  }
+
+                  Text {
+                    text: settings.mobiParagraphSpacing.toFixed(2)
+                    color: theme.textPrimary
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 48
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Paragraph indent"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 0.0
+                    to: 3.0
+                    stepSize: 0.05
+                    value: settings.mobiParagraphIndent
+                    onMoved: settings.mobiParagraphIndent = Math.round(value * 100) / 100
+                  }
+
+                  Text {
+                    text: settings.mobiParagraphIndent.toFixed(2)
+                    color: theme.textPrimary
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 48
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Image max width"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 10
+                    to: 100
+                    stepSize: 5
+                    value: settings.mobiImageMaxWidth
+                    onMoved: settings.mobiImageMaxWidth = Math.round(value)
+                  }
+
+                  Text {
+                    text: settings.mobiImageMaxWidth + "%"
+                    color: theme.textPrimary
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 48
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Image spacing"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 0.0
+                    to: 4.0
+                    stepSize: 0.05
+                    value: settings.mobiImageSpacing
+                    onMoved: settings.mobiImageSpacing = Math.round(value * 100) / 100
+                  }
+
+                  Text {
+                    text: settings.mobiImageSpacing.toFixed(2)
+                    color: theme.textPrimary
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 48
+                  }
+                }
+
+                Text {
+                  text: settings.formatSettingsPath("mobi")
+                  color: theme.textMuted
+                  font.pixelSize: 11
+                  font.family: root.uiFont
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Button {
+                    text: "Reset MOBI"
+                    onClicked: settings.resetMobiDefaults()
+                    font.family: root.uiFont
+                  }
+
+                  Item { Layout.fillWidth: true }
+                }
+
+                Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
+              }
+
+              ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 12
+                Text {
+                  text: "PDF"
+                  color: theme.textPrimary
+                  font.pixelSize: 20
+                  font.family: root.uiFont
+                }
+
+                Text {
+                  text: "PDF rendering quality and caching."
+                  color: theme.textMuted
+                  font.pixelSize: 12
+                  font.family: root.uiFont
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Quality preset"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  ComboBox {
+                    Layout.fillWidth: true
+                    model: ["custom", "fast", "balanced", "high"]
+                    currentIndex: model.indexOf(settings.pdfRenderPreset)
+                    onActivated: settings.pdfRenderPreset = model[currentIndex]
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Render DPI"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 72
+                    to: 240
+                    stepSize: 6
+                    value: settings.pdfDpi
+                    enabled: settings.pdfRenderPreset === "custom"
+                    onMoved: settings.pdfDpi = Math.round(value)
+                  }
+
+                  SpinBox {
+                    from: 72
+                    to: 240
+                    value: settings.pdfDpi
+                    editable: true
+                    enabled: settings.pdfRenderPreset === "custom"
+                    onValueModified: settings.pdfDpi = value
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Cache pages"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 5
+                    to: 120
+                    stepSize: 1
+                    value: settings.pdfCacheLimit
+                    onMoved: settings.pdfCacheLimit = Math.round(value)
+                  }
+
+                  SpinBox {
+                    from: 5
+                    to: 120
+                    value: settings.pdfCacheLimit
+                    editable: true
+                    onValueModified: settings.pdfCacheLimit = value
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Cache policy"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  ComboBox {
+                    Layout.fillWidth: true
+                    model: ["fifo", "lru"]
+                    currentIndex: model.indexOf(settings.pdfCachePolicy)
+                    onActivated: settings.pdfCachePolicy = model[currentIndex]
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Prefetch distance"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 0
+                    to: 6
+                    stepSize: 1
+                    value: settings.pdfPrefetchDistance
+                    onMoved: settings.pdfPrefetchDistance = Math.round(value)
+                  }
+
+                  SpinBox {
+                    from: 0
+                    to: 6
+                    value: settings.pdfPrefetchDistance
+                    editable: true
+                    onValueModified: settings.pdfPrefetchDistance = value
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Prefetch strategy"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  ComboBox {
+                    Layout.fillWidth: true
+                    model: ["forward", "symmetric", "backward"]
+                    currentIndex: model.indexOf(settings.pdfPrefetchStrategy)
+                    onActivated: settings.pdfPrefetchStrategy = model[currentIndex]
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Progressive render"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  CheckBox {
+                    checked: settings.pdfProgressiveRendering
+                    text: settings.pdfProgressiveRendering ? "On" : "Off"
+                    onToggled: settings.pdfProgressiveRendering = checked
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+                  enabled: settings.pdfProgressiveRendering
+
+                  Text {
+                    text: "Preview DPI"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 48
+                    to: settings.pdfDpi
+                    stepSize: 6
+                    value: settings.pdfProgressiveDpi
+                    onMoved: settings.pdfProgressiveDpi = Math.round(value)
+                  }
+
+                  SpinBox {
+                    from: 48
+                    to: settings.pdfDpi
+                    value: settings.pdfProgressiveDpi
+                    editable: true
+                    onValueModified: settings.pdfProgressiveDpi = value
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Color mode"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  ComboBox {
+                    Layout.fillWidth: true
+                    model: ["color", "grayscale"]
+                    currentIndex: model.indexOf(settings.pdfColorMode)
+                    onActivated: settings.pdfColorMode = model[currentIndex]
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Background"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  ComboBox {
+                    Layout.fillWidth: true
+                    model: ["white", "transparent", "theme", "custom"]
+                    currentIndex: model.indexOf(settings.pdfBackgroundMode)
+                    onActivated: settings.pdfBackgroundMode = model[currentIndex]
+                  }
+
+                  TextField {
+                    Layout.preferredWidth: 120
+                    text: settings.pdfBackgroundColor
+                    placeholderText: "#202633"
+                    enabled: settings.pdfBackgroundMode !== "transparent"
+                    onEditingFinished: settings.pdfBackgroundColor = text
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Max size"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  SpinBox {
+                    from: 0
+                    to: 20000
+                    value: settings.pdfMaxWidth
+                    editable: true
+                    onValueModified: settings.pdfMaxWidth = value
+                  }
+
+                  SpinBox {
+                    from: 0
+                    to: 20000
+                    value: settings.pdfMaxHeight
+                    editable: true
+                    onValueModified: settings.pdfMaxHeight = value
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Image format"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  ComboBox {
+                    Layout.fillWidth: true
+                    model: ["png", "jpeg"]
+                    currentIndex: model.indexOf(settings.pdfImageFormat)
+                    onActivated: settings.pdfImageFormat = model[currentIndex]
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+                  enabled: settings.pdfImageFormat === "jpeg"
+
+                  Text {
+                    text: "JPEG quality"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 1
+                    to: 100
+                    stepSize: 1
+                    value: settings.pdfJpegQuality
+                    onMoved: settings.pdfJpegQuality = Math.round(value)
+                  }
+
+                  SpinBox {
+                    from: 1
+                    to: 100
+                    value: settings.pdfJpegQuality
+                    editable: true
+                    onValueModified: settings.pdfJpegQuality = value
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Extract text"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  CheckBox {
+                    checked: settings.pdfExtractText
+                    text: settings.pdfExtractText ? "On" : "Off"
+                    onToggled: settings.pdfExtractText = checked
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Tile size"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 0
+                    to: 4096
+                    stepSize: 256
+                    value: settings.pdfTileSize
+                    onMoved: settings.pdfTileSize = Math.round(value / 256) * 256
+                  }
+
+                  SpinBox {
+                    from: 0
+                    to: 8192
+                    value: settings.pdfTileSize
+                    editable: true
+                    onValueModified: settings.pdfTileSize = value
+                  }
+                }
+
+                Text {
+                  text: settings.formatSettingsPath("pdf")
+                  color: theme.textMuted
+                  font.pixelSize: 11
+                  font.family: root.uiFont
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Button {
+                    text: "Reset PDF"
+                    onClicked: settings.resetPdfDefaults()
+                    font.family: root.uiFont
+                  }
+
+                  Item { Layout.fillWidth: true }
+                }
+
+                Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
+              }
+
+              ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 12
+                Text {
+                  text: "Comics"
+                  color: theme.textPrimary
+                  font.pixelSize: 20
+                  font.family: root.uiFont
+                }
+
+                Text {
+                  text: "CBZ/CBR zoom and sorting."
+                  color: theme.textMuted
+                  font.pixelSize: 12
+                  font.family: root.uiFont
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Min zoom"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 0.2
+                    to: 6.0
+                    stepSize: 0.1
+                    value: settings.comicMinZoom
+                    onMoved: settings.comicMinZoom = Math.round(value * 10) / 10
+                  }
+
+                  Text {
+                    text: settings.comicMinZoom.toFixed(1)
+                    color: theme.textPrimary
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 48
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Max zoom"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 1.0
+                    to: 8.0
+                    stepSize: 0.1
+                    value: settings.comicMaxZoom
+                    onMoved: settings.comicMaxZoom = Math.round(value * 10) / 10
+                  }
+
+                  Text {
+                    text: settings.comicMaxZoom.toFixed(1)
+                    color: theme.textPrimary
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 48
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Sort mode"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  ComboBox {
+                    Layout.fillWidth: true
+                    model: ["path", "filename", "archive"]
+                    currentIndex: Math.max(0, model.indexOf(settings.comicSortMode))
+                    onActivated: settings.comicSortMode = model[currentIndex]
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Descending"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  CheckBox {
+                    checked: settings.comicSortDescending
+                    onToggled: settings.comicSortDescending = checked
+                  }
+                }
+
+                Text {
+                  text: settings.formatSettingsPath("cbz")
+                  color: theme.textMuted
+                  font.pixelSize: 11
+                  font.family: root.uiFont
+                }
+
+                Text {
+                  text: settings.formatSettingsPath("cbr")
+                  color: theme.textMuted
+                  font.pixelSize: 11
+                  font.family: root.uiFont
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Button {
+                    text: "Reset Comics"
+                    onClicked: settings.resetComicDefaults()
+                    font.family: root.uiFont
+                  }
+
+                  Item { Layout.fillWidth: true }
+                }
+
+                Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
+              }
+
+              ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 12
+                Text {
+                  text: "DJVU"
+                  color: theme.textPrimary
+                  font.pixelSize: 20
+                  font.family: root.uiFont
+                }
+
+                Text {
+                  text: "DJVU rendering controls."
+                  color: theme.textMuted
+                  font.pixelSize: 12
+                  font.family: root.uiFont
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Render DPI"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 72
+                    to: 240
+                    stepSize: 6
+                    value: settings.djvuDpi
+                    onMoved: settings.djvuDpi = Math.round(value)
+                  }
+
+                  SpinBox {
+                    from: 72
+                    to: 240
+                    value: settings.djvuDpi
+                    editable: true
+                    onValueModified: settings.djvuDpi = value
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Cache pages"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 5
+                    to: 120
+                    stepSize: 1
+                    value: settings.djvuCacheLimit
+                    onMoved: settings.djvuCacheLimit = Math.round(value)
+                  }
+
+                  SpinBox {
+                    from: 5
+                    to: 120
+                    value: settings.djvuCacheLimit
+                    editable: true
+                    onValueModified: settings.djvuCacheLimit = value
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Prefetch distance"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 0
+                    to: 6
+                    stepSize: 1
+                    value: settings.djvuPrefetchDistance
+                    onMoved: settings.djvuPrefetchDistance = Math.round(value)
+                  }
+
+                  SpinBox {
+                    from: 0
+                    to: 6
+                    value: settings.djvuPrefetchDistance
+                    editable: true
+                    onValueModified: settings.djvuPrefetchDistance = value
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Cache policy"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  ComboBox {
+                    Layout.fillWidth: true
+                    model: ["fifo", "lru"]
+                    currentIndex: model.indexOf(settings.djvuCachePolicy)
+                    onActivated: settings.djvuCachePolicy = model[currentIndex]
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Output format"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  ComboBox {
+                    Layout.fillWidth: true
+                    model: ["ppm", "tiff"]
+                    currentIndex: model.indexOf(settings.djvuImageFormat)
+                    onActivated: settings.djvuImageFormat = model[currentIndex]
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Extract text"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  CheckBox {
+                    checked: settings.djvuExtractText
+                    onToggled: settings.djvuExtractText = checked
+                  }
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Text {
+                    text: "Rotation"
+                    color: theme.textMuted
+                    font.pixelSize: 13
+                    font.family: root.uiFont
+                    Layout.preferredWidth: 120
+                  }
+
+                  ComboBox {
+                    Layout.fillWidth: true
+                    model: ["0", "90", "180", "270"]
+                    currentIndex: model.indexOf(String(settings.djvuRotation))
+                    onActivated: settings.djvuRotation = parseInt(model[currentIndex])
+                  }
+                }
+
+                Text {
+                  text: settings.formatSettingsPath("djvu")
+                  color: theme.textMuted
+                  font.pixelSize: 11
+                  font.family: root.uiFont
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 12
+
+                  Button {
+                    text: "Reset DJVU"
+                    onClicked: settings.resetDjvuDefaults()
+                    font.family: root.uiFont
+                  }
+
+                  Item { Layout.fillWidth: true }
+                }
+
+              }
+            }
+
+            Rectangle {
+              Layout.fillWidth: true
+              height: 1
+              color: theme.panelHighlight
+            }
+
+            RowLayout {
+              Layout.fillWidth: true
+              spacing: 12
+
+              Button {
+                text: "Back to Settings"
+                onClicked: {
+                  formatSettingsDialog.close()
+                  settingsDialog.open()
+                }
+                font.family: root.uiFont
+              }
+
+              Item { Layout.fillWidth: true }
+            }
           }
         }
       }
@@ -4665,1679 +6445,6 @@ ApplicationWindow {
             height: 1
             color: theme.panelHighlight
           }
-
-          Text {
-            text: "EPUB"
-            color: theme.textPrimary
-            font.pixelSize: 20
-            font.family: root.uiFont
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Font size"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 12
-              to: 36
-              stepSize: 1
-              value: settings.epubFontSize
-              onMoved: settings.epubFontSize = Math.round(value)
-            }
-
-            SpinBox {
-              from: 12
-              to: 36
-              value: settings.epubFontSize
-              editable: true
-              onValueModified: settings.epubFontSize = value
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Line height"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 1.0
-              to: 2.0
-              stepSize: 0.05
-              value: settings.epubLineHeight
-              onMoved: settings.epubLineHeight = Math.round(value * 100) / 100
-            }
-
-            Text {
-              text: settings.epubLineHeight.toFixed(2)
-              color: theme.textPrimary
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 48
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Show images"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            CheckBox {
-              checked: settings.epubShowImages
-              onToggled: settings.epubShowImages = checked
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Text align"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            ComboBox {
-              Layout.fillWidth: true
-              model: ["left", "justify", "center", "right"]
-              currentIndex: Math.max(0, model.indexOf(settings.epubTextAlign))
-              onActivated: settings.epubTextAlign = model[currentIndex]
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Paragraph spacing"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 0.0
-              to: 3.0
-              stepSize: 0.05
-              value: settings.epubParagraphSpacing
-              onMoved: settings.epubParagraphSpacing = Math.round(value * 100) / 100
-            }
-
-            Text {
-              text: settings.epubParagraphSpacing.toFixed(2)
-              color: theme.textPrimary
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 48
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Paragraph indent"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 0.0
-              to: 3.0
-              stepSize: 0.05
-              value: settings.epubParagraphIndent
-              onMoved: settings.epubParagraphIndent = Math.round(value * 100) / 100
-            }
-
-            Text {
-              text: settings.epubParagraphIndent.toFixed(2)
-              color: theme.textPrimary
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 48
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Image max width"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 10
-              to: 100
-              stepSize: 5
-              value: settings.epubImageMaxWidth
-              onMoved: settings.epubImageMaxWidth = Math.round(value)
-            }
-
-            Text {
-              text: settings.epubImageMaxWidth + "%"
-              color: theme.textPrimary
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 48
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Image spacing"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 0.0
-              to: 4.0
-              stepSize: 0.05
-              value: settings.epubImageSpacing
-              onMoved: settings.epubImageSpacing = Math.round(value * 100) / 100
-            }
-
-            Text {
-              text: settings.epubImageSpacing.toFixed(2)
-              color: theme.textPrimary
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 48
-            }
-          }
-
-          Text {
-            text: settings.formatSettingsPath("epub")
-            color: theme.textMuted
-            font.pixelSize: 11
-            font.family: root.uiFont
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Button {
-              text: "Reset EPUB"
-              onClicked: settings.resetEpubDefaults()
-              font.family: root.uiFont
-            }
-
-            Item { Layout.fillWidth: true }
-          }
-
-          Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
-
-          Text {
-            text: "FB2"
-            color: theme.textPrimary
-            font.pixelSize: 20
-            font.family: root.uiFont
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Font size"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 12
-              to: 36
-              stepSize: 1
-              value: settings.fb2FontSize
-              onMoved: settings.fb2FontSize = Math.round(value)
-            }
-
-            SpinBox {
-              from: 12
-              to: 36
-              value: settings.fb2FontSize
-              editable: true
-              onValueModified: settings.fb2FontSize = value
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Line height"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 1.0
-              to: 2.0
-              stepSize: 0.05
-              value: settings.fb2LineHeight
-              onMoved: settings.fb2LineHeight = Math.round(value * 100) / 100
-            }
-
-            Text {
-              text: settings.fb2LineHeight.toFixed(2)
-              color: theme.textPrimary
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 48
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Show images"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            CheckBox {
-              checked: settings.fb2ShowImages
-              onToggled: settings.fb2ShowImages = checked
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Text align"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            ComboBox {
-              Layout.fillWidth: true
-              model: ["left", "justify", "center", "right"]
-              currentIndex: Math.max(0, model.indexOf(settings.fb2TextAlign))
-              onActivated: settings.fb2TextAlign = model[currentIndex]
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Paragraph spacing"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 0.0
-              to: 3.0
-              stepSize: 0.05
-              value: settings.fb2ParagraphSpacing
-              onMoved: settings.fb2ParagraphSpacing = Math.round(value * 100) / 100
-            }
-
-            Text {
-              text: settings.fb2ParagraphSpacing.toFixed(2)
-              color: theme.textPrimary
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 48
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Paragraph indent"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 0.0
-              to: 3.0
-              stepSize: 0.05
-              value: settings.fb2ParagraphIndent
-              onMoved: settings.fb2ParagraphIndent = Math.round(value * 100) / 100
-            }
-
-            Text {
-              text: settings.fb2ParagraphIndent.toFixed(2)
-              color: theme.textPrimary
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 48
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Image max width"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 10
-              to: 100
-              stepSize: 5
-              value: settings.fb2ImageMaxWidth
-              onMoved: settings.fb2ImageMaxWidth = Math.round(value)
-            }
-
-            Text {
-              text: settings.fb2ImageMaxWidth + "%"
-              color: theme.textPrimary
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 48
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Image spacing"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 0.0
-              to: 4.0
-              stepSize: 0.05
-              value: settings.fb2ImageSpacing
-              onMoved: settings.fb2ImageSpacing = Math.round(value * 100) / 100
-            }
-
-            Text {
-              text: settings.fb2ImageSpacing.toFixed(2)
-              color: theme.textPrimary
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 48
-            }
-          }
-
-          Text {
-            text: settings.formatSettingsPath("fb2")
-            color: theme.textMuted
-            font.pixelSize: 11
-            font.family: root.uiFont
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Button {
-              text: "Reset FB2"
-              onClicked: settings.resetFb2Defaults()
-              font.family: root.uiFont
-            }
-
-            Item { Layout.fillWidth: true }
-          }
-
-          Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
-
-          Text {
-            text: "TXT"
-            color: theme.textPrimary
-            font.pixelSize: 20
-            font.family: root.uiFont
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Font size"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 12
-              to: 36
-              stepSize: 1
-              value: settings.txtFontSize
-              onMoved: settings.txtFontSize = Math.round(value)
-            }
-
-            SpinBox {
-              from: 12
-              to: 36
-              value: settings.txtFontSize
-              editable: true
-              onValueModified: settings.txtFontSize = value
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Line height"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 1.0
-              to: 2.0
-              stepSize: 0.05
-              value: settings.txtLineHeight
-              onMoved: settings.txtLineHeight = Math.round(value * 100) / 100
-            }
-
-            Text {
-              text: settings.txtLineHeight.toFixed(2)
-              color: theme.textPrimary
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 48
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Encoding"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            ComboBox {
-              Layout.fillWidth: true
-              model: ["auto", "utf-8", "utf-16le", "utf-16be", "utf-32le", "utf-32be", "latin1"]
-              currentIndex: Math.max(0, model.indexOf(settings.txtEncoding))
-              onActivated: settings.txtEncoding = model[currentIndex]
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Tab width"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 0
-              to: 16
-              stepSize: 1
-              value: settings.txtTabWidth
-              onMoved: settings.txtTabWidth = Math.round(value)
-            }
-
-            Text {
-              text: settings.txtTabWidth.toString()
-              color: theme.textPrimary
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 48
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Trim whitespace"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            CheckBox {
-              checked: settings.txtTrimWhitespace
-              onToggled: settings.txtTrimWhitespace = checked
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Auto chapters"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            CheckBox {
-              checked: settings.txtAutoChapters
-              onToggled: settings.txtAutoChapters = checked
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Monospace"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            CheckBox {
-              checked: settings.txtMonospace
-              onToggled: settings.txtMonospace = checked
-            }
-          }
-
-          Text {
-            text: settings.formatSettingsPath("txt")
-            color: theme.textMuted
-            font.pixelSize: 11
-            font.family: root.uiFont
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Button {
-              text: "Reset TXT"
-              onClicked: settings.resetTxtDefaults()
-              font.family: root.uiFont
-            }
-
-            Item { Layout.fillWidth: true }
-          }
-
-          Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
-
-          Text {
-            text: "MOBI/AZW/PRC"
-            color: theme.textPrimary
-            font.pixelSize: 20
-            font.family: root.uiFont
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Font size"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 12
-              to: 36
-              stepSize: 1
-              value: settings.mobiFontSize
-              onMoved: settings.mobiFontSize = Math.round(value)
-            }
-
-            SpinBox {
-              from: 12
-              to: 36
-              value: settings.mobiFontSize
-              editable: true
-              onValueModified: settings.mobiFontSize = value
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Line height"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 1.0
-              to: 2.0
-              stepSize: 0.05
-              value: settings.mobiLineHeight
-              onMoved: settings.mobiLineHeight = Math.round(value * 100) / 100
-            }
-
-            Text {
-              text: settings.mobiLineHeight.toFixed(2)
-              color: theme.textPrimary
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 48
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Show images"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            CheckBox {
-              checked: settings.mobiShowImages
-              onToggled: settings.mobiShowImages = checked
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Text align"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            ComboBox {
-              Layout.fillWidth: true
-              model: ["left", "justify", "center", "right"]
-              currentIndex: Math.max(0, model.indexOf(settings.mobiTextAlign))
-              onActivated: settings.mobiTextAlign = model[currentIndex]
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Paragraph spacing"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 0.0
-              to: 3.0
-              stepSize: 0.05
-              value: settings.mobiParagraphSpacing
-              onMoved: settings.mobiParagraphSpacing = Math.round(value * 100) / 100
-            }
-
-            Text {
-              text: settings.mobiParagraphSpacing.toFixed(2)
-              color: theme.textPrimary
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 48
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Paragraph indent"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 0.0
-              to: 3.0
-              stepSize: 0.05
-              value: settings.mobiParagraphIndent
-              onMoved: settings.mobiParagraphIndent = Math.round(value * 100) / 100
-            }
-
-            Text {
-              text: settings.mobiParagraphIndent.toFixed(2)
-              color: theme.textPrimary
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 48
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Image max width"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 10
-              to: 100
-              stepSize: 5
-              value: settings.mobiImageMaxWidth
-              onMoved: settings.mobiImageMaxWidth = Math.round(value)
-            }
-
-            Text {
-              text: settings.mobiImageMaxWidth + "%"
-              color: theme.textPrimary
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 48
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Image spacing"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 0.0
-              to: 4.0
-              stepSize: 0.05
-              value: settings.mobiImageSpacing
-              onMoved: settings.mobiImageSpacing = Math.round(value * 100) / 100
-            }
-
-            Text {
-              text: settings.mobiImageSpacing.toFixed(2)
-              color: theme.textPrimary
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 48
-            }
-          }
-
-          Text {
-            text: settings.formatSettingsPath("mobi")
-            color: theme.textMuted
-            font.pixelSize: 11
-            font.family: root.uiFont
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Button {
-              text: "Reset MOBI"
-              onClicked: settings.resetMobiDefaults()
-              font.family: root.uiFont
-            }
-
-            Item { Layout.fillWidth: true }
-          }
-
-          Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
-
-          Text {
-            text: "PDF"
-            color: theme.textPrimary
-            font.pixelSize: 20
-            font.family: root.uiFont
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Quality preset"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            ComboBox {
-              Layout.fillWidth: true
-              model: ["custom", "fast", "balanced", "high"]
-              currentIndex: model.indexOf(settings.pdfRenderPreset)
-              onActivated: settings.pdfRenderPreset = model[currentIndex]
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Render DPI"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 72
-              to: 240
-              stepSize: 6
-              value: settings.pdfDpi
-              enabled: settings.pdfRenderPreset === "custom"
-              onMoved: settings.pdfDpi = Math.round(value)
-            }
-
-            SpinBox {
-              from: 72
-              to: 240
-              value: settings.pdfDpi
-              editable: true
-              enabled: settings.pdfRenderPreset === "custom"
-              onValueModified: settings.pdfDpi = value
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Cache pages"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 5
-              to: 120
-              stepSize: 1
-              value: settings.pdfCacheLimit
-              onMoved: settings.pdfCacheLimit = Math.round(value)
-            }
-
-            SpinBox {
-              from: 5
-              to: 120
-              value: settings.pdfCacheLimit
-              editable: true
-              onValueModified: settings.pdfCacheLimit = value
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Cache policy"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            ComboBox {
-              Layout.fillWidth: true
-              model: ["fifo", "lru"]
-              currentIndex: model.indexOf(settings.pdfCachePolicy)
-              onActivated: settings.pdfCachePolicy = model[currentIndex]
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Prefetch distance"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 0
-              to: 6
-              stepSize: 1
-              value: settings.pdfPrefetchDistance
-              onMoved: settings.pdfPrefetchDistance = Math.round(value)
-            }
-
-            SpinBox {
-              from: 0
-              to: 6
-              value: settings.pdfPrefetchDistance
-              editable: true
-              onValueModified: settings.pdfPrefetchDistance = value
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Prefetch strategy"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            ComboBox {
-              Layout.fillWidth: true
-              model: ["forward", "symmetric", "backward"]
-              currentIndex: model.indexOf(settings.pdfPrefetchStrategy)
-              onActivated: settings.pdfPrefetchStrategy = model[currentIndex]
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Progressive render"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            CheckBox {
-              checked: settings.pdfProgressiveRendering
-              text: settings.pdfProgressiveRendering ? "On" : "Off"
-              onToggled: settings.pdfProgressiveRendering = checked
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-            enabled: settings.pdfProgressiveRendering
-
-            Text {
-              text: "Preview DPI"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 48
-              to: settings.pdfDpi
-              stepSize: 6
-              value: settings.pdfProgressiveDpi
-              onMoved: settings.pdfProgressiveDpi = Math.round(value)
-            }
-
-            SpinBox {
-              from: 48
-              to: settings.pdfDpi
-              value: settings.pdfProgressiveDpi
-              editable: true
-              onValueModified: settings.pdfProgressiveDpi = value
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Color mode"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            ComboBox {
-              Layout.fillWidth: true
-              model: ["color", "grayscale"]
-              currentIndex: model.indexOf(settings.pdfColorMode)
-              onActivated: settings.pdfColorMode = model[currentIndex]
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Background"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            ComboBox {
-              Layout.fillWidth: true
-              model: ["white", "transparent", "theme", "custom"]
-              currentIndex: model.indexOf(settings.pdfBackgroundMode)
-              onActivated: settings.pdfBackgroundMode = model[currentIndex]
-            }
-
-            TextField {
-              Layout.preferredWidth: 120
-              text: settings.pdfBackgroundColor
-              placeholderText: "#202633"
-              enabled: settings.pdfBackgroundMode !== "transparent"
-              onEditingFinished: settings.pdfBackgroundColor = text
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Max size"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            SpinBox {
-              from: 0
-              to: 20000
-              value: settings.pdfMaxWidth
-              editable: true
-              onValueModified: settings.pdfMaxWidth = value
-            }
-
-            SpinBox {
-              from: 0
-              to: 20000
-              value: settings.pdfMaxHeight
-              editable: true
-              onValueModified: settings.pdfMaxHeight = value
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Image format"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            ComboBox {
-              Layout.fillWidth: true
-              model: ["png", "jpeg"]
-              currentIndex: model.indexOf(settings.pdfImageFormat)
-              onActivated: settings.pdfImageFormat = model[currentIndex]
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-            enabled: settings.pdfImageFormat === "jpeg"
-
-            Text {
-              text: "JPEG quality"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 1
-              to: 100
-              stepSize: 1
-              value: settings.pdfJpegQuality
-              onMoved: settings.pdfJpegQuality = Math.round(value)
-            }
-
-            SpinBox {
-              from: 1
-              to: 100
-              value: settings.pdfJpegQuality
-              editable: true
-              onValueModified: settings.pdfJpegQuality = value
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Extract text"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            CheckBox {
-              checked: settings.pdfExtractText
-              text: settings.pdfExtractText ? "On" : "Off"
-              onToggled: settings.pdfExtractText = checked
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Tile size"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 0
-              to: 4096
-              stepSize: 256
-              value: settings.pdfTileSize
-              onMoved: settings.pdfTileSize = Math.round(value / 256) * 256
-            }
-
-            SpinBox {
-              from: 0
-              to: 8192
-              value: settings.pdfTileSize
-              editable: true
-              onValueModified: settings.pdfTileSize = value
-            }
-          }
-
-          Text {
-            text: settings.formatSettingsPath("pdf")
-            color: theme.textMuted
-            font.pixelSize: 11
-            font.family: root.uiFont
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Button {
-              text: "Reset PDF"
-              onClicked: settings.resetPdfDefaults()
-              font.family: root.uiFont
-            }
-
-            Item { Layout.fillWidth: true }
-          }
-
-          Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
-
-          Text {
-            text: "Comics"
-            color: theme.textPrimary
-            font.pixelSize: 20
-            font.family: root.uiFont
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Min zoom"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 0.2
-              to: 6.0
-              stepSize: 0.1
-              value: settings.comicMinZoom
-              onMoved: settings.comicMinZoom = Math.round(value * 10) / 10
-            }
-
-            Text {
-              text: settings.comicMinZoom.toFixed(1)
-              color: theme.textPrimary
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 48
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Max zoom"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 1.0
-              to: 8.0
-              stepSize: 0.1
-              value: settings.comicMaxZoom
-              onMoved: settings.comicMaxZoom = Math.round(value * 10) / 10
-            }
-
-            Text {
-              text: settings.comicMaxZoom.toFixed(1)
-              color: theme.textPrimary
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 48
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Sort mode"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            ComboBox {
-              Layout.fillWidth: true
-              model: ["path", "filename", "archive"]
-              currentIndex: Math.max(0, model.indexOf(settings.comicSortMode))
-              onActivated: settings.comicSortMode = model[currentIndex]
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Descending"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            CheckBox {
-              checked: settings.comicSortDescending
-              onToggled: settings.comicSortDescending = checked
-            }
-          }
-
-          Text {
-            text: settings.formatSettingsPath("cbz")
-            color: theme.textMuted
-            font.pixelSize: 11
-            font.family: root.uiFont
-          }
-
-          Text {
-            text: settings.formatSettingsPath("cbr")
-            color: theme.textMuted
-            font.pixelSize: 11
-            font.family: root.uiFont
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Button {
-              text: "Reset Comics"
-              onClicked: settings.resetComicDefaults()
-              font.family: root.uiFont
-            }
-
-            Item { Layout.fillWidth: true }
-          }
-
-          Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
-
-          Text {
-            text: "DJVU"
-            color: theme.textPrimary
-            font.pixelSize: 20
-            font.family: root.uiFont
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Render DPI"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 72
-              to: 240
-              stepSize: 6
-              value: settings.djvuDpi
-              onMoved: settings.djvuDpi = Math.round(value)
-            }
-
-            SpinBox {
-              from: 72
-              to: 240
-              value: settings.djvuDpi
-              editable: true
-              onValueModified: settings.djvuDpi = value
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Cache pages"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 5
-              to: 120
-              stepSize: 1
-              value: settings.djvuCacheLimit
-              onMoved: settings.djvuCacheLimit = Math.round(value)
-            }
-
-            SpinBox {
-              from: 5
-              to: 120
-              value: settings.djvuCacheLimit
-              editable: true
-              onValueModified: settings.djvuCacheLimit = value
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Prefetch"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            Slider {
-              Layout.fillWidth: true
-              from: 0
-              to: 6
-              stepSize: 1
-              value: settings.djvuPrefetchDistance
-              onMoved: settings.djvuPrefetchDistance = Math.round(value)
-            }
-
-            SpinBox {
-              from: 0
-              to: 6
-              value: settings.djvuPrefetchDistance
-              editable: true
-              onValueModified: settings.djvuPrefetchDistance = value
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Cache policy"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            ComboBox {
-              Layout.fillWidth: true
-              model: ["fifo", "lru"]
-              currentIndex: model.indexOf(settings.djvuCachePolicy)
-              onActivated: settings.djvuCachePolicy = model[currentIndex]
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Output format"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            ComboBox {
-              Layout.fillWidth: true
-              model: ["ppm", "tiff"]
-              currentIndex: model.indexOf(settings.djvuImageFormat)
-              onActivated: settings.djvuImageFormat = model[currentIndex]
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Extract text"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            CheckBox {
-              checked: settings.djvuExtractText
-              onToggled: settings.djvuExtractText = checked
-            }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Rotation"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 120
-            }
-
-            ComboBox {
-              Layout.fillWidth: true
-              model: ["0", "90", "180", "270"]
-              currentIndex: model.indexOf(String(settings.djvuRotation))
-              onActivated: settings.djvuRotation = parseInt(model[currentIndex])
-            }
-          }
-
-          Text {
-            text: settings.formatSettingsPath("djvu")
-            color: theme.textMuted
-            font.pixelSize: 11
-            font.family: root.uiFont
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Button {
-              text: "Reset DJVU"
-              onClicked: settings.resetDjvuDefaults()
-              font.family: root.uiFont
-            }
-
-            Item { Layout.fillWidth: true }
-          }
-
-          Rectangle { height: 1; color: theme.panelHighlight; Layout.fillWidth: true }
 
           RowLayout {
             Layout.fillWidth: true
