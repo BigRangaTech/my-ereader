@@ -5,6 +5,7 @@
 #include <QVariant>
 #include <QVariantList>
 #include <QVariantMap>
+#include <QStringList>
 
 #include "LibraryItem.h"
 
@@ -12,6 +13,12 @@ class LibraryModel : public QAbstractListModel {
   Q_OBJECT
   Q_PROPERTY(bool ready READ ready NOTIFY readyChanged)
   Q_PROPERTY(int count READ count NOTIFY countChanged)
+  Q_PROPERTY(int totalCount READ totalCount NOTIFY totalCountChanged)
+  Q_PROPERTY(int pageSize READ pageSize WRITE setPageSize NOTIFY pageSizeChanged)
+  Q_PROPERTY(int pageIndex READ pageIndex WRITE setPageIndex NOTIFY pageIndexChanged)
+  Q_PROPERTY(int pageCount READ pageCount NOTIFY pageCountChanged)
+  Q_PROPERTY(QStringList availableCollections READ availableCollections NOTIFY availableCollectionsChanged)
+  Q_PROPERTY(QStringList availableTags READ availableTags NOTIFY availableTagsChanged)
   Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
   Q_PROPERTY(QString searchQuery READ searchQuery WRITE setSearchQuery NOTIFY searchQueryChanged)
   Q_PROPERTY(QString sortKey READ sortKey WRITE setSortKey NOTIFY sortKeyChanged)
@@ -73,6 +80,9 @@ public:
   Q_INVOKABLE int importLibrarySync(const QVariantList &payload, const QString &conflictPolicy);
   Q_INVOKABLE bool hasFileHash(const QString &fileHash) const;
   Q_INVOKABLE QString pathForHash(const QString &fileHash) const;
+  Q_INVOKABLE void nextPage();
+  Q_INVOKABLE void prevPage();
+  Q_INVOKABLE void goToPage(int index);
 
   QString searchQuery() const;
   QString sortKey() const;
@@ -82,11 +92,19 @@ public:
   bool bulkImportActive() const;
   int bulkImportTotal() const;
   int bulkImportDone() const;
+  int totalCount() const;
+  int pageSize() const;
+  int pageIndex() const;
+  int pageCount() const;
+  QStringList availableCollections() const;
+  QStringList availableTags() const;
   void setSearchQuery(const QString &query);
   void setSortKey(const QString &key);
   void setSortDescending(bool descending);
   void setFilterTag(const QString &tag);
   void setFilterCollection(const QString &collection);
+  void setPageSize(int size);
+  void setPageIndex(int index);
   Q_INVOKABLE void close();
   Q_INVOKABLE bool openEncryptedVault(const QString &vaultPath, const QString &passphrase);
   Q_INVOKABLE bool saveEncryptedVault(const QString &vaultPath, const QString &passphrase);
@@ -99,6 +117,12 @@ public:
 signals:
   void readyChanged();
   void countChanged();
+  void totalCountChanged();
+  void pageSizeChanged();
+  void pageIndexChanged();
+  void pageCountChanged();
+  void availableCollectionsChanged();
+  void availableTagsChanged();
   void lastErrorChanged();
   void searchQueryChanged();
   void sortKeyChanged();
@@ -121,5 +145,11 @@ private:
   bool m_bulkImportActive = false;
   int m_bulkImportTotal = 0;
   int m_bulkImportDone = 0;
+  int m_totalCount = 0;
+  int m_pageSize = 50;
+  int m_pageIndex = 0;
+  int m_pageCount = 1;
+  QStringList m_availableCollections;
+  QStringList m_availableTags;
   QVector<LibraryItem> m_items;
 };

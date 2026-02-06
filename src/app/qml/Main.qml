@@ -1,6 +1,8 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Dialogs 6.2
+import Qt.labs.platform 1.1 as Platform
+import Qt.labs.platform 1.1 as Platform
 import QtQuick.Layouts 1.15
 import QtQuick 2.15 as QQ
 import QtTextToSpeech 6.2
@@ -96,6 +98,14 @@ ApplicationWindow {
     if (text.startsWith("file://")) return decodeURIComponent(text.replace("file://", ""))
     return decodeURIComponent(text)
   }
+  function dirFromPath(value) {
+    var path = value ? String(value) : ""
+    if (path.length === 0) return ""
+    if (path.endsWith("/")) path = path.slice(0, -1)
+    var idx = path.lastIndexOf("/")
+    if (idx <= 0) return path
+    return path.slice(0, idx)
+  }
 
   function textFontSizeFor(format) {
     const f = (format || "").toLowerCase()
@@ -121,6 +131,111 @@ ApplicationWindow {
     return settings.readingLineHeight
   }
 
+  readonly property var keyBindingsMap: settings.keyBindings
+  readonly property var keyBindingLabels: ({
+    open_book: "Open book",
+    import_folder: "Import folder",
+    focus_search: "Focus search",
+    toggle_tts: "Toggle speak / stop",
+    close_book: "Close current book",
+    next: "Next page or chapter",
+    prev: "Previous page or chapter",
+    jump_start: "Jump to start",
+    jump_end: "Jump to end",
+    zoom_in: "Increase text size or zoom in images",
+    zoom_out: "Decrease text size or zoom out images",
+    zoom_reset: "Reset image zoom to page fit"
+  })
+
+  function bindingList(action) {
+    var map = keyBindingsMap
+    if (!map) return []
+    var list = map[action]
+    return list ? list : []
+  }
+
+  function bindingText(action) {
+    var map = keyBindingsMap
+    if (!map) return ""
+    var list = map[action]
+    if (!list) return ""
+    if (Array.isArray(list)) {
+      return list.join(", ")
+    }
+    return String(list)
+  }
+
+  function shortcutEnabled(allowWhenTextInput) {
+    if (isModalOpen()) return false
+    if (!allowWhenTextInput && isTextInputFocused()) return false
+    return true
+  }
+
+  function actionLabel(action) {
+    var labels = keyBindingLabels || {}
+    return labels[action] ? labels[action] : action
+  }
+
+  function normalizeKeySequence(sequence) {
+    return String(sequence).trim().toLowerCase()
+  }
+
+  function bindingConflicts(action) {
+    var map = keyBindingsMap
+    if (!map) return []
+    var seqToActions = {}
+    for (var key in map) {
+      var list = map[key]
+      if (!list) continue
+      if (!Array.isArray(list)) list = String(list).split(",")
+      for (var i = 0; i < list.length; i++) {
+        var seqNorm = normalizeKeySequence(list[i])
+        if (!seqNorm) continue
+        if (!seqToActions[seqNorm]) seqToActions[seqNorm] = []
+        if (seqToActions[seqNorm].indexOf(key) === -1) {
+          seqToActions[seqNorm].push(key)
+        }
+      }
+    }
+    var conflicts = []
+    var targetList = map[action]
+    if (!targetList) return conflicts
+    if (!Array.isArray(targetList)) targetList = String(targetList).split(",")
+    for (var j = 0; j < targetList.length; j++) {
+      var norm = normalizeKeySequence(targetList[j])
+      if (!norm) continue
+      var actions = seqToActions[norm]
+      if (actions && actions.length > 1) {
+        conflicts.push({ sequence: String(targetList[j]).trim(), actions: actions })
+      }
+    }
+    return conflicts
+  }
+
+  function bindingConflictText(action) {
+    var conflicts = bindingConflicts(action)
+    if (conflicts.length === 0) return ""
+    var parts = []
+    for (var i = 0; i < conflicts.length; i++) {
+      var conflict = conflicts[i]
+      var others = []
+      for (var j = 0; j < conflict.actions.length; j++) {
+        var other = conflict.actions[j]
+        if (other === action) continue
+        others.push(actionLabel(other))
+      }
+      if (others.length > 0) {
+        parts.push(conflict.sequence + " with " + others.join(", "))
+      }
+    }
+    if (parts.length === 0) return ""
+    return "Conflicts: " + parts.join(" | ")
+  }
+
+  function hasBindingConflict(action) {
+    return bindingConflicts(action).length > 0
+  }
+
   onClosing: {
     if (vault.state === VaultController.Unlocked && sessionPassphrase.length > 0) {
       vault.lock(sessionPassphrase)
@@ -132,6 +247,21 @@ ApplicationWindow {
       markActivity()
     }
   }
+  property bool nativeFolderDialogOpened: false
+
+  function openFolderImport() {
+    nativeFolderDialogOpened = false
+    manualFolderDialog.errorText = ""
+    if (folderPathField) {
+      folderPathField.text = ""
+    }
+    if (nativeFolderDialog) {
+      nativeFolderDialog.open()
+      folderDialogFallbackTimer.restart()
+    } else {
+      manualFolderDialog.open()
+    }
+  }
 
   Item {
     id: keyActivitySink
@@ -139,11 +269,172 @@ ApplicationWindow {
     focus: true
     Keys.onPressed: (event) => {
       markActivity()
-      if (handleGlobalKey(event)) {
-        event.accepted = true
+      event.accepted = false
+    }
+    Keys.onReleased: (event) => {
+      markActivity()
+      event.accepted = false
+    }
+  }
+
+  Item {
+    id: shortcutHost
+    visible: false
+
+    Instantiator {
+      model: bindingList("open_book")
+      delegate: Shortcut {
+        sequence: modelData
+        context: Qt.ApplicationShortcut
+        enabled: shortcutEnabled(true)
+        onActivated: fileDialog.open()
       }
     }
-    Keys.onReleased: markActivity()
+
+    Instantiator {
+      model: bindingList("import_folder")
+      delegate: Shortcut {
+        sequence: modelData
+        context: Qt.ApplicationShortcut
+        enabled: shortcutEnabled(true)
+        onActivated: openFolderImport()
+      }
+    }
+
+    Instantiator {
+      model: bindingList("focus_search")
+      delegate: Shortcut {
+        sequence: modelData
+        context: Qt.ApplicationShortcut
+        enabled: shortcutEnabled(true)
+        onActivated: {
+          if (librarySearch.visible) {
+            librarySearch.forceActiveFocus()
+            librarySearch.selectAll()
+          }
+        }
+      }
+    }
+
+    Instantiator {
+      model: bindingList("toggle_tts")
+      delegate: Shortcut {
+        sequence: modelData
+        context: Qt.ApplicationShortcut
+        enabled: shortcutEnabled(true)
+        onActivated: {
+          if (tts.speaking) {
+            tts.stop()
+          } else if (tts.available && reader.ttsAllowed) {
+            tts.speak(reader.currentPlainText)
+          }
+        }
+      }
+    }
+
+    Instantiator {
+      model: bindingList("close_book")
+      delegate: Shortcut {
+        sequence: modelData
+        context: Qt.ApplicationShortcut
+        enabled: shortcutEnabled(true)
+        onActivated: {
+          if (reader.currentPath && reader.currentPath.length > 0) {
+            reader.close()
+          }
+        }
+      }
+    }
+
+    Instantiator {
+      model: bindingList("next")
+      delegate: Shortcut {
+        sequence: modelData
+        context: Qt.ApplicationShortcut
+        enabled: shortcutEnabled(false)
+        onActivated: advanceReader(1)
+      }
+    }
+
+    Instantiator {
+      model: bindingList("prev")
+      delegate: Shortcut {
+        sequence: modelData
+        context: Qt.ApplicationShortcut
+        enabled: shortcutEnabled(false)
+        onActivated: advanceReader(-1)
+      }
+    }
+
+    Instantiator {
+      model: bindingList("jump_start")
+      delegate: Shortcut {
+        sequence: modelData
+        context: Qt.ApplicationShortcut
+        enabled: shortcutEnabled(false)
+        onActivated: jumpToEdge(-1)
+      }
+    }
+
+    Instantiator {
+      model: bindingList("jump_end")
+      delegate: Shortcut {
+        sequence: modelData
+        context: Qt.ApplicationShortcut
+        enabled: shortcutEnabled(false)
+        onActivated: jumpToEdge(1)
+      }
+    }
+
+    Instantiator {
+      model: bindingList("zoom_in")
+      delegate: Shortcut {
+        sequence: modelData
+        context: Qt.ApplicationShortcut
+        enabled: shortcutEnabled(false)
+        onActivated: {
+          if (reader.hasImages) {
+            if (imageReaderItem) {
+              imageReaderItem.zoom = imageReaderItem.clampZoom(imageReaderItem.zoom + imageReaderItem.zoomStep)
+            }
+          } else {
+            adjustTextFont(1)
+          }
+        }
+      }
+    }
+
+    Instantiator {
+      model: bindingList("zoom_out")
+      delegate: Shortcut {
+        sequence: modelData
+        context: Qt.ApplicationShortcut
+        enabled: shortcutEnabled(false)
+        onActivated: {
+          if (reader.hasImages) {
+            if (imageReaderItem) {
+              imageReaderItem.zoom = imageReaderItem.clampZoom(imageReaderItem.zoom - imageReaderItem.zoomStep)
+            }
+          } else {
+            adjustTextFont(-1)
+          }
+        }
+      }
+    }
+
+    Instantiator {
+      model: bindingList("zoom_reset")
+      delegate: Shortcut {
+        sequence: modelData
+        context: Qt.ApplicationShortcut
+        enabled: shortcutEnabled(false)
+        onActivated: {
+          if (reader.hasImages && imageReaderItem) {
+            imageReaderItem.applyFitMode("page")
+          }
+        }
+      }
+    }
   }
 
   QtObject {
@@ -177,7 +468,7 @@ ApplicationWindow {
   }
 
   function isModalOpen() {
-    return fileDialog.visible || bulkFileDialog.visible || folderDialog.visible ||
+    return fileDialog.visible || nativeFolderDialog.visible || manualFolderDialog.visible ||
            exportAnnotationsDialog.visible || annotationDialog.visible ||
            deleteAnnotationDialog.visible || editBookDialog.visible ||
            deleteBookDialog.visible || bulkTagsDialog.visible ||
@@ -191,9 +482,13 @@ ApplicationWindow {
   function isTextInputFocused() {
     var item = root.activeFocusItem
     if (!item) return false
-    return item.hasOwnProperty("cursorPosition") ||
+    var isInput = item.hasOwnProperty("cursorPosition") ||
            item.hasOwnProperty("inputMethodComposing") ||
            item.hasOwnProperty("selectionStart")
+    if (!isInput) return false
+    if (item.hasOwnProperty("readOnly") && item.readOnly === true) return false
+    if (item.hasOwnProperty("enabled") && item.enabled === false) return false
+    return true
   }
 
   function setTextFontSizeFor(format, size) {
@@ -264,6 +559,61 @@ ApplicationWindow {
     return false
   }
 
+  function readerPaginationCount() {
+    if (reader.hasImages) {
+      return reader.imageCount
+    }
+    if (reader.chapterCount > 0) {
+      return reader.chapterCount
+    }
+    return 0
+  }
+
+  function readerPaginationIndex() {
+    if (reader.hasImages) {
+      return reader.currentImageIndex
+    }
+    if (reader.chapterCount > 0) {
+      return reader.currentChapterIndex
+    }
+    return -1
+  }
+
+  function readerPaginationLabel() {
+    if (reader.hasImages) {
+      if (reader.imageCount <= 0) return ""
+      if ((imageReaderItem && imageReaderItem.spreadActive === true) &&
+          reader.currentImageIndex + 1 < reader.imageCount) {
+        return qsTr("Page %1-%2 / %3")
+              .arg(reader.currentImageIndex + 1)
+              .arg(reader.currentImageIndex + 2)
+              .arg(reader.imageCount)
+      }
+      return qsTr("Page %1 / %2")
+            .arg(reader.currentImageIndex + 1)
+            .arg(reader.imageCount)
+    }
+    if (reader.chapterCount > 0) {
+      return qsTr("Chapter %1 / %2")
+            .arg(reader.currentChapterIndex + 1)
+            .arg(reader.chapterCount)
+    }
+    return ""
+  }
+
+  function goToReaderPagination(index) {
+    const target = Math.max(0, index)
+    if (reader.hasImages && reader.imageCount > 0) {
+      reader.goToImage(Math.min(target, reader.imageCount - 1))
+      return true
+    }
+    if (reader.chapterCount > 0) {
+      reader.goToChapter(Math.min(target, reader.chapterCount - 1))
+      return true
+    }
+    return false
+  }
+
   function handleGlobalKey(event) {
     if (isModalOpen()) return false
     const ctrl = (event.modifiers & Qt.ControlModifier) !== 0
@@ -278,12 +628,8 @@ ApplicationWindow {
       fileDialog.open()
       return true
     }
-    if (ctrl && shift && event.key === Qt.Key_O) {
-      bulkFileDialog.open()
-      return true
-    }
     if (ctrl && alt && event.key === Qt.Key_O) {
-      folderDialog.open()
+      openFolderImport()
       return true
     }
     if (ctrl && event.key === Qt.Key_F) {
@@ -922,37 +1268,129 @@ ApplicationWindow {
     }
   }
 
-  FileDialog {
-    id: bulkFileDialog
-    title: "Add books"
-    fileMode: FileDialog.OpenFiles
-    nameFilters: ["Books (*.epub *.pdf *.mobi *.azw *.azw3 *.fb2 *.cbz *.cbr *.djvu *.djv *.txt)"]
+  Platform.FolderDialog {
+    id: nativeFolderDialog
+    title: "Add folder"
     onAccepted: {
-      const paths = []
-      if (selectedFiles && selectedFiles.length > 0) {
-        for (let i = 0; i < selectedFiles.length; i++) {
-          const p = localPathFromUrl(selectedFiles[i])
-          if (p.length > 0) paths.push(p)
-        }
-      } else {
-        const single = localPathFromUrl(selectedFile)
-        if (single.length > 0) paths.push(single)
+      nativeFolderDialogOpened = true
+      const folder = localPathFromUrl(nativeFolderDialog.folder)
+      if (folder.length > 0) {
+        libraryModel.addFolder(folder, true)
       }
-      if (paths.length > 0) {
-        libraryModel.addBooks(paths)
+    }
+    onRejected: {
+      nativeFolderDialogOpened = true
+    }
+    onVisibleChanged: {
+      if (visible) {
+        nativeFolderDialogOpened = true
+      }
+    }
+  }
+
+  Timer {
+    id: folderDialogFallbackTimer
+    interval: 200
+    repeat: false
+    onTriggered: {
+      if (!nativeFolderDialogOpened) {
+        manualFolderDialog.open()
+      }
+    }
+  }
+
+  Dialog {
+    id: manualFolderDialog
+    title: "Add folder"
+    modal: true
+    standardButtons: Dialog.NoButton
+    width: Math.min(520, root.width - 80)
+
+    property string errorText: ""
+
+    contentItem: Rectangle {
+      color: theme.panel
+      radius: 16
+
+      ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 16
+        spacing: 12
+
+        Text {
+          text: "Choose a folder to import. You can paste a path or pick a file inside it."
+          color: theme.textPrimary
+          font.pixelSize: 13
+          font.family: root.uiFont
+          wrapMode: Text.Wrap
+        }
+
+        RowLayout {
+          Layout.fillWidth: true
+          spacing: 8
+
+          TextField {
+            id: folderPathField
+            Layout.fillWidth: true
+            placeholderText: "/home/user/Books"
+            onTextChanged: manualFolderDialog.errorText = ""
+          }
+
+          Button {
+            text: "Browse"
+            font.family: root.uiFont
+            onClicked: folderFilePicker.open()
+          }
+        }
+
+        Text {
+          text: manualFolderDialog.errorText
+          color: theme.accent
+          font.pixelSize: 12
+          font.family: root.uiFont
+          visible: manualFolderDialog.errorText.length > 0
+        }
+
+        RowLayout {
+          Layout.fillWidth: true
+          spacing: 10
+
+          Button {
+            text: "Cancel"
+            font.family: root.uiFont
+            onClicked: manualFolderDialog.close()
+          }
+
+          Item { Layout.fillWidth: true }
+
+          Button {
+            text: "Import"
+            font.family: root.uiFont
+            onClicked: {
+              const folder = folderPathField.text.trim()
+              if (folder.length === 0) {
+                manualFolderDialog.errorText = "Please enter a folder path."
+                return
+              }
+              manualFolderDialog.errorText = ""
+              manualFolderDialog.close()
+              libraryModel.addFolder(folder, true)
+            }
+          }
+        }
       }
     }
   }
 
   FileDialog {
-    id: folderDialog
-    title: "Add folder"
+    id: folderFilePicker
+    title: "Pick a file in the folder"
     fileMode: FileDialog.OpenFile
-    options: FileDialog.ShowDirsOnly
     onAccepted: {
-      const folder = localPathFromUrl(selectedFile)
+      const picked = localPathFromUrl(selectedFile)
+      const folder = dirFromPath(picked)
       if (folder.length > 0) {
-        libraryModel.addFolder(folder, true)
+        folderPathField.text = folder
       }
     }
   }
@@ -964,12 +1402,8 @@ ApplicationWindow {
       onTriggered: fileDialog.open()
     }
     MenuItem {
-      text: "Add files (bulk)"
-      onTriggered: bulkFileDialog.open()
-    }
-    MenuItem {
       text: "Add folder"
-      onTriggered: folderDialog.open()
+      onTriggered: openFolderImport()
     }
   }
 
@@ -2078,8 +2512,8 @@ ApplicationWindow {
             }
 
             TextField {
+              id: chapterField
               Layout.preferredWidth: 60
-              text: reader.chapterCount > 0 ? String(reader.currentChapterIndex + 1) : "1"
               placeholderText: "Page"
               inputMethodHints: Qt.ImhDigitsOnly
               validator: IntValidator { bottom: 1; top: Math.max(1, reader.chapterCount) }
@@ -2088,6 +2522,12 @@ ApplicationWindow {
                 if (!isNaN(page)) {
                   reader.goToChapter(page - 1)
                 }
+              }
+              Binding {
+                target: chapterField
+                property: "text"
+                value: reader.chapterCount > 0 ? String(reader.currentChapterIndex + 1) : "1"
+                when: !chapterField.activeFocus
               }
             }
 
@@ -2335,8 +2775,8 @@ ApplicationWindow {
             }
 
             TextField {
+              id: imagePageField
               Layout.preferredWidth: 60
-              text: reader.imageCount > 0 ? String(reader.currentImageIndex + 1) : ""
               placeholderText: "Page"
               inputMethodHints: Qt.ImhDigitsOnly
               validator: IntValidator { bottom: 1; top: Math.max(1, reader.imageCount) }
@@ -2345,6 +2785,12 @@ ApplicationWindow {
                 if (!isNaN(page)) {
                   reader.goToImage(page - 1)
                 }
+              }
+              Binding {
+                target: imagePageField
+                property: "text"
+                value: reader.imageCount > 0 ? String(reader.currentImageIndex + 1) : ""
+                when: !imagePageField.activeFocus
               }
             }
 
@@ -2610,30 +3056,11 @@ ApplicationWindow {
         collectionFilterModel.append({ label: "Unassigned", value: "__none__" })
         tagFilterModel.append({ label: "All Tags", value: "__all__" })
         tagFilterModel.append({ label: "Untagged", value: "__none__" })
-
-        var collectionSet = {}
-        var tagSet = {}
-        for (var i = 0; i < libraryModel.count; ++i) {
-          const item = libraryModel.get(i)
-          if (!item) continue
-          if (item.collection && item.collection.length > 0) {
-            collectionSet[item.collection] = true
-          }
-          if (item.tags && item.tags.length > 0) {
-            const parts = item.tags.split(",")
-            for (var p = 0; p < parts.length; ++p) {
-              const tag = parts[p].trim()
-              if (tag.length > 0) {
-                tagSet[tag] = true
-              }
-            }
-          }
-        }
-        const collections = Object.keys(collectionSet).sort()
+        const collections = libraryModel.availableCollections || []
         for (var c = 0; c < collections.length; ++c) {
           collectionFilterModel.append({ label: collections[c], value: collections[c] })
         }
-        const tags = Object.keys(tagSet).sort()
+        const tags = libraryModel.availableTags || []
         for (var t = 0; t < tags.length; ++t) {
           tagFilterModel.append({ label: tags[t], value: tags[t] })
         }
@@ -2641,7 +3068,8 @@ ApplicationWindow {
 
       Connections {
         target: libraryModel
-        function onCountChanged() { rebuildFilterOptions() }
+        function onAvailableCollectionsChanged() { rebuildFilterOptions() }
+        function onAvailableTagsChanged() { rebuildFilterOptions() }
         function onReadyChanged() { rebuildFilterOptions() }
       }
 
@@ -2680,7 +3108,7 @@ ApplicationWindow {
             }
 
             Text {
-              text: qsTr("%1 books").arg(libraryModel.count)
+              text: qsTr("%1 books").arg(libraryModel.totalCount)
               color: theme.textMuted
               font.pixelSize: 16
               font.family: root.uiFont
@@ -3011,23 +3439,32 @@ ApplicationWindow {
           Item {
             anchors.fill: parent
 
-            ListView {
-              id: listView
+            ColumnLayout {
               anchors.fill: parent
               anchors.margins: 12
-              model: libraryModel
-              reuseItems: true
-              clip: true
-              spacing: 8
-              visible: viewMode === "list"
+              spacing: 10
 
-              delegate: Rectangle {
-                radius: 12
-                height: 106
-                width: listView.width
-                color: index % 2 === 0 ? theme.panelHighlight : theme.panel
-                border.width: isSelected(model.id) ? 2 : 0
-                border.color: theme.accent
+              Item {
+                id: libraryListArea
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+
+                ListView {
+                  id: listView
+                  anchors.fill: parent
+                  model: libraryModel
+                  reuseItems: true
+                  clip: true
+                  spacing: 8
+                  visible: viewMode === "list"
+
+                  delegate: Rectangle {
+                    radius: 12
+                    height: 106
+                    width: listView.width
+                    color: index % 2 === 0 ? theme.panelHighlight : theme.panel
+                    border.width: isSelected(model.id) ? 2 : 0
+                    border.color: theme.accent
 
                 RowLayout {
                   anchors.fill: parent
@@ -3190,27 +3627,26 @@ ApplicationWindow {
                     }
                   }
                 }
-              }
-            }
+                  }
+                }
 
-            GridView {
-              id: gridView
-              anchors.fill: parent
-              anchors.margins: 12
-              model: libraryModel
-              reuseItems: true
-              clip: true
-              visible: viewMode === "grid"
-              cellWidth: 232
-              cellHeight: 272
+                GridView {
+                  id: gridView
+                  anchors.fill: parent
+                  model: libraryModel
+                  reuseItems: true
+                  clip: true
+                  visible: viewMode === "grid"
+                  cellWidth: 232
+                  cellHeight: 272
 
-              delegate: Rectangle {
-                width: gridView.cellWidth
-                height: gridView.cellHeight
-                radius: 14
-                color: theme.panelHighlight
-                border.width: isSelected(model.id) ? 2 : 0
-                border.color: theme.accent
+                  delegate: Rectangle {
+                    width: gridView.cellWidth
+                    height: gridView.cellHeight
+                    radius: 14
+                    color: theme.panelHighlight
+                    border.width: isSelected(model.id) ? 2 : 0
+                    border.color: theme.accent
 
                 MouseArea {
                   anchors.fill: parent
@@ -3295,6 +3731,94 @@ ApplicationWindow {
                     font.pixelSize: 12
                     font.family: root.uiFont
                   }
+                }
+                  }
+                }
+              }
+
+              RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+
+                Button {
+                  text: "Prev"
+                  font.family: root.uiFont
+                  enabled: libraryModel.pageIndex > 0
+                  onClicked: libraryModel.prevPage()
+                }
+
+                Text {
+                  text: qsTr("Page %1 / %2")
+                        .arg(libraryModel.pageIndex + 1)
+                        .arg(libraryModel.pageCount)
+                  color: theme.textMuted
+                  font.pixelSize: 12
+                  font.family: root.uiFont
+                }
+
+                Button {
+                  text: "Next"
+                  font.family: root.uiFont
+                  enabled: libraryModel.pageIndex + 1 < libraryModel.pageCount
+                  onClicked: libraryModel.nextPage()
+                }
+
+                Text {
+                  text: "Go to"
+                  color: theme.textMuted
+                  font.pixelSize: 12
+                  font.family: root.uiFont
+                }
+
+                TextField {
+                  id: pageJumpField
+                  Layout.preferredWidth: 64
+                  placeholderText: "Page"
+                  inputMethodHints: Qt.ImhDigitsOnly
+                  validator: IntValidator { bottom: 1; top: Math.max(1, libraryModel.pageCount) }
+                  onAccepted: {
+                    const page = parseInt(text)
+                    if (!isNaN(page)) {
+                      libraryModel.goToPage(page - 1)
+                    }
+                  }
+                  Binding {
+                    target: pageJumpField
+                    property: "text"
+                    value: String(libraryModel.pageIndex + 1)
+                    when: !pageJumpField.activeFocus
+                  }
+                }
+
+                Button {
+                  text: "Go"
+                  font.family: root.uiFont
+                  enabled: pageJumpField.text.length > 0
+                  onClicked: {
+                    const page = parseInt(pageJumpField.text)
+                    if (!isNaN(page)) {
+                      libraryModel.goToPage(page - 1)
+                    }
+                  }
+                }
+
+                Item { Layout.fillWidth: true }
+
+                Text {
+                  text: "Page size"
+                  color: theme.textMuted
+                  font.pixelSize: 12
+                  font.family: root.uiFont
+                }
+
+                ComboBox {
+                  id: pageSizeCombo
+                  model: [25, 50, 100, 200]
+                  currentIndex: {
+                    var idx = model.indexOf(libraryModel.pageSize)
+                    return idx >= 0 ? idx : 1
+                  }
+                  onActivated: libraryModel.pageSize = model[currentIndex]
                 }
               }
             }
@@ -3382,6 +3906,48 @@ ApplicationWindow {
               font.family: root.uiFont
               elide: Text.ElideRight
               Layout.fillWidth: true
+            }
+
+            Text {
+              text: root.readerPaginationLabel()
+              color: theme.textMuted
+              font.pixelSize: 12
+              font.family: root.uiFont
+              visible: text.length > 0
+            }
+
+            TextField {
+              id: readerPageField
+              Layout.preferredWidth: 70
+              placeholderText: reader.hasImages ? "Page" : "Chapter"
+              inputMethodHints: Qt.ImhDigitsOnly
+              validator: IntValidator { bottom: 1; top: Math.max(1, root.readerPaginationCount()) }
+              onAccepted: {
+                const page = parseInt(text)
+                if (!isNaN(page)) {
+                  root.goToReaderPagination(page - 1)
+                }
+              }
+              Binding {
+                target: readerPageField
+                property: "text"
+                value: root.readerPaginationIndex() >= 0 ? String(root.readerPaginationIndex() + 1) : ""
+                when: !readerPageField.activeFocus
+              }
+              visible: root.readerPaginationCount() > 0
+            }
+
+            Button {
+              text: "Go"
+              font.family: root.uiFont
+              enabled: readerPageField.visible && readerPageField.text.length > 0
+              onClicked: {
+                const page = parseInt(readerPageField.text)
+                if (!isNaN(page)) {
+                  root.goToReaderPagination(page - 1)
+                }
+              }
+              visible: readerPageField.visible
             }
 
             Item { width: 10; height: 10 }
@@ -3967,30 +4533,56 @@ ApplicationWindow {
 
           Repeater {
             model: [
-              { keys: "Ctrl+O", action: "Open book" },
-              { keys: "Ctrl+Shift+O", action: "Open multiple books" },
-              { keys: "Ctrl+Alt+O", action: "Import folder" },
-              { keys: "Ctrl+F", action: "Focus search" }
+              { id: "open_book", label: "Open book" },
+              { id: "import_folder", label: "Import folder" },
+              { id: "focus_search", label: "Focus search" }
             ]
-            delegate: RowLayout {
+            delegate: ColumnLayout {
               Layout.fillWidth: true
-              spacing: 12
+              spacing: 4
 
-              Text {
-                text: modelData.keys
-                color: theme.textPrimary
-                font.pixelSize: 13
-                font.family: root.uiFont
-                Layout.preferredWidth: 180
+              readonly property string conflictText: root.bindingConflictText(modelData.id)
+
+              RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+
+                Text {
+                  text: modelData.label
+                  color: theme.textPrimary
+                  font.pixelSize: 13
+                  font.family: root.uiFont
+                  Layout.preferredWidth: 180
+                }
+
+                TextField {
+                  id: keyField
+                  Layout.fillWidth: true
+                  text: root.bindingText(modelData.id)
+                  placeholderText: "Ctrl+O"
+                  onEditingFinished: settings.setKeyBinding(modelData.id, text)
+                  background: Rectangle {
+                    radius: 6
+                    color: theme.panel
+                    border.width: 1
+                    border.color: conflictText.length > 0 ? theme.accent : theme.panelHighlight
+                  }
+                  Binding {
+                    target: keyField
+                    property: "text"
+                    value: root.bindingText(modelData.id)
+                    when: !keyField.activeFocus
+                  }
+                }
               }
 
               Text {
-                text: modelData.action
-                color: theme.textMuted
-                font.pixelSize: 13
+                text: conflictText
+                color: theme.accent
+                font.pixelSize: 11
                 font.family: root.uiFont
-                Layout.fillWidth: true
                 wrapMode: Text.Wrap
+                visible: conflictText.length > 0
               }
             }
           }
@@ -4010,31 +4602,57 @@ ApplicationWindow {
 
           Repeater {
             model: [
-              { keys: "Esc", action: "Close current book" },
-              { keys: "Right / Page Down / Space", action: "Next page or chapter" },
-              { keys: "Left / Page Up / Backspace", action: "Previous page or chapter" },
-              { keys: "Home", action: "Jump to start" },
-              { keys: "End", action: "Jump to end" }
+              { id: "close_book", label: "Close current book" },
+              { id: "next", label: "Next page or chapter" },
+              { id: "prev", label: "Previous page or chapter" },
+              { id: "jump_start", label: "Jump to start" },
+              { id: "jump_end", label: "Jump to end" }
             ]
-            delegate: RowLayout {
+            delegate: ColumnLayout {
               Layout.fillWidth: true
-              spacing: 12
+              spacing: 4
 
-              Text {
-                text: modelData.keys
-                color: theme.textPrimary
-                font.pixelSize: 13
-                font.family: root.uiFont
-                Layout.preferredWidth: 180
+              readonly property string conflictText: root.bindingConflictText(modelData.id)
+
+              RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+
+                Text {
+                  text: modelData.label
+                  color: theme.textPrimary
+                  font.pixelSize: 13
+                  font.family: root.uiFont
+                  Layout.preferredWidth: 180
+                }
+
+                TextField {
+                  id: keyField
+                  Layout.fillWidth: true
+                  text: root.bindingText(modelData.id)
+                  onEditingFinished: settings.setKeyBinding(modelData.id, text)
+                  background: Rectangle {
+                    radius: 6
+                    color: theme.panel
+                    border.width: 1
+                    border.color: conflictText.length > 0 ? theme.accent : theme.panelHighlight
+                  }
+                  Binding {
+                    target: keyField
+                    property: "text"
+                    value: root.bindingText(modelData.id)
+                    when: !keyField.activeFocus
+                  }
+                }
               }
 
               Text {
-                text: modelData.action
-                color: theme.textMuted
-                font.pixelSize: 13
+                text: conflictText
+                color: theme.accent
+                font.pixelSize: 11
                 font.family: root.uiFont
-                Layout.fillWidth: true
                 wrapMode: Text.Wrap
+                visible: conflictText.length > 0
               }
             }
           }
@@ -4054,29 +4672,55 @@ ApplicationWindow {
 
           Repeater {
             model: [
-              { keys: "+ / =", action: "Increase text size or zoom in images" },
-              { keys: "-", action: "Decrease text size or zoom out images" },
-              { keys: "0", action: "Reset image zoom to page fit" }
+              { id: "zoom_in", label: "Increase text size or zoom in images" },
+              { id: "zoom_out", label: "Decrease text size or zoom out images" },
+              { id: "zoom_reset", label: "Reset image zoom to page fit" }
             ]
-            delegate: RowLayout {
+            delegate: ColumnLayout {
               Layout.fillWidth: true
-              spacing: 12
+              spacing: 4
 
-              Text {
-                text: modelData.keys
-                color: theme.textPrimary
-                font.pixelSize: 13
-                font.family: root.uiFont
-                Layout.preferredWidth: 180
+              readonly property string conflictText: root.bindingConflictText(modelData.id)
+
+              RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+
+                Text {
+                  text: modelData.label
+                  color: theme.textPrimary
+                  font.pixelSize: 13
+                  font.family: root.uiFont
+                  Layout.preferredWidth: 180
+                }
+
+                TextField {
+                  id: keyField
+                  Layout.fillWidth: true
+                  text: root.bindingText(modelData.id)
+                  onEditingFinished: settings.setKeyBinding(modelData.id, text)
+                  background: Rectangle {
+                    radius: 6
+                    color: theme.panel
+                    border.width: 1
+                    border.color: conflictText.length > 0 ? theme.accent : theme.panelHighlight
+                  }
+                  Binding {
+                    target: keyField
+                    property: "text"
+                    value: root.bindingText(modelData.id)
+                    when: !keyField.activeFocus
+                  }
+                }
               }
 
               Text {
-                text: modelData.action
-                color: theme.textMuted
-                font.pixelSize: 13
+                text: conflictText
+                color: theme.accent
+                font.pixelSize: 11
                 font.family: root.uiFont
-                Layout.fillWidth: true
                 wrapMode: Text.Wrap
+                visible: conflictText.length > 0
               }
             }
           }
@@ -4096,27 +4740,53 @@ ApplicationWindow {
 
           Repeater {
             model: [
-              { keys: "Ctrl+Shift+S", action: "Toggle speak / stop" }
+              { id: "toggle_tts", label: "Toggle speak / stop" }
             ]
-            delegate: RowLayout {
+            delegate: ColumnLayout {
               Layout.fillWidth: true
-              spacing: 12
+              spacing: 4
 
-              Text {
-                text: modelData.keys
-                color: theme.textPrimary
-                font.pixelSize: 13
-                font.family: root.uiFont
-                Layout.preferredWidth: 180
+              readonly property string conflictText: root.bindingConflictText(modelData.id)
+
+              RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+
+                Text {
+                  text: modelData.label
+                  color: theme.textPrimary
+                  font.pixelSize: 13
+                  font.family: root.uiFont
+                  Layout.preferredWidth: 180
+                }
+
+                TextField {
+                  id: keyField
+                  Layout.fillWidth: true
+                  text: root.bindingText(modelData.id)
+                  onEditingFinished: settings.setKeyBinding(modelData.id, text)
+                  background: Rectangle {
+                    radius: 6
+                    color: theme.panel
+                    border.width: 1
+                    border.color: conflictText.length > 0 ? theme.accent : theme.panelHighlight
+                  }
+                  Binding {
+                    target: keyField
+                    property: "text"
+                    value: root.bindingText(modelData.id)
+                    when: !keyField.activeFocus
+                  }
+                }
               }
 
               Text {
-                text: modelData.action
-                color: theme.textMuted
-                font.pixelSize: 13
+                text: conflictText
+                color: theme.accent
+                font.pixelSize: 11
                 font.family: root.uiFont
-                Layout.fillWidth: true
                 wrapMode: Text.Wrap
+                visible: conflictText.length > 0
               }
             }
           }
@@ -4127,6 +4797,35 @@ ApplicationWindow {
             font.pixelSize: 12
             font.family: root.uiFont
             wrapMode: Text.Wrap
+          }
+
+          Text {
+            text: "Conflicting shortcuts are highlighted in orange."
+            color: theme.textMuted
+            font.pixelSize: 12
+            font.family: root.uiFont
+            wrapMode: Text.Wrap
+          }
+
+          Text {
+            text: "Use commas to add multiple bindings (e.g. Right, PageDown, Space)."
+            color: theme.textMuted
+            font.pixelSize: 12
+            font.family: root.uiFont
+            wrapMode: Text.Wrap
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Button {
+              text: "Reset Key Bindings"
+              font.family: root.uiFont
+              onClicked: settings.resetKeyBindings()
+            }
+
+            Item { Layout.fillWidth: true }
           }
         }
       }

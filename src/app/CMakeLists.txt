@@ -17,6 +17,7 @@ target_link_libraries(ereader PRIVATE
   Qt6::Quick
   Qt6::Qml
   Qt6::QuickControls2
+  Qt6::Widgets
   Qt6::Network
   Qt6::Sql
   core

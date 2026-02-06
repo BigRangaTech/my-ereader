@@ -8,6 +8,7 @@
 #include <QMetaObject>
 #include <QSet>
 #include <QStandardPaths>
+#include <algorithm>
 
 #include "include/AppPaths.h"
 #include "DbWorker.h"
@@ -28,11 +29,42 @@ LibraryModel::LibraryModel(QObject *parent) : QAbstractListModel(parent) {
             emit readyChanged();
           });
   connect(worker, &DbWorker::libraryLoaded, this,
-          [this](const QVector<LibraryItem> &items) {
+          [this](const QVector<LibraryItem> &items, int totalCount) {
+            const int newTotal = std::max(0, totalCount);
+            const int newPageCount =
+                (newTotal == 0 || m_pageSize <= 0) ? 1 : ((newTotal + m_pageSize - 1) / m_pageSize);
+            if (m_pageIndex >= newPageCount) {
+              const int newIndex = std::max(0, newPageCount - 1);
+              if (m_pageIndex != newIndex) {
+                m_pageIndex = newIndex;
+                emit pageIndexChanged();
+              }
+              reload();
+              return;
+            }
             beginResetModel();
             m_items = items;
             endResetModel();
+            if (m_totalCount != newTotal) {
+              m_totalCount = newTotal;
+              emit totalCountChanged();
+            }
+            if (m_pageCount != newPageCount) {
+              m_pageCount = newPageCount;
+              emit pageCountChanged();
+            }
             emit countChanged();
+          });
+  connect(worker, &DbWorker::facetsLoaded, this,
+          [this](const QStringList &collections, const QStringList &tags) {
+            if (m_availableCollections != collections) {
+              m_availableCollections = collections;
+              emit availableCollectionsChanged();
+            }
+            if (m_availableTags != tags) {
+              m_availableTags = tags;
+              emit availableTagsChanged();
+            }
           });
   connect(worker, &DbWorker::addBookFinished, this,
           [this](bool ok, const QString &error) {
@@ -551,6 +583,12 @@ QString LibraryModel::filterCollection() const { return m_filterCollection; }
 bool LibraryModel::bulkImportActive() const { return m_bulkImportActive; }
 int LibraryModel::bulkImportTotal() const { return m_bulkImportTotal; }
 int LibraryModel::bulkImportDone() const { return m_bulkImportDone; }
+int LibraryModel::totalCount() const { return m_totalCount; }
+int LibraryModel::pageSize() const { return m_pageSize; }
+int LibraryModel::pageIndex() const { return m_pageIndex; }
+int LibraryModel::pageCount() const { return m_pageCount; }
+QStringList LibraryModel::availableCollections() const { return m_availableCollections; }
+QStringList LibraryModel::availableTags() const { return m_availableTags; }
 
 void LibraryModel::setSearchQuery(const QString &query) {
   if (m_searchQuery == query) {
@@ -558,6 +596,7 @@ void LibraryModel::setSearchQuery(const QString &query) {
   }
   m_searchQuery = query;
   emit searchQueryChanged();
+  setPageIndex(0);
   reload();
 }
 
@@ -567,6 +606,7 @@ void LibraryModel::setSortKey(const QString &key) {
   }
   m_sortKey = key;
   emit sortKeyChanged();
+  setPageIndex(0);
   reload();
 }
 
@@ -576,6 +616,7 @@ void LibraryModel::setSortDescending(bool descending) {
   }
   m_sortDescending = descending;
   emit sortDescendingChanged();
+  setPageIndex(0);
   reload();
 }
 
@@ -585,6 +626,7 @@ void LibraryModel::setFilterTag(const QString &tag) {
   }
   m_filterTag = tag;
   emit filterTagChanged();
+  setPageIndex(0);
   reload();
 }
 
@@ -594,6 +636,55 @@ void LibraryModel::setFilterCollection(const QString &collection) {
   }
   m_filterCollection = collection;
   emit filterCollectionChanged();
+  setPageIndex(0);
+  reload();
+}
+
+void LibraryModel::setPageSize(int size) {
+  const int normalized = std::max(10, std::min(500, size));
+  if (m_pageSize == normalized) {
+    return;
+  }
+  m_pageSize = normalized;
+  emit pageSizeChanged();
+  setPageIndex(0);
+  reload();
+}
+
+void LibraryModel::setPageIndex(int index) {
+  const int normalized = std::max(0, index);
+  if (m_pageIndex == normalized) {
+    return;
+  }
+  m_pageIndex = normalized;
+  emit pageIndexChanged();
+}
+
+void LibraryModel::nextPage() {
+  if (m_pageIndex + 1 >= m_pageCount) {
+    return;
+  }
+  m_pageIndex++;
+  emit pageIndexChanged();
+  reload();
+}
+
+void LibraryModel::prevPage() {
+  if (m_pageIndex <= 0) {
+    return;
+  }
+  m_pageIndex--;
+  emit pageIndexChanged();
+  reload();
+}
+
+void LibraryModel::goToPage(int index) {
+  const int normalized = std::max(0, std::min(index, m_pageCount - 1));
+  if (m_pageIndex == normalized) {
+    return;
+  }
+  m_pageIndex = normalized;
+  emit pageIndexChanged();
   reload();
 }
 
@@ -605,7 +696,9 @@ void LibraryModel::reload() {
                             Q_ARG(QString, m_sortKey),
                             Q_ARG(bool, m_sortDescending),
                             Q_ARG(QString, m_filterTag),
-                            Q_ARG(QString, m_filterCollection));
+                            Q_ARG(QString, m_filterCollection),
+                            Q_ARG(int, m_pageSize),
+                            Q_ARG(int, m_pageIndex));
 }
 
 void LibraryModel::close() {
@@ -613,6 +706,14 @@ void LibraryModel::close() {
   beginResetModel();
   m_items.clear();
   endResetModel();
+  if (!m_availableCollections.isEmpty()) {
+    m_availableCollections.clear();
+    emit availableCollectionsChanged();
+  }
+  if (!m_availableTags.isEmpty()) {
+    m_availableTags.clear();
+    emit availableTagsChanged();
+  }
   m_ready = false;
   emit readyChanged();
   emit countChanged();

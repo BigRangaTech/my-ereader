@@ -15,7 +15,7 @@ option(ENABLE_TTS "Enable TextToSpeech" ON)
 option(USE_BUNDLED_POPPLER "Use bundled Poppler (third_party/install/poppler)" ON)
 option(USE_BUNDLED_LIBARCHIVE "Use bundled libarchive (third_party/install/libarchive)" ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick Qml QuickControls2 Network Sql Xml)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick Qml QuickControls2 Network Sql Xml Widgets)
 if(ENABLE_TTS)
   find_package(Qt6TextToSpeech QUIET)
   if (Qt6TextToSpeech_FOUND)

@@ -14,6 +14,7 @@ finish-args:
   - --filesystem=xdg-download
   - --filesystem=xdg-pictures
   - --filesystem=xdg-public-share
+  - --env=QT_QPA_PLATFORMTHEME=xdgdesktopportal
   - --env=QML2_IMPORT_PATH=/app/share/my-ereader/qml
   - --env=QML_IMPORT_PATH=/app/share/my-ereader/qml
   - --env=QT_PLUGIN_PATH=/app/plugins:/usr/plugins

@@ -1,4 +1,4 @@
-#include <QGuiApplication>
+#include <QApplication>
 #include <QIcon>
 #include <QDir>
 #include <QFileInfo>
@@ -36,7 +36,7 @@ QString findIconPath() {
 } // namespace
 
 int main(int argc, char *argv[]) {
-  QGuiApplication app(argc, argv);
+  QApplication app(argc, argv);
   QQuickStyle::setStyle("Basic");
   Logger::init();
 

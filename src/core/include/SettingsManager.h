@@ -2,6 +2,8 @@
 
 #include <QObject>
 #include <QSettings>
+#include <QHash>
+#include <QVariantMap>
 
 class SettingsManager : public QObject {
   Q_OBJECT
@@ -85,6 +87,7 @@ class SettingsManager : public QObject {
   Q_PROPERTY(bool comicSpreadInPortrait READ comicSpreadInPortrait WRITE setComicSpreadInPortrait NOTIFY comicSpreadInPortraitChanged)
   Q_PROPERTY(QString settingsPath READ settingsPath CONSTANT)
   Q_PROPERTY(QString iconPath READ iconPath CONSTANT)
+  Q_PROPERTY(QVariantMap keyBindings READ keyBindings NOTIFY keyBindingsChanged)
 
 public:
   explicit SettingsManager(QObject *parent = nullptr);
@@ -169,9 +172,14 @@ public:
   bool comicSpreadInPortrait() const;
   QString settingsPath() const;
   QString iconPath() const;
+  QVariantMap keyBindings() const;
   Q_INVOKABLE QString formatSettingsPath(const QString &format) const;
   Q_INVOKABLE QString comicFitModeForPath(const QString &path) const;
   Q_INVOKABLE void setComicFitModeForPath(const QString &path, const QString &mode);
+  Q_INVOKABLE QString keyBinding(const QString &action) const;
+  Q_INVOKABLE QStringList keyBindingList(const QString &action) const;
+  Q_INVOKABLE void setKeyBinding(const QString &action, const QString &binding);
+  Q_INVOKABLE void resetKeyBindings();
 
   void setReadingFontSize(int value);
   void setReadingLineHeight(double value);
@@ -343,6 +351,7 @@ signals:
   void comicSmoothScalingChanged();
   void comicTwoPageSpreadChanged();
   void comicSpreadInPortraitChanged();
+  void keyBindingsChanged();
 
 private:
   void loadFromSettings();
@@ -434,4 +443,5 @@ private:
   bool m_comicSmoothScaling = false;
   bool m_comicTwoPageSpread = false;
   bool m_comicSpreadInPortrait = false;
+  QHash<QString, QStringList> m_keyBindings;
 };

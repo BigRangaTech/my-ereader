@@ -20,6 +20,7 @@
 #include <QVariant>
 #include <QUrl>
 
+#include <algorithm>
 #include <sqlite3.h>
 
 #include "FormatRegistry.h"
@@ -111,14 +112,21 @@ void DbWorker::openAt(const QString &dbPath) {
     emit openFinished(false, error);
     return;
   }
+  const int total = fetchLibraryCount(m_searchQuery, m_filterTag, m_filterCollection, &error);
+  if (!error.isEmpty()) {
+    emit openFinished(false, error);
+    return;
+  }
   const QVector<LibraryItem> items =
-      fetchLibraryFiltered(m_searchQuery, m_sortKey, m_sortDescending, m_filterTag, m_filterCollection, &error);
+      fetchLibraryFiltered(m_searchQuery, m_sortKey, m_sortDescending, m_filterTag, m_filterCollection,
+                           m_pageSize, m_pageIndex * m_pageSize, &error);
   if (!error.isEmpty()) {
     emit openFinished(false, error);
     return;
   }
   emit openFinished(true, "");
-  emit libraryLoaded(items);
+  emit libraryLoaded(items, total);
+  emitFacetsSnapshot();
 }
 
 void DbWorker::openEncryptedVault(const QString &vaultPath, const QString &passphrase) {
@@ -151,14 +159,21 @@ void DbWorker::openEncryptedVault(const QString &vaultPath, const QString &passp
       return;
     }
   }
+  const int total = fetchLibraryCount(m_searchQuery, m_filterTag, m_filterCollection, &error);
+  if (!error.isEmpty()) {
+    emit openFinished(false, error);
+    return;
+  }
   const QVector<LibraryItem> items =
-      fetchLibraryFiltered(m_searchQuery, m_sortKey, m_sortDescending, m_filterTag, m_filterCollection, &error);
+      fetchLibraryFiltered(m_searchQuery, m_sortKey, m_sortDescending, m_filterTag, m_filterCollection,
+                           m_pageSize, m_pageIndex * m_pageSize, &error);
   if (!error.isEmpty()) {
     emit openFinished(false, error);
     return;
   }
   emit openFinished(true, "");
-  emit libraryLoaded(items);
+  emit libraryLoaded(items, total);
+  emitFacetsSnapshot();
 }
 
 void DbWorker::saveEncryptedVault(const QString &vaultPath, const QString &passphrase) {
@@ -209,8 +224,7 @@ void DbWorker::addBook(const QString &filePath) {
     return;
   }
   emit addBookFinished(true, "");
-  emit libraryLoaded(fetchLibraryFiltered(m_searchQuery, m_sortKey, m_sortDescending,
-                                          m_filterTag, m_filterCollection, &error));
+  emitLibrarySnapshot(&error);
 }
 
 void DbWorker::updateLibraryItem(int id,
@@ -248,8 +262,7 @@ void DbWorker::updateLibraryItem(int id,
     return;
   }
   emit updateBookFinished(true, "");
-  emit libraryLoaded(fetchLibraryFiltered(m_searchQuery, m_sortKey, m_sortDescending,
-                                          m_filterTag, m_filterCollection, &error));
+  emitLibrarySnapshot(&error);
 }
 
 void DbWorker::deleteLibraryItem(int id) {
@@ -277,8 +290,7 @@ void DbWorker::deleteLibraryItem(int id) {
     return;
   }
   emit deleteBookFinished(true, "");
-  emit libraryLoaded(fetchLibraryFiltered(m_searchQuery, m_sortKey, m_sortDescending,
-                                          m_filterTag, m_filterCollection, &error));
+  emitLibrarySnapshot(&error);
 }
 
 void DbWorker::bulkUpdateTagsCollection(const QVector<int> &ids,
@@ -337,8 +349,7 @@ void DbWorker::bulkUpdateTagsCollection(const QVector<int> &ids,
     return;
   }
   emit updateBookFinished(true, "");
-  emit libraryLoaded(fetchLibraryFiltered(m_searchQuery, m_sortKey, m_sortDescending,
-                                          m_filterTag, m_filterCollection, &error));
+  emitLibrarySnapshot(&error);
 }
 
 void DbWorker::deleteLibraryItems(const QVector<int> &ids) {
@@ -381,27 +392,28 @@ void DbWorker::deleteLibraryItems(const QVector<int> &ids) {
     return;
   }
   emit deleteBookFinished(true, "");
-  emit libraryLoaded(fetchLibraryFiltered(m_searchQuery, m_sortKey, m_sortDescending,
-                                          m_filterTag, m_filterCollection, &error));
+  emitLibrarySnapshot(&error);
 }
 
 void DbWorker::loadLibrary() {
   QString error;
-  const QVector<LibraryItem> items =
-      fetchLibraryFiltered(m_searchQuery, m_sortKey, m_sortDescending, m_filterTag, m_filterCollection, &error);
-  emit libraryLoaded(items);
+  emitLibrarySnapshot(&error);
 }
 
 void DbWorker::loadLibraryFiltered(const QString &searchQuery,
                                    const QString &sortKey,
                                    bool sortDescending,
                                    const QString &filterTag,
-                                   const QString &filterCollection) {
+                                   const QString &filterCollection,
+                                   int pageSize,
+                                   int pageIndex) {
   m_searchQuery = searchQuery;
   m_sortKey = sortKey.isEmpty() ? QStringLiteral("title") : sortKey;
   m_sortDescending = sortDescending;
   m_filterTag = filterTag;
   m_filterCollection = filterCollection;
+  m_pageSize = std::max(1, pageSize);
+  m_pageIndex = std::max(0, pageIndex);
   loadLibrary();
 }
 
@@ -664,8 +676,7 @@ int DbWorker::importLibrarySync(const QVariantList &payload, const QString &conf
     update.finish();
   }
   if (applied > 0) {
-    emit libraryLoaded(fetchLibraryFiltered(m_searchQuery, m_sortKey, m_sortDescending,
-                                            m_filterTag, m_filterCollection, nullptr));
+    emitLibrarySnapshot(nullptr);
   }
   return applied;
 }
@@ -960,7 +971,7 @@ bool DbWorker::ensureLibraryUpdatedAt(QString *error) {
 }
 
 QVector<LibraryItem> DbWorker::fetchLibrary(QString *error) {
-  return fetchLibraryFiltered(QString(), QStringLiteral("title"), false, QString(), QString(), error);
+  return fetchLibraryFiltered(QString(), QStringLiteral("title"), false, QString(), QString(), 0, 0, error);
 }
 
 QVector<LibraryItem> DbWorker::fetchLibraryFiltered(const QString &searchQuery,
@@ -968,6 +979,8 @@ QVector<LibraryItem> DbWorker::fetchLibraryFiltered(const QString &searchQuery,
                                                     bool sortDescending,
                                                     const QString &filterTag,
                                                     const QString &filterCollection,
+                                                    int limit,
+                                                    int offset,
                                                     QString *error) {
   QVector<LibraryItem> items;
   if (!m_db.isOpen()) {
@@ -1027,6 +1040,9 @@ QVector<LibraryItem> DbWorker::fetchLibraryFiltered(const QString &searchQuery,
   if (sortDescending) {
     sql += " DESC";
   }
+  if (limit > 0) {
+    sql += " LIMIT ? OFFSET ?";
+  }
 
   QSqlQuery query(m_db);
   if (!query.prepare(sql)) {
@@ -1047,6 +1063,10 @@ QVector<LibraryItem> DbWorker::fetchLibraryFiltered(const QString &searchQuery,
   }
   if (!trimmedCollection.isEmpty() && trimmedCollection != "__all__" && trimmedCollection != "__none__") {
     query.addBindValue(trimmedCollection);
+  }
+  if (limit > 0) {
+    query.addBindValue(limit);
+    query.addBindValue(std::max(0, offset));
   }
 
   if (query.exec()) {
@@ -1073,6 +1093,249 @@ QVector<LibraryItem> DbWorker::fetchLibraryFiltered(const QString &searchQuery,
     *error = query.lastError().text();
   }
   return items;
+}
+
+int DbWorker::fetchLibraryCount(const QString &searchQuery,
+                                const QString &filterTag,
+                                const QString &filterCollection,
+                                QString *error) {
+  if (!m_db.isOpen()) {
+    if (error) {
+      *error = "Database not open";
+    }
+    return 0;
+  }
+  QString sql = "SELECT COUNT(*) FROM library_items";
+  const QString trimmed = searchQuery.trimmed();
+  const QString trimmedTag = filterTag.trimmed();
+  const QString trimmedCollection = filterCollection.trimmed();
+  QStringList whereParts;
+  if (!trimmed.isEmpty()) {
+    whereParts << "(title LIKE ? OR authors LIKE ? OR series LIKE ? OR publisher LIKE ? "
+                  "OR description LIKE ? OR tags LIKE ? OR collection LIKE ? OR path LIKE ?)";
+  }
+  if (!trimmedTag.isEmpty() && trimmedTag != "__all__") {
+    if (trimmedTag == "__none__") {
+      whereParts << "(tags IS NULL OR tags = '')";
+    } else {
+      whereParts << "tags LIKE ?";
+    }
+  }
+  if (!trimmedCollection.isEmpty() && trimmedCollection != "__all__") {
+    if (trimmedCollection == "__none__") {
+      whereParts << "(collection IS NULL OR collection = '')";
+    } else {
+      whereParts << "collection = ?";
+    }
+  }
+  if (!whereParts.isEmpty()) {
+    sql += " WHERE " + whereParts.join(" AND ");
+  }
+
+  QSqlQuery query(m_db);
+  if (!query.prepare(sql)) {
+    if (error) {
+      *error = query.lastError().text();
+    }
+    return 0;
+  }
+  if (!trimmed.isEmpty()) {
+    const QString like = "%" + trimmed + "%";
+    for (int i = 0; i < 8; ++i) {
+      query.addBindValue(like);
+    }
+  }
+  if (!trimmedTag.isEmpty() && trimmedTag != "__all__" && trimmedTag != "__none__") {
+    query.addBindValue("%" + trimmedTag + "%");
+  }
+  if (!trimmedCollection.isEmpty() && trimmedCollection != "__all__" && trimmedCollection != "__none__") {
+    query.addBindValue(trimmedCollection);
+  }
+  if (!query.exec() || !query.next()) {
+    if (error) {
+      *error = query.lastError().text();
+    }
+    return 0;
+  }
+  return query.value(0).toInt();
+}
+
+QStringList DbWorker::fetchCollectionsFiltered(const QString &searchQuery,
+                                               const QString &filterTag,
+                                               QString *error) {
+  QStringList collections;
+  if (!m_db.isOpen()) {
+    if (error) {
+      *error = "Database not open";
+    }
+    return collections;
+  }
+
+  QString sql = "SELECT DISTINCT collection FROM library_items";
+  const QString trimmed = searchQuery.trimmed();
+  const QString trimmedTag = filterTag.trimmed();
+  QStringList whereParts;
+  if (!trimmed.isEmpty()) {
+    whereParts << "(title LIKE ? OR authors LIKE ? OR series LIKE ? OR publisher LIKE ? "
+                  "OR description LIKE ? OR tags LIKE ? OR collection LIKE ? OR path LIKE ?)";
+  }
+  if (!trimmedTag.isEmpty() && trimmedTag != "__all__") {
+    if (trimmedTag == "__none__") {
+      whereParts << "(tags IS NULL OR tags = '')";
+    } else {
+      whereParts << "tags LIKE ?";
+    }
+  }
+  if (!whereParts.isEmpty()) {
+    sql += " WHERE " + whereParts.join(" AND ");
+  }
+
+  QSqlQuery query(m_db);
+  if (!query.prepare(sql)) {
+    if (error) {
+      *error = query.lastError().text();
+    }
+    return collections;
+  }
+  if (!trimmed.isEmpty()) {
+    const QString like = "%" + trimmed + "%";
+    for (int i = 0; i < 8; ++i) {
+      query.addBindValue(like);
+    }
+  }
+  if (!trimmedTag.isEmpty() && trimmedTag != "__all__" && trimmedTag != "__none__") {
+    query.addBindValue("%" + trimmedTag + "%");
+  }
+
+  if (query.exec()) {
+    while (query.next()) {
+      const QString value = query.value(0).toString().trimmed();
+      if (!value.isEmpty()) {
+        collections.append(value);
+      }
+    }
+  } else if (error) {
+    *error = query.lastError().text();
+  }
+
+  std::sort(collections.begin(), collections.end(),
+            [](const QString &a, const QString &b) {
+              return a.compare(b, Qt::CaseInsensitive) < 0;
+            });
+  collections.removeDuplicates();
+  return collections;
+}
+
+QStringList DbWorker::fetchTagsFiltered(const QString &searchQuery,
+                                        const QString &filterCollection,
+                                        QString *error) {
+  QStringList tags;
+  if (!m_db.isOpen()) {
+    if (error) {
+      *error = "Database not open";
+    }
+    return tags;
+  }
+
+  QString sql = "SELECT tags FROM library_items";
+  const QString trimmed = searchQuery.trimmed();
+  const QString trimmedCollection = filterCollection.trimmed();
+  QStringList whereParts;
+  if (!trimmed.isEmpty()) {
+    whereParts << "(title LIKE ? OR authors LIKE ? OR series LIKE ? OR publisher LIKE ? "
+                  "OR description LIKE ? OR tags LIKE ? OR collection LIKE ? OR path LIKE ?)";
+  }
+  if (!trimmedCollection.isEmpty() && trimmedCollection != "__all__") {
+    if (trimmedCollection == "__none__") {
+      whereParts << "(collection IS NULL OR collection = '')";
+    } else {
+      whereParts << "collection = ?";
+    }
+  }
+  if (!whereParts.isEmpty()) {
+    sql += " WHERE " + whereParts.join(" AND ");
+  }
+
+  QSqlQuery query(m_db);
+  if (!query.prepare(sql)) {
+    if (error) {
+      *error = query.lastError().text();
+    }
+    return tags;
+  }
+  if (!trimmed.isEmpty()) {
+    const QString like = "%" + trimmed + "%";
+    for (int i = 0; i < 8; ++i) {
+      query.addBindValue(like);
+    }
+  }
+  if (!trimmedCollection.isEmpty() && trimmedCollection != "__all__" && trimmedCollection != "__none__") {
+    query.addBindValue(trimmedCollection);
+  }
+
+  QSet<QString> tagSet;
+  if (query.exec()) {
+    while (query.next()) {
+      const QString value = query.value(0).toString();
+      if (value.isEmpty()) {
+        continue;
+      }
+      const QStringList parts = value.split(',', Qt::SkipEmptyParts);
+      for (const QString &part : parts) {
+        const QString trimmedTag = part.trimmed();
+        if (!trimmedTag.isEmpty()) {
+          tagSet.insert(trimmedTag);
+        }
+      }
+    }
+  } else if (error) {
+    *error = query.lastError().text();
+  }
+
+  tags = tagSet.values();
+  std::sort(tags.begin(), tags.end(),
+            [](const QString &a, const QString &b) {
+              return a.compare(b, Qt::CaseInsensitive) < 0;
+            });
+  return tags;
+}
+
+void DbWorker::emitLibrarySnapshot(QString *error) {
+  QString localError;
+  QString *err = error ? error : &localError;
+  const int total = fetchLibraryCount(m_searchQuery, m_filterTag, m_filterCollection, err);
+  if (err && !err->isEmpty()) {
+    emit libraryLoaded({}, 0);
+    emit facetsLoaded({}, {});
+    return;
+  }
+  const int limit = m_pageSize > 0 ? m_pageSize : 0;
+  const int offset = limit > 0 ? (m_pageIndex * limit) : 0;
+  const QVector<LibraryItem> items =
+      fetchLibraryFiltered(m_searchQuery, m_sortKey, m_sortDescending, m_filterTag, m_filterCollection,
+                           limit, offset, err);
+  if (err && !err->isEmpty()) {
+    emit libraryLoaded({}, total);
+    emit facetsLoaded({}, {});
+    return;
+  }
+  emit libraryLoaded(items, total);
+  emitFacetsSnapshot();
+}
+
+void DbWorker::emitFacetsSnapshot() {
+  QString error;
+  QStringList collections = fetchCollectionsFiltered(m_searchQuery, m_filterTag, &error);
+  if (!error.isEmpty()) {
+    emit facetsLoaded({}, {});
+    return;
+  }
+  QStringList tags = fetchTagsFiltered(m_searchQuery, m_filterCollection, &error);
+  if (!error.isEmpty()) {
+    emit facetsLoaded(collections, {});
+    return;
+  }
+  emit facetsLoaded(collections, tags);
 }
 
 QVector<AnnotationItem> DbWorker::fetchAnnotations(int libraryItemId, QString *error) {

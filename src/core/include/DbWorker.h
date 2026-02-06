@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QSqlDatabase>
 #include <QVariantList>
+#include <QStringList>
 #include <QVector>
 
 #include "LibraryItem.h"
@@ -40,7 +41,9 @@ public slots:
                            const QString &sortKey,
                            bool sortDescending,
                            const QString &filterTag,
-                           const QString &filterCollection);
+                           const QString &filterCollection,
+                           int pageSize,
+                           int pageIndex);
   void loadAnnotations(int libraryItemId);
   void addAnnotation(int libraryItemId,
                      const QString &locator,
@@ -64,7 +67,8 @@ public slots:
 signals:
   void openFinished(bool ok, const QString &error);
   void saveFinished(bool ok, const QString &error);
-  void libraryLoaded(const QVector<LibraryItem> &items);
+  void libraryLoaded(const QVector<LibraryItem> &items, int totalCount);
+  void facetsLoaded(const QStringList &collections, const QStringList &tags);
   void annotationCountChanged(int libraryItemId, int count);
   void annotationsLoaded(int libraryItemId, const QVector<AnnotationItem> &items);
   void addBookFinished(bool ok, const QString &error);
@@ -88,7 +92,19 @@ private:
                                             bool sortDescending,
                                             const QString &filterTag,
                                             const QString &filterCollection,
+                                            int limit,
+                                            int offset,
                                             QString *error);
+  int fetchLibraryCount(const QString &searchQuery,
+                        const QString &filterTag,
+                        const QString &filterCollection,
+                        QString *error);
+  QStringList fetchCollectionsFiltered(const QString &searchQuery,
+                                       const QString &filterTag,
+                                       QString *error);
+  QStringList fetchTagsFiltered(const QString &searchQuery,
+                                const QString &filterCollection,
+                                QString *error);
   QVector<AnnotationItem> fetchAnnotations(int libraryItemId, QString *error);
   int annotationCountFor(int libraryItemId);
   bool insertLibraryItem(const LibraryItem &item, QString *error);
@@ -97,6 +113,8 @@ private:
   void *sqliteHandle() const;
   bool deserializeToMemory(const QByteArray &dbBytes, QString *error);
   QByteArray serializeFromMemory(QString *error);
+  void emitLibrarySnapshot(QString *error);
+  void emitFacetsSnapshot();
 
   QSqlDatabase m_db;
   QString m_connectionName;
@@ -105,6 +123,8 @@ private:
   bool m_sortDescending = false;
   QString m_filterTag;
   QString m_filterCollection;
+  int m_pageSize = 50;
+  int m_pageIndex = 0;
 };
 
 DbWorker *dbWorker();

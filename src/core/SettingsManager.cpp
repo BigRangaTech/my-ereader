@@ -40,6 +40,35 @@ QString normalizeReadingDirection(const QString &value) {
   }
   return "ltr";
 }
+
+QStringList normalizeKeyBindingList(const QString &value) {
+  QStringList out;
+  const QStringList parts = value.split(',', Qt::SkipEmptyParts);
+  for (const QString &part : parts) {
+    const QString trimmed = part.trimmed();
+    if (!trimmed.isEmpty() && !out.contains(trimmed)) {
+      out.append(trimmed);
+    }
+  }
+  return out;
+}
+
+QHash<QString, QStringList> defaultKeyBindings() {
+  QHash<QString, QStringList> bindings;
+  bindings.insert("open_book", {"Ctrl+O"});
+  bindings.insert("import_folder", {"Ctrl+Alt+O"});
+  bindings.insert("focus_search", {"Ctrl+F"});
+  bindings.insert("toggle_tts", {"Ctrl+Shift+S"});
+  bindings.insert("close_book", {"Esc"});
+  bindings.insert("next", {"Right", "PageDown", "Space"});
+  bindings.insert("prev", {"Left", "PageUp", "Backspace"});
+  bindings.insert("jump_start", {"Home"});
+  bindings.insert("jump_end", {"End"});
+  bindings.insert("zoom_in", {"+", "="});
+  bindings.insert("zoom_out", {"-"});
+  bindings.insert("zoom_reset", {"0"});
+  return bindings;
+}
 } // namespace
 
 SettingsManager::SettingsManager(QObject *parent)
@@ -75,6 +104,14 @@ QString SettingsManager::iconPath() const {
     return genericPath;
   }
   return {};
+}
+
+QVariantMap SettingsManager::keyBindings() const {
+  QVariantMap map;
+  for (auto it = m_keyBindings.constBegin(); it != m_keyBindings.constEnd(); ++it) {
+    map.insert(it.key(), it.value());
+  }
+  return map;
 }
 
 int SettingsManager::readingFontSize() const { return m_readingFontSize; }
@@ -176,6 +213,40 @@ void SettingsManager::setComicFitModeForPath(const QString &path, const QString 
   const QByteArray hash = QCryptographicHash::hash(path.toUtf8(), QCryptographicHash::Sha1).toHex();
   m_settings.setValue(QString("reader/comic_fit/%1").arg(QString::fromUtf8(hash)), normalized);
   m_settings.sync();
+}
+
+QString SettingsManager::keyBinding(const QString &action) const {
+  const QString key = action.trimmed().toLower();
+  const QStringList list = m_keyBindings.value(key);
+  return list.join(", ");
+}
+
+QStringList SettingsManager::keyBindingList(const QString &action) const {
+  const QString key = action.trimmed().toLower();
+  return m_keyBindings.value(key);
+}
+
+void SettingsManager::setKeyBinding(const QString &action, const QString &binding) {
+  const QString key = action.trimmed().toLower();
+  if (key.isEmpty()) {
+    return;
+  }
+  const QStringList list = normalizeKeyBindingList(binding);
+  if (m_keyBindings.value(key) == list) {
+    return;
+  }
+  m_keyBindings.insert(key, list);
+  saveValue(QString("keys/%1").arg(key), list.join(", "));
+  emit keyBindingsChanged();
+}
+
+void SettingsManager::resetKeyBindings() {
+  const QHash<QString, QStringList> defaults = defaultKeyBindings();
+  for (auto it = defaults.constBegin(); it != defaults.constEnd(); ++it) {
+    m_keyBindings.insert(it.key(), it.value());
+    saveValue(QString("keys/%1").arg(it.key()), it.value().join(", "));
+  }
+  emit keyBindingsChanged();
 }
 
 void SettingsManager::setReadingFontSize(int value) {
@@ -1321,6 +1392,17 @@ void SettingsManager::loadFromSettings() {
       readFormatValue("cbz", "view/two_page_spread", false).toBool();
   m_comicSpreadInPortrait =
       readFormatValue("cbz", "view/spread_in_portrait", false).toBool();
+
+  m_keyBindings.clear();
+  const QHash<QString, QStringList> defaults = defaultKeyBindings();
+  for (auto it = defaults.constBegin(); it != defaults.constEnd(); ++it) {
+    const QString stored = m_settings.value(QString("keys/%1").arg(it.key()), it.value().join(", ")).toString();
+    QStringList list = normalizeKeyBindingList(stored);
+    if (list.isEmpty()) {
+      list = it.value();
+    }
+    m_keyBindings.insert(it.key(), list);
+  }
   m_comicMinZoom =
       clampDouble(readFormatValue("cbz", "zoom/min", m_settings.value("comics/min_zoom", 0.5)).toDouble(), 0.2, 7.0);
   m_comicMaxZoom =
@@ -1481,6 +1563,7 @@ void SettingsManager::loadFromSettings() {
   emit comicSmoothScalingChanged();
   emit comicTwoPageSpreadChanged();
   emit comicSpreadInPortraitChanged();
+  emit keyBindingsChanged();
   emit comicMinZoomChanged();
   emit comicMaxZoomChanged();
   emit comicSortModeChanged();
