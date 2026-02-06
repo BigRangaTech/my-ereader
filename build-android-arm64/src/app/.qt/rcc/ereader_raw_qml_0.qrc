@@ -1,0 +1,7 @@
+<RCC>
+  <qresource prefix="/Ereader/">
+    <file alias="qml/Main.qml">/home/jessie/Documents/my ereader/src/app/qml/Main.qml</file>
+    <file alias="qml/Theme.qml">/home/jessie/Documents/my ereader/src/app/qml/Theme.qml</file>
+  </qresource>
+</RCC>
+

@@ -17,12 +17,16 @@ option(USE_BUNDLED_LIBARCHIVE "Use bundled libarchive (third_party/install/libar
 
 if (ANDROID)
   set(ENABLE_TTS OFF CACHE BOOL "Disable TTS on Android" FORCE)
+  set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE BOTH CACHE STRING "Search both sysroot and host for packages" FORCE)
+  set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH CACHE STRING "Search both sysroot and host for libraries" FORCE)
+  set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH CACHE STRING "Search both sysroot and host for headers" FORCE)
   list(PREPEND CMAKE_PREFIX_PATH
     "${CMAKE_SOURCE_DIR}/third_party/install/android/${ANDROID_ABI}/zlib"
     "${CMAKE_SOURCE_DIR}/third_party/install/android/${ANDROID_ABI}/libxml2"
     "${CMAKE_SOURCE_DIR}/third_party/install/android/${ANDROID_ABI}/freetype"
     "${CMAKE_SOURCE_DIR}/third_party/install/android/${ANDROID_ABI}/libjpeg-turbo"
     "${CMAKE_SOURCE_DIR}/third_party/install/android/${ANDROID_ABI}/libpng"
+    "${CMAKE_SOURCE_DIR}/third_party/install/android/${ANDROID_ABI}/sqlite"
     "${CMAKE_SOURCE_DIR}/third_party/install/android/${ANDROID_ABI}/libarchive"
     "${CMAKE_SOURCE_DIR}/third_party/install/android/${ANDROID_ABI}/poppler"
     "${CMAKE_SOURCE_DIR}/third_party/install/android/${ANDROID_ABI}/djvulibre"
@@ -34,6 +38,8 @@ if (NOT ANDROID)
   list(APPEND _qt_components Widgets)
 endif()
 find_package(Qt6 REQUIRED COMPONENTS ${_qt_components})
+find_package(Qt6 COMPONENTS DBus QUIET)
+find_package(Qt6 COMPONENTS Pdf QUIET)
 if(ENABLE_TTS)
   find_package(Qt6TextToSpeech QUIET)
   if (Qt6TextToSpeech_FOUND)

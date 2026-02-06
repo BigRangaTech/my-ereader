@@ -4,6 +4,11 @@
 #ifdef HAVE_POPPLER_QT6
 #include <poppler-qt6.h>
 #endif
+#ifdef HAVE_QT_PDF
+#include <QPdfDocument>
+#include <QPdfDocumentRenderOptions>
+#include <QPdfSelection>
+#endif
 
 #include <QCryptographicHash>
 #include <QDir>
@@ -19,7 +24,9 @@
 #include <QMutexLocker>
 #include <QSet>
 #include <QColor>
+#include <QRect>
 #include <QSizeF>
+#include <QVariant>
 #include <memory>
 #include <functional>
 #include <algorithm>
@@ -151,7 +158,14 @@ void runPdfTask(std::function<void()> task) {
 }
 
 struct PdfRenderState {
+#ifdef HAVE_POPPLER_QT6
   std::unique_ptr<Poppler::Document> doc;
+#elif defined(HAVE_QT_PDF)
+  std::unique_ptr<QPdfDocument> doc;
+  QMutex renderMutex;
+#else
+  void *doc = nullptr;
+#endif
   QStringList images;
   QString tempDir;
   int cacheLimit = 30;
@@ -283,12 +297,16 @@ private:
       if (!state) {
         return;
       }
+#ifdef HAVE_POPPLER_QT6
       std::unique_ptr<Poppler::Page> page;
+#endif
       QString path;
       double highDpi = 120.0;
       double lowDpi = 72.0;
       bool progressive = false;
       bool haveHigh = false;
+      bool antialias = true;
+      bool textAntialias = true;
       QString colorMode;
       QString backgroundMode;
       QColor backgroundColor;
@@ -303,12 +321,16 @@ private:
           state->inFlight.remove(index);
           return;
         }
+#ifdef HAVE_POPPLER_QT6
         page = std::unique_ptr<Poppler::Page>(state->doc->page(index));
+#endif
         path = state->images.at(index);
         highDpi = state->renderDpi;
         lowDpi = state->progressiveDpi;
         progressive = state->progressive;
         haveHigh = state->highResCached.contains(index);
+        antialias = state->antialias;
+        textAntialias = state->textAntialias;
         colorMode = state->colorMode;
         backgroundMode = state->backgroundMode;
         backgroundColor = state->backgroundColor;
@@ -318,11 +340,13 @@ private:
         jpegQuality = state->jpegQuality;
         tileSize = state->tileSize;
       }
+#ifdef HAVE_POPPLER_QT6
       if (!page) {
         QMutexLocker locker(&state->mutex);
         state->inFlight.remove(index);
         return;
       }
+#endif
 
       auto notifyReady = [state, index]() {
         std::function<void(int)> callback;
@@ -343,6 +367,7 @@ private:
       const bool renderHigh = !progressive || !haveHigh;
 
       auto renderPageImage = [&](double dpi) -> QImage {
+#ifdef HAVE_POPPLER_QT6
         const QSizeF pageSize = page->pageSizeF();
         const int pixelWidth = std::max(1, static_cast<int>(std::ceil(pageSize.width() * dpi / 72.0)));
         const int pixelHeight = std::max(1, static_cast<int>(std::ceil(pageSize.height() * dpi / 72.0)));
@@ -395,6 +420,96 @@ private:
         }
 
         return image;
+#elif defined(HAVE_QT_PDF)
+        if (!state->doc) {
+          return {};
+        }
+        const QSizeF pageSize = state->doc->pagePointSize(index);
+        if (pageSize.isEmpty()) {
+          return {};
+        }
+        const int pixelWidth = std::max(1, static_cast<int>(std::ceil(pageSize.width() * dpi / 72.0)));
+        const int pixelHeight = std::max(1, static_cast<int>(std::ceil(pageSize.height() * dpi / 72.0)));
+
+        QPdfDocumentRenderOptions options;
+        QPdfDocumentRenderOptions::RenderFlags flags = {};
+        if (colorMode == "grayscale") {
+          flags |= QPdfDocumentRenderOptions::RenderFlag::Grayscale;
+        }
+        if (!antialias) {
+          flags |= QPdfDocumentRenderOptions::RenderFlag::ImageAliased;
+          flags |= QPdfDocumentRenderOptions::RenderFlag::PathAliased;
+        }
+        if (!textAntialias) {
+          flags |= QPdfDocumentRenderOptions::RenderFlag::TextAliased;
+        }
+        if (flags != QPdfDocumentRenderOptions::RenderFlags()) {
+          options.setRenderFlags(flags);
+        }
+
+        auto renderWithOptions = [&](const QSize &size,
+                                     const QPdfDocumentRenderOptions &renderOptions) -> QImage {
+          QMutexLocker renderLock(&state->renderMutex);
+          return state->doc->render(index, size, renderOptions);
+        };
+
+        QImage image;
+        if (tileSize > 0 && (pixelWidth > tileSize || pixelHeight > tileSize)) {
+          image = QImage(pixelWidth, pixelHeight, QImage::Format_ARGB32_Premultiplied);
+          image.fill(Qt::transparent);
+          QPainter painter(&image);
+          const QSize fullSize(pixelWidth, pixelHeight);
+          for (int y = 0; y < pixelHeight; y += tileSize) {
+            for (int x = 0; x < pixelWidth; x += tileSize) {
+              const int w = std::min(tileSize, pixelWidth - x);
+              const int h = std::min(tileSize, pixelHeight - y);
+              QPdfDocumentRenderOptions tileOptions = options;
+              tileOptions.setScaledSize(fullSize);
+              tileOptions.setScaledClipRect(QRect(x, y, w, h));
+              const QImage tile = renderWithOptions(QSize(w, h), tileOptions);
+              if (!tile.isNull()) {
+                painter.drawImage(x, y, tile);
+              }
+            }
+          }
+        } else {
+          image = renderWithOptions(QSize(pixelWidth, pixelHeight), options);
+        }
+
+        if (image.isNull()) {
+          return image;
+        }
+
+        if (backgroundMode != "transparent") {
+          QColor fill = Qt::white;
+          if (backgroundMode == "theme" || backgroundMode == "custom") {
+            if (backgroundColor.isValid()) {
+              fill = backgroundColor;
+            }
+          }
+          QImage composed(image.size(), QImage::Format_ARGB32_Premultiplied);
+          composed.fill(fill);
+          QPainter painter(&composed);
+          painter.drawImage(0, 0, image);
+          image = composed;
+        }
+
+        if (colorMode == "grayscale") {
+          image = image.convertToFormat(QImage::Format_Grayscale8);
+        }
+
+        if ((maxWidth > 0 && image.width() > maxWidth) ||
+            (maxHeight > 0 && image.height() > maxHeight)) {
+          const int targetW = maxWidth > 0 ? maxWidth : image.width();
+          const int targetH = maxHeight > 0 ? maxHeight : image.height();
+          image = image.scaled(targetW, targetH, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        }
+
+        return image;
+#else
+        Q_UNUSED(dpi)
+        return {};
+#endif
       };
 
       if (renderLow) {
@@ -482,14 +597,7 @@ QString PdfProvider::name() const { return "PDF"; }
 QStringList PdfProvider::supportedExtensions() const { return {"pdf"}; }
 
 std::unique_ptr<FormatDocument> PdfProvider::open(const QString &path, QString *error) {
-#ifndef HAVE_POPPLER_QT6
-  if (error) {
-    *error = "Poppler Qt6 backend not available";
-  }
-  qWarning() << "PdfProvider: Poppler Qt6 not available";
-  Q_UNUSED(path)
-  return nullptr;
-#else
+#if defined(HAVE_POPPLER_QT6)
   std::unique_ptr<Poppler::Document> doc(Poppler::Document::load(path));
   if (!doc) {
     if (error) {
@@ -553,5 +661,78 @@ std::unique_ptr<FormatDocument> PdfProvider::open(const QString &path, QString *
   state->progressiveDpi = pdfSettings.progressiveDpi;
 
   return std::make_unique<PdfDocument>(title, pages.join("\n\n"), state);
+#elif defined(HAVE_QT_PDF)
+  auto doc = std::make_unique<QPdfDocument>();
+  const QPdfDocument::Error loadError = doc->load(path);
+  if (loadError != QPdfDocument::Error::None || doc->status() != QPdfDocument::Status::Ready) {
+    if (error) {
+      *error = "Failed to open PDF";
+    }
+    qWarning() << "PdfProvider: failed to open" << path << "error:" << static_cast<int>(loadError);
+    return nullptr;
+  }
+
+  const PdfSettings pdfSettings = loadPdfSettings();
+
+  QStringList pages;
+  QStringList images;
+  const int pageCount = doc->pageCount();
+  pages.reserve(pageCount);
+  images.reserve(pageCount);
+  const QFileInfo info(path);
+  const QString outDir = tempDirForPdf(info);
+  QDir().mkpath(outDir);
+  const int cacheLimit = pdfSettings.cacheLimit;
+  const double renderDpi = static_cast<double>(pdfSettings.dpi);
+  const QString imageExt = pdfSettings.imageFormat == "jpeg" ? "jpg" : "png";
+  for (int i = 0; i < pageCount; ++i) {
+    if (pdfSettings.extractText) {
+      const QPdfSelection selection = doc->getAllText(i);
+      pages.append(selection.text());
+    }
+    const QString outPath =
+        QDir(outDir).filePath(QString("page_%1.%2").arg(i + 1, 4, 10, QLatin1Char('0')).arg(imageExt));
+    images.append(outPath);
+  }
+
+  QString title;
+  const QVariant metaTitle = doc->metaData(QPdfDocument::MetaDataField::Title);
+  if (!metaTitle.toString().isEmpty()) {
+    title = metaTitle.toString();
+  } else {
+    title = QFileInfo(path).completeBaseName();
+  }
+
+  auto state = std::make_shared<PdfRenderState>();
+  state->doc = std::move(doc);
+  state->images = images;
+  state->tempDir = outDir;
+  state->cacheLimit = cacheLimit;
+  state->renderDpi = renderDpi;
+  state->prefetchDistance = pdfSettings.prefetchDistance;
+  state->prefetchStrategy = pdfSettings.prefetchStrategy;
+  state->cachePolicy = pdfSettings.cachePolicy;
+  state->renderPreset = pdfSettings.renderPreset;
+  state->antialias = pdfSettings.antialias;
+  state->textAntialias = pdfSettings.textAntialias;
+  state->colorMode = pdfSettings.colorMode;
+  state->backgroundMode = pdfSettings.backgroundMode;
+  state->backgroundColor = pdfSettings.backgroundColor;
+  state->maxWidth = pdfSettings.maxWidth;
+  state->maxHeight = pdfSettings.maxHeight;
+  state->imageFormat = pdfSettings.imageFormat;
+  state->jpegQuality = pdfSettings.jpegQuality;
+  state->tileSize = pdfSettings.tileSize;
+  state->progressive = pdfSettings.progressive;
+  state->progressiveDpi = pdfSettings.progressiveDpi;
+
+  return std::make_unique<PdfDocument>(title, pages.join("\n\n"), state);
+#else
+  if (error) {
+    *error = "No PDF backend available (Poppler Qt6 or QtPdf required)";
+  }
+  qWarning() << "PdfProvider: No PDF backend available";
+  Q_UNUSED(path)
+  return nullptr;
 #endif
 }

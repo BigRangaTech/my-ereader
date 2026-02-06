@@ -1,0 +1,14 @@
+-I
+/home/jessie/Documents/my ereader/build-android-arm64/src/app
+-I
+/home/jessie/Documents/my ereader/build-android-arm64/src/app/Ereader
+-I
+/home/jessie/Documents/my ereader/build-android-arm64/src/app
+-I
+/home/jessie/Qt/6.10.2/android_arm64_v8a/qml
+--resource
+/home/jessie/Documents/my ereader/build-android-arm64/src/app/.qt/rcc/qmake_Ereader.qrc
+--resource
+/home/jessie/Documents/my ereader/build-android-arm64/src/app/.qt/rcc/ereader_raw_qml_0.qrc
+--module
+Ereader

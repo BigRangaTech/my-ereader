@@ -7,12 +7,14 @@ Place the following sources here for Android builds:
 - `third_party/freetype` — freetype source tree (CMake-capable).
 - `third_party/libjpeg-turbo` — libjpeg source tree (CMake-capable).
 - `third_party/libpng` — libpng source tree (CMake-capable).
+- `third_party/sqlite` — SQLite amalgamation (sqlite3.c/sqlite3.h/sqlite3ext.h).
 
 Pinned upstreams used in Flatpak:
 - libxml2: https://github.com/BigRangaTech/libxml2.git (tag v001)
 - freetype: https://github.com/freetype/freetype (tag VER-2-13-2)
 - libjpeg-turbo: https://github.com/libjpeg-turbo/libjpeg-turbo (tag 3.0.2)
 - libpng: https://github.com/pnggroup/libpng (tag v1.6.43)
+- sqlite: https://www.sqlite.org (amalgamation)
 
 After adding these sources, run:
 ```

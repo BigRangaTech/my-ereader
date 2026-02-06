@@ -12,3 +12,4 @@ libxml2 | https://github.com/BigRangaTech/libxml2 | v001 | third_party/libxml2 |
 freetype | https://github.com/freetype/freetype | VER-2-13-2 | third_party/freetype | third_party/freetype/LICENSE.TXT
 libjpeg-turbo | https://github.com/libjpeg-turbo/libjpeg-turbo | 3.0.2 | third_party/libjpeg-turbo | third_party/libjpeg-turbo/LICENSE.md
 libpng | https://github.com/pnggroup/libpng | v1.6.43 | third_party/libpng | third_party/libpng/LICENSE
+sqlite | https://www.sqlite.org | amalgamation | third_party/sqlite | third_party/sqlite/sqlite3.c

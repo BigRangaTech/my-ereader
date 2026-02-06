@@ -1,0 +1,7 @@
+module Ereader
+typeinfo ereader.qmltypes
+prefer :/Ereader/
+Main 1.0 qml/Main.qml
+Theme 1.0 qml/Theme.qml
+depends QtQuick
+

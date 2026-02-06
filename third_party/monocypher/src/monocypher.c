@@ -78,7 +78,7 @@
 #endif
 #include <immintrin.h>
 #endif
-#if defined(__ARM_NEON) || defined(__aarch64__)
+#if (defined(__ARM_NEON) || defined(__aarch64__)) && !defined(MONOCYPHER_DISABLE_NEON)
 #include <arm_neon.h>
 #endif
 #if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
@@ -295,7 +295,7 @@ static u64 x16_sse2(const u8 a[16], const u8 b[16])
 }
 #endif
 
-#if defined(__ARM_NEON) || defined(__aarch64__)
+#if (defined(__ARM_NEON) || defined(__aarch64__)) && !defined(MONOCYPHER_DISABLE_NEON)
 static u64 x16_neon(const u8 a[16], const u8 b[16])
 {
 	uint8x16_t va = vld1q_u8(a);
@@ -311,7 +311,7 @@ static u64 x16(const u8 a[16], const u8 b[16])
 #if defined(MONO_HAS_SSE2) && MONO_HAS_SSE2
 	if (mono_have_sse2_cached()) { return x16_sse2(a, b); }
 #endif
-#if defined(__ARM_NEON) || defined(__aarch64__)
+#if (defined(__ARM_NEON) || defined(__aarch64__)) && !defined(MONOCYPHER_DISABLE_NEON)
 	if (mono_have_neon_cached()) { return x16_neon(a, b); }
 #endif
 	return (load64_le(a + 0) ^ load64_le(b + 0))
@@ -866,7 +866,7 @@ static void chacha20_blocks8_avx2(u8 *cipher_text, const u8 *plain_text,
 #endif
 #endif
 
-#if defined(__ARM_NEON) || defined(__aarch64__)
+#if (defined(__ARM_NEON) || defined(__aarch64__)) && !defined(MONOCYPHER_DISABLE_NEON)
 static inline uint32x4_t rotl32_neon(uint32x4_t v, int n)
 {
 	return vorrq_u32(vshlq_n_u32(v, n), vshrq_n_u32(v, 32 - n));
@@ -876,7 +876,7 @@ static int chacha20_cpu_has_neon(void)
 {
 #if defined(__aarch64__)
 	return 1;
-#elif defined(__ARM_NEON)
+#elif defined(__ARM_NEON) && !defined(MONOCYPHER_DISABLE_NEON)
 	return 1;
 #else
 	return 0;
@@ -1126,7 +1126,7 @@ static u64 crypto_chacha20_djb_inner(u8 *cipher_text, const u8 *plain_text,
 #else
 	int use_sse2 = 0;
 #endif
-#if defined(__ARM_NEON) || defined(__aarch64__)
+#if (defined(__ARM_NEON) || defined(__aarch64__)) && !defined(MONOCYPHER_DISABLE_NEON)
 	int use_neon = mono_have_neon_cached();
 #else
 	int use_neon = 0;
@@ -1156,7 +1156,7 @@ static u64 crypto_chacha20_djb_inner(u8 *cipher_text, const u8 *plain_text,
 			chacha20_blocks4_sse2(cipher_text, plain_text, input, block_ctr);
 		} else
 #endif
-#if defined(__ARM_NEON) || defined(__aarch64__)
+#if (defined(__ARM_NEON) || defined(__aarch64__)) && !defined(MONOCYPHER_DISABLE_NEON)
 		if (use_neon) {
 			chacha20_blocks4_neon(cipher_text, plain_text, input, block_ctr);
 		} else
@@ -1438,7 +1438,7 @@ static u64 poly_mul_sum4_sse2(const u64 s[4], const u32 r[4])
 }
 #endif
 
-#if defined(__ARM_NEON) || defined(__aarch64__)
+#if (defined(__ARM_NEON) || defined(__aarch64__)) && !defined(MONOCYPHER_DISABLE_NEON)
 static u64 poly_mul_sum4_neon(const u64 s[4], const u32 r[4])
 {
 	u32 s0 = (u32)s[0]; u32 s1 = (u32)s[1];
@@ -1504,7 +1504,7 @@ static void poly_blocks(crypto_poly1305_ctx *ctx, const u8 *in,
 	}
 #endif
 #endif
-#if defined(__ARM_NEON) || defined(__aarch64__)
+#if (defined(__ARM_NEON) || defined(__aarch64__)) && !defined(MONOCYPHER_DISABLE_NEON)
 	if (poly_simd == 0 && mono_have_neon_cached()) {
 		poly_simd = 3;
 	}
@@ -1540,7 +1540,7 @@ static void poly_blocks(crypto_poly1305_ctx *ctx, const u8 *in,
 			x3 = poly_mul_sum4_sse2(s_vec, r_vec3);
 #endif
 		} else if (poly_simd == 3) {
-#if defined(__ARM_NEON) || defined(__aarch64__)
+#if (defined(__ARM_NEON) || defined(__aarch64__)) && !defined(MONOCYPHER_DISABLE_NEON)
 			x0 = poly_mul_sum4_neon(s_vec, r_vec0);
 			x1 = poly_mul_sum4_neon(s_vec, r_vec1);
 			x2 = poly_mul_sum4_neon(s_vec, r_vec2);
@@ -3758,7 +3758,7 @@ static void fe_copy(fe h, const fe f)
 		return;
 	}
 #endif
-#if defined(__ARM_NEON) || defined(__aarch64__)
+#if (defined(__ARM_NEON) || defined(__aarch64__)) && !defined(MONOCYPHER_DISABLE_NEON)
 	if (mono_have_neon_cached()) {
 		int i = 0;
 		for (; i + 3 < 10; i += 4) {
@@ -3797,7 +3797,7 @@ static void fe_neg(fe h, const fe f)
 		return;
 	}
 #endif
-#if defined(__ARM_NEON) || defined(__aarch64__)
+#if (defined(__ARM_NEON) || defined(__aarch64__)) && !defined(MONOCYPHER_DISABLE_NEON)
 	if (mono_have_neon_cached()) {
 		int i = 0;
 		for (; i + 3 < 10; i += 4) {
@@ -3837,7 +3837,7 @@ static void fe_add(fe h, const fe f, const fe g)
 		return;
 	}
 #endif
-#if defined(__ARM_NEON) || defined(__aarch64__)
+#if (defined(__ARM_NEON) || defined(__aarch64__)) && !defined(MONOCYPHER_DISABLE_NEON)
 	if (mono_have_neon_cached()) {
 		int i = 0;
 		for (; i + 3 < 10; i += 4) {
@@ -3878,7 +3878,7 @@ static void fe_sub(fe h, const fe f, const fe g)
 		return;
 	}
 #endif
-#if defined(__ARM_NEON) || defined(__aarch64__)
+#if (defined(__ARM_NEON) || defined(__aarch64__)) && !defined(MONOCYPHER_DISABLE_NEON)
 	if (mono_have_neon_cached()) {
 		int i = 0;
 		for (; i + 3 < 10; i += 4) {
@@ -3950,7 +3950,7 @@ static void fe_cswap(fe f, fe g, int b)
 		return;
 	}
 #endif
-#if defined(__ARM_NEON) || defined(__aarch64__)
+#if (defined(__ARM_NEON) || defined(__aarch64__)) && !defined(MONOCYPHER_DISABLE_NEON)
 	if (mono_have_neon_cached()) {
 		int32x4_t m = vdupq_n_s32(mask);
 		int i = 0;
@@ -3999,7 +3999,7 @@ static void fe_ccopy_avx2(fe f, const fe g, int b)
 }
 #endif
 
-#if defined(__ARM_NEON) || defined(__aarch64__)
+#if (defined(__ARM_NEON) || defined(__aarch64__)) && !defined(MONOCYPHER_DISABLE_NEON)
 static void fe_ccopy_neon(fe f, const fe g, int b)
 {
 	i32 mask = -b; // -1 = 0xffffffff
@@ -4046,7 +4046,7 @@ static void fe_ccopy(fe f, const fe g, int b)
 		return;
 	}
 #endif
-#if defined(__ARM_NEON) || defined(__aarch64__)
+#if (defined(__ARM_NEON) || defined(__aarch64__)) && !defined(MONOCYPHER_DISABLE_NEON)
 	if (mono_have_neon_cached()) {
 		fe_ccopy_neon(f, g, b);
 		return;
@@ -4325,7 +4325,7 @@ static void fe_mul_small_sse41(fe h, const fe f, i32 g)
 }
 #endif
 
-#if defined(__ARM_NEON) || defined(__aarch64__)
+#if (defined(__ARM_NEON) || defined(__aarch64__)) && !defined(MONOCYPHER_DISABLE_NEON)
 static void fe_mul_small_neon(fe h, const fe f, i32 g)
 {
 	int32x2_t vg = vdup_n_s32(g);
@@ -4366,7 +4366,7 @@ static void fe_mul_small(fe h, const fe f, i32 g)
 		return;
 	}
 #endif
-#if defined(__ARM_NEON) || defined(__aarch64__)
+#if (defined(__ARM_NEON) || defined(__aarch64__)) && !defined(MONOCYPHER_DISABLE_NEON)
 	if (mono_have_neon_cached()) {
 		fe_mul_small_neon(h, f, g);
 		return;
@@ -4423,7 +4423,7 @@ static i64 muladd4_sse41(i32 a0, i32 a1, i32 a2, i32 a3,
 }
 #endif
 
-#if defined(__ARM_NEON) || defined(__aarch64__)
+#if (defined(__ARM_NEON) || defined(__aarch64__)) && !defined(MONOCYPHER_DISABLE_NEON)
 static i64 muladd4_neon(i32 a0, i32 a1, i32 a2, i32 a3,
                         i32 b0, i32 b1, i32 b2, i32 b3)
 {
@@ -4547,7 +4547,7 @@ static void fe_mul_sse41(fe h, const fe f, const fe g)
 }
 #endif
 
-#if defined(__ARM_NEON) || defined(__aarch64__)
+#if (defined(__ARM_NEON) || defined(__aarch64__)) && !defined(MONOCYPHER_DISABLE_NEON)
 static void fe_mul_neon(fe h, const fe f, const fe g)
 {
 	i32 f0 = f[0]; i32 f1 = f[1]; i32 f2 = f[2]; i32 f3 = f[3]; i32 f4 = f[4];
@@ -4608,7 +4608,7 @@ static void fe_mul(fe h, const fe f, const fe g)
 		return;
 	}
 #endif
-#if defined(__ARM_NEON) || defined(__aarch64__)
+#if (defined(__ARM_NEON) || defined(__aarch64__)) && !defined(MONOCYPHER_DISABLE_NEON)
 	if (mono_have_neon_cached()) {
 		fe_mul_neon(h, f, g);
 		return;
@@ -4754,7 +4754,7 @@ static void fe_sq_sse41(fe h, const fe f)
 }
 #endif
 
-#if defined(__ARM_NEON) || defined(__aarch64__)
+#if (defined(__ARM_NEON) || defined(__aarch64__)) && !defined(MONOCYPHER_DISABLE_NEON)
 static void fe_sq_neon(fe h, const fe f)
 {
 	i32 f0 = f[0]; i32 f1 = f[1]; i32 f2 = f[2]; i32 f3 = f[3]; i32 f4 = f[4];
@@ -4803,7 +4803,7 @@ static void fe_sq(fe h, const fe f)
 		return;
 	}
 #endif
-#if defined(__ARM_NEON) || defined(__aarch64__)
+#if (defined(__ARM_NEON) || defined(__aarch64__)) && !defined(MONOCYPHER_DISABLE_NEON)
 	if (mono_have_neon_cached()) {
 		fe_sq_neon(h, f);
 		return;

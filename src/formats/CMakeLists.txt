@@ -57,6 +57,11 @@ if (POPPLER_QT6_AVAILABLE)
   target_link_libraries(formats PUBLIC Poppler::Qt6)
 endif()
 
+if (TARGET Qt6::Pdf)
+  target_link_libraries(formats PUBLIC Qt6::Pdf)
+  target_compile_definitions(formats PRIVATE HAVE_QT_PDF=1)
+endif()
+
 if (LIBARCHIVE_AVAILABLE)
   target_link_libraries(formats PUBLIC Archive::Archive)
 endif()

@@ -55,6 +55,11 @@ that is built and bundled into prebuilt binaries.
   - Upstream: https://github.com/pnggroup/libpng (tag `v1.6.43`)
   - License: `third_party/libpng/LICENSE`
   - Notes: PNG decoder for Poppler
+- sqlite
+  - Source: `third_party/sqlite/`
+  - Upstream: https://www.sqlite.org (amalgamation)
+  - License: public domain statement in `third_party/sqlite/sqlite3.c`
+  - Notes: database engine (Android build)
 - libarchive
   - Source: `third_party/libarchive/`
   - Upstream: https://github.com/BigRangaTech/libarchive (tag `v001`)

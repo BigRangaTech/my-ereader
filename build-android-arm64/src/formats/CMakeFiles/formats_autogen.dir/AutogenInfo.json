@@ -1,0 +1,406 @@
+{
+	"BUILD_DIR" : "/home/jessie/Documents/my ereader/build-android-arm64/src/formats/formats_autogen",
+	"CMAKE_BINARY_DIR" : "/home/jessie/Documents/my ereader/build-android-arm64",
+	"CMAKE_CURRENT_BINARY_DIR" : "/home/jessie/Documents/my ereader/build-android-arm64/src/formats",
+	"CMAKE_CURRENT_SOURCE_DIR" : "/home/jessie/Documents/my ereader/src/formats",
+	"CMAKE_EXECUTABLE" : "/usr/bin/cmake",
+	"CMAKE_LIST_FILES" : 
+	[
+		"/home/jessie/Documents/my ereader/src/formats/CMakeLists.txt",
+		"/usr/share/cmake-3.31/Modules/FindZLIB.cmake",
+		"/usr/share/cmake-3.31/Modules/SelectLibraryConfigurations.cmake",
+		"/usr/share/cmake-3.31/Modules/FindPackageHandleStandardArgs.cmake",
+		"/usr/share/cmake-3.31/Modules/FindPackageMessage.cmake",
+		"/usr/share/cmake-3.31/Modules/FindLibXml2.cmake",
+		"/usr/share/cmake-3.31/Modules/FindPkgConfig.cmake",
+		"/usr/share/cmake-3.31/Modules/FindPackageHandleStandardArgs.cmake",
+		"/usr/share/cmake-3.31/Modules/FindPackageMessage.cmake",
+		"/usr/share/cmake-3.31/Modules/FindPackageHandleStandardArgs.cmake",
+		"/usr/share/cmake-3.31/Modules/FindPackageMessage.cmake"
+	],
+	"CMAKE_SOURCE_DIR" : "/home/jessie/Documents/my ereader",
+	"CROSS_CONFIG" : false,
+	"DEP_FILE" : "/home/jessie/Documents/my ereader/build-android-arm64/src/formats/formats_autogen/deps",
+	"DEP_FILE_RULE_NAME" : "formats_autogen/timestamp",
+	"HEADERS" : 
+	[
+		[
+			"/home/jessie/Documents/my ereader/src/formats/CbzProvider.h",
+			"MU",
+			"EWIEGA46WW/moc_CbzProvider.cpp",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/src/formats/DjvuProvider.h",
+			"MU",
+			"EWIEGA46WW/moc_DjvuProvider.cpp",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/src/formats/EpubProvider.h",
+			"MU",
+			"EWIEGA46WW/moc_EpubProvider.cpp",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/src/formats/Fb2Provider.h",
+			"MU",
+			"EWIEGA46WW/moc_Fb2Provider.cpp",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/src/formats/MobiProvider.h",
+			"MU",
+			"EWIEGA46WW/moc_MobiProvider.cpp",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/src/formats/PdfProvider.h",
+			"MU",
+			"EWIEGA46WW/moc_PdfProvider.cpp",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/src/formats/TxtProvider.h",
+			"MU",
+			"EWIEGA46WW/moc_TxtProvider.cpp",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/buffer.h",
+			"MU",
+			"2DNL3MRPLI/moc_buffer.cpp",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/compression.h",
+			"MU",
+			"2DNL3MRPLI/moc_compression.cpp",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/debug.h",
+			"MU",
+			"2DNL3MRPLI/moc_debug.cpp",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/encryption.h",
+			"MU",
+			"2DNL3MRPLI/moc_encryption.cpp",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/index.h",
+			"MU",
+			"2DNL3MRPLI/moc_index.cpp",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/memory.h",
+			"MU",
+			"2DNL3MRPLI/moc_memory.cpp",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/meta.h",
+			"MU",
+			"2DNL3MRPLI/moc_meta.cpp",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/opf.h",
+			"MU",
+			"2DNL3MRPLI/moc_opf.cpp",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/parse_rawml.h",
+			"MU",
+			"2DNL3MRPLI/moc_parse_rawml.cpp",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/randombytes.h",
+			"MU",
+			"2DNL3MRPLI/moc_randombytes.cpp",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/read.h",
+			"MU",
+			"2DNL3MRPLI/moc_read.cpp",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/sha1.h",
+			"MU",
+			"2DNL3MRPLI/moc_sha1.cpp",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/structure.h",
+			"MU",
+			"2DNL3MRPLI/moc_structure.cpp",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/util.h",
+			"MU",
+			"2DNL3MRPLI/moc_util.cpp",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/write.h",
+			"MU",
+			"2DNL3MRPLI/moc_write.cpp",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/xmlwriter.h",
+			"MU",
+			"2DNL3MRPLI/moc_xmlwriter.cpp",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/miniz/miniz.h",
+			"MU",
+			"Y5YUJLW5F5/moc_miniz.cpp",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/miniz/miniz_tdef.h",
+			"MU",
+			"Y5YUJLW5F5/moc_miniz_tdef.cpp",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/miniz/miniz_tinfl.h",
+			"MU",
+			"Y5YUJLW5F5/moc_miniz_tinfl.cpp",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/miniz/miniz_zip.h",
+			"MU",
+			"Y5YUJLW5F5/moc_miniz_zip.cpp",
+			null
+		]
+	],
+	"HEADER_EXTENSIONS" : [ "h", "hh", "h++", "hm", "hpp", "hxx", "in", "txx" ],
+	"INCLUDE_DIR" : "/home/jessie/Documents/my ereader/build-android-arm64/src/formats/formats_autogen/include",
+	"MOC_COMPILATION_FILE" : "/home/jessie/Documents/my ereader/build-android-arm64/src/formats/formats_autogen/mocs_compilation.cpp",
+	"MOC_DEFINITIONS" : 
+	[
+		"HAVE_LIBARCHIVE=1",
+		"QT_CORE_LIB",
+		"QT_GUI_LIB",
+		"QT_NO_DEBUG",
+		"QT_XML_LIB"
+	],
+	"MOC_DEPEND_FILTERS" : 
+	[
+		[
+			"Q_PLUGIN_METADATA",
+			"[\n][ \t]*Q_PLUGIN_METADATA[ \t]*\\([^\\)]*FILE[ \t]*\"([^\"]+)\""
+		]
+	],
+	"MOC_INCLUDES" : 
+	[
+		"/home/jessie/Documents/my ereader/src/formats/include",
+		"/home/jessie/Documents/my ereader/third_party/miniz",
+		"/home/jessie/Documents/my ereader/third_party/libmobi/src",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/include/QtCore",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/include",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/mkspecs/android-clang",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/include/QtGui",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/include/QtXml",
+		"/home/jessie/Documents/my ereader/third_party/install/android/arm64-v8a/libxml2/include/libxml2",
+		"/home/jessie/Documents/my ereader/third_party/install/android/arm64-v8a/libarchive/include",
+		"/home/jessie/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
+		"/home/jessie/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1",
+		"/home/jessie/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/lib/clang/21/include",
+		"/home/jessie/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/aarch64-linux-android"
+	],
+	"MOC_MACRO_NAMES" : 
+	[
+		"Q_OBJECT",
+		"Q_GADGET",
+		"Q_NAMESPACE",
+		"Q_NAMESPACE_EXPORT",
+		"Q_GADGET_EXPORT",
+		"Q_ENUM_NS"
+	],
+	"MOC_OPTIONS" : [],
+	"MOC_PATH_PREFIX" : false,
+	"MOC_PREDEFS_CMD" : 
+	[
+		"/home/jessie/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++",
+		"-std=gnu++20",
+		"-dM",
+		"-E",
+		"-c",
+		"/usr/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp",
+		"--target=aarch64-none-linux-android24"
+	],
+	"MOC_PREDEFS_FILE" : "/home/jessie/Documents/my ereader/build-android-arm64/src/formats/formats_autogen/moc_predefs.h",
+	"MOC_RELAXED_MODE" : false,
+	"MOC_SKIP" : [],
+	"MULTI_CONFIG" : false,
+	"PARALLEL" : 4,
+	"PARSE_CACHE_FILE" : "/home/jessie/Documents/my ereader/build-android-arm64/src/formats/CMakeFiles/formats_autogen.dir/ParseCache.txt",
+	"QT_MOC_EXECUTABLE" : "/home/jessie/Qt/6.10.2/gcc_64/libexec/moc",
+	"QT_UIC_EXECUTABLE" : "",
+	"QT_VERSION_MAJOR" : 6,
+	"QT_VERSION_MINOR" : 10,
+	"SETTINGS_FILE" : "/home/jessie/Documents/my ereader/build-android-arm64/src/formats/CMakeFiles/formats_autogen.dir/AutogenUsed.txt",
+	"SOURCES" : 
+	[
+		[
+			"/home/jessie/Documents/my ereader/src/formats/CbzProvider.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/src/formats/DjvuProvider.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/src/formats/EpubProvider.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/src/formats/Fb2Provider.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/src/formats/FormatRegistry.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/src/formats/MobiProvider.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/src/formats/PdfProvider.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/src/formats/TxtProvider.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/buffer.c",
+			"MU",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/compression.c",
+			"MU",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/debug.c",
+			"MU",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/encryption.c",
+			"MU",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/index.c",
+			"MU",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/memory.c",
+			"MU",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/meta.c",
+			"MU",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/opf.c",
+			"MU",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/parse_rawml.c",
+			"MU",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/randombytes.c",
+			"MU",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/read.c",
+			"MU",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/sha1.c",
+			"MU",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/structure.c",
+			"MU",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/util.c",
+			"MU",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/write.c",
+			"MU",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/libmobi/src/xmlwriter.c",
+			"MU",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/miniz/miniz.c",
+			"MU",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/miniz/miniz_tdef.c",
+			"MU",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/miniz/miniz_tinfl.c",
+			"MU",
+			null
+		],
+		[
+			"/home/jessie/Documents/my ereader/third_party/miniz/miniz_zip.c",
+			"MU",
+			null
+		]
+	],
+	"UIC_OPTIONS" : [],
+	"UIC_SEARCH_PATHS" : [],
+	"UIC_SKIP" : [],
+	"UIC_UI_FILES" : [],
+	"USE_BETTER_GRAPH" : true,
+	"VERBOSITY" : 0
+}

@@ -1,4 +1,5 @@
 qt_add_executable(ereader
+  MANUAL_FINALIZATION
   main.cpp
 )
 
@@ -32,6 +33,14 @@ endif()
 if (POPPLER_QT6_AVAILABLE)
   target_link_libraries(ereader PRIVATE Poppler::Qt6)
 endif()
+
+if (ANDROID)
+  set_target_properties(ereader PROPERTIES
+    QT_ANDROID_PACKAGE_NAME "com.bigrangatech.myereader"
+  )
+endif()
+
+qt_finalize_target(ereader)
 
 if (UNIX AND NOT APPLE)
   set(_rpath "$ORIGIN")

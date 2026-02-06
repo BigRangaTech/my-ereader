@@ -6,6 +6,8 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 ANDROID_NDK="${ANDROID_NDK:-${ANDROID_NDK_ROOT:-}}"
 ANDROID_ABI="${ANDROID_ABI:-arm64-v8a}"
 ANDROID_API="${ANDROID_API:-24}"
+QT_ANDROID_PREFIX="${QT_ANDROID_PREFIX:-${QT6_ANDROID_PREFIX:-}}"
+BUILD_POPPLER="${BUILD_POPPLER:-0}"
 
 if [[ -z "$ANDROID_NDK" ]]; then
   echo "ANDROID_NDK (or ANDROID_NDK_ROOT) is not set" >&2
@@ -22,6 +24,9 @@ BUILD_ROOT="$ROOT/third_party/build/android/$ANDROID_ABI"
 INSTALL_ROOT="$ROOT/third_party/install/android/$ANDROID_ABI"
 
 prefix_paths=()
+if [[ -n "$QT_ANDROID_PREFIX" ]]; then
+  prefix_paths+=("$QT_ANDROID_PREFIX")
+fi
 
 prefix_arg() {
   local IFS=";"
@@ -111,6 +116,21 @@ build_libpng() {
   cmake_build libpng "$src" -DPNG_TESTS=OFF
 }
 
+build_sqlite() {
+  local src="$ROOT/third_party/sqlite"
+  if [[ ! -d "$src" ]]; then
+    echo "sqlite source not found at $src" >&2
+    echo "Add the SQLite amalgamation (sqlite3.c, sqlite3.h, sqlite3ext.h) and CMakeLists.txt." >&2
+    return 1
+  fi
+  if [[ ! -f "$src/sqlite3.c" ]]; then
+    echo "sqlite3.c not found in $src" >&2
+    echo "Place the SQLite amalgamation files in third_party/sqlite." >&2
+    return 1
+  fi
+  cmake_build sqlite "$src" -DSQLITE_OMIT_LOAD_EXTENSION=ON
+}
+
 build_libarchive() {
   local src="$ROOT/third_party/libarchive"
   if [[ ! -d "$src" ]]; then
@@ -136,10 +156,24 @@ build_poppler() {
     echo "Poppler source not found at $src" >&2
     return 1
   fi
+  if [[ -z "$QT_ANDROID_PREFIX" ]]; then
+    echo "QT_ANDROID_PREFIX is not set. Set it to your Qt 6.10.2 Android kit path (e.g. ~/Qt/6.10.2/android_arm64_v8a)" >&2
+    return 1
+  fi
+  local qt_cmake_root="$QT_ANDROID_PREFIX/lib/cmake"
+  local qt_cmake_dir="$qt_cmake_root/Qt6"
+  if [[ ! -d "$qt_cmake_dir" ]]; then
+    echo "Qt6 CMake config not found at $qt_cmake_dir" >&2
+    return 1
+  fi
   local freetype_prefix="$INSTALL_ROOT/freetype"
   local jpeg_prefix="$INSTALL_ROOT/libjpeg-turbo"
   local png_prefix="$INSTALL_ROOT/libpng"
   cmake_build poppler "$src" \
+    -DQt6_DIR="$qt_cmake_dir" \
+    -DQt6Core_DIR="$qt_cmake_root/Qt6Core" \
+    -DQt6Gui_DIR="$qt_cmake_root/Qt6Gui" \
+    -DQt6Xml_DIR="$qt_cmake_root/Qt6Xml" \
     -DBUILD_QT6_TESTS=OFF \
     -DBUILD_GTK_TESTS=OFF \
     -DBUILD_CPP_TESTS=OFF \
@@ -174,6 +208,28 @@ build_djvulibre() {
   local install_dir="$INSTALL_ROOT/djvulibre"
   mkdir -p "$build_dir" "$install_dir"
 
+  # Autoconf scripts in DjVuLibre reject spaces in srcdir/build paths.
+  # Use a temp symlink/build/install dir without spaces when needed.
+  local src_for_build="$src"
+  local build_for_make="$build_dir"
+  local install_for_make="$install_dir"
+  local need_safe_paths=0
+  if [[ "$src" == *" "* || "$build_dir" == *" "* ]]; then
+    need_safe_paths=1
+    local safe_root="/tmp/ereader_android_build/${ANDROID_ABI}"
+    local safe_src="$safe_root/src/djvulibre"
+    local safe_build="$safe_root/build/djvulibre"
+    local safe_install="$safe_root/install/djvulibre"
+    mkdir -p "$safe_root/src" "$safe_root/build"
+    if [[ ! -L "$safe_src" ]]; then
+      ln -s "$src" "$safe_src"
+    fi
+    mkdir -p "$safe_build"
+    src_for_build="$safe_src"
+    build_for_make="$safe_build"
+    install_for_make="$safe_install"
+  fi
+
   local host_tag
   case "$ANDROID_ABI" in
     arm64-v8a) host_tag=aarch64-linux-android ;;
@@ -190,29 +246,38 @@ build_djvulibre() {
 
   local cc="$toolchain_bin/${host_tag}${ANDROID_API}-clang"
   local cxx="$toolchain_bin/${host_tag}${ANDROID_API}-clang++"
+  local extra_cxxflags="-Wno-register -Wno-error=register -DDJVU_NO_PTHREAD_CANCEL"
 
   if [[ ! -x "$cc" ]]; then
     echo "Clang not found for ABI: $ANDROID_ABI (expected $cc)" >&2
     return 1
   fi
 
-  if [[ -x "$src/configure" ]]; then
-    (cd "$build_dir" && \
-      CC="$cc" CXX="$cxx" \
-      "$src/configure" --host="$host_tag" --prefix="$install_dir")
-    cmake --build "$build_dir" --parallel || make -C "$build_dir" -j"$(nproc || echo 4)"
-    make -C "$build_dir" install
+  if [[ -x "$src_for_build/configure" ]]; then
+    (cd "$build_for_make" && \
+      CC="$cc" CXX="$cxx" CXXFLAGS="${CXXFLAGS:-} ${extra_cxxflags}" \
+      "$src_for_build/configure" --host="$host_tag" --prefix="$install_for_make")
+    cmake --build "$build_for_make" --parallel || make -C "$build_for_make" -j"$(nproc || echo 4)"
+    make -C "$build_for_make" install
+    if [[ "$need_safe_paths" -eq 1 ]]; then
+      mkdir -p "$install_dir"
+      cp -a "$install_for_make"/. "$install_dir"/
+    fi
     prefix_paths+=("$install_dir")
     return 0
   fi
 
-  if [[ -x "$src/autogen.sh" ]]; then
-    (cd "$src" && ./autogen.sh)
-    (cd "$build_dir" && \
-      CC="$cc" CXX="$cxx" \
-      "$src/configure" --host="$host_tag" --prefix="$install_dir")
-    cmake --build "$build_dir" --parallel || make -C "$build_dir" -j"$(nproc || echo 4)"
-    make -C "$build_dir" install
+  if [[ -x "$src_for_build/autogen.sh" ]]; then
+    (cd "$src_for_build" && ./autogen.sh)
+    (cd "$build_for_make" && \
+      CC="$cc" CXX="$cxx" CXXFLAGS="${CXXFLAGS:-} ${extra_cxxflags}" \
+      "$src_for_build/configure" --host="$host_tag" --prefix="$install_for_make")
+    cmake --build "$build_for_make" --parallel || make -C "$build_for_make" -j"$(nproc || echo 4)"
+    make -C "$build_for_make" install
+    if [[ "$need_safe_paths" -eq 1 ]]; then
+      mkdir -p "$install_dir"
+      cp -a "$install_for_make"/. "$install_dir"/
+    fi
     prefix_paths+=("$install_dir")
     return 0
   fi
@@ -226,8 +291,13 @@ build_libxml2
 build_freetype
 build_libjpeg
 build_libpng
+build_sqlite
 build_libarchive
-build_poppler
+if [[ "$BUILD_POPPLER" == "1" ]]; then
+  build_poppler
+else
+  echo "Skipping Poppler (set BUILD_POPPLER=1 to build it)"
+fi
 build_djvulibre
 
 echo "Android deps installed to: $INSTALL_ROOT"

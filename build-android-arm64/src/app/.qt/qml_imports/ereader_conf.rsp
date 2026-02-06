@@ -1,0 +1,14 @@
+-rootPath
+/home/jessie/Documents/my ereader/src/app
+-cmake-output
+-output-file
+/home/jessie/Documents/my ereader/build-android-arm64/src/app/.qt/qml_imports/ereader_conf.cmake
+-importPath
+/home/jessie/Documents/my ereader/build-android-arm64/src/app
+-importPath
+/home/jessie/Documents/my ereader/build-android-arm64/src/app/Ereader
+-importPath
+/home/jessie/Qt/6.10.2/android_arm64_v8a/qml
+-qrcFiles
+/home/jessie/Documents/my ereader/build-android-arm64/src/app/.qt/rcc/qmake_Ereader.qrc
+/home/jessie/Documents/my ereader/build-android-arm64/src/app/.qt/rcc/ereader_raw_qml_0.qrc

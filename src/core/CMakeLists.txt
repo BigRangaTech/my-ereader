@@ -25,7 +25,11 @@ add_library(core STATIC
 
 target_include_directories(core PUBLIC include)
 
-target_link_libraries(core PUBLIC Qt6::Core Qt6::Sql Qt6::DBus formats crypto SQLite::SQLite3)
+target_link_libraries(core PUBLIC Qt6::Core Qt6::Sql formats crypto SQLite::SQLite3)
+
+if (TARGET Qt6::DBus)
+  target_link_libraries(core PUBLIC Qt6::DBus)
+endif()
 
 option(ENABLE_LIBSECRET "Enable libsecret keychain storage" ON)
 if (ENABLE_LIBSECRET)

@@ -1,0 +1,141 @@
+{
+	"BUILD_DIR" : "/home/jessie/Documents/my ereader/build-android-arm64/src/app/ereader_autogen",
+	"CMAKE_BINARY_DIR" : "/home/jessie/Documents/my ereader/build-android-arm64",
+	"CMAKE_CURRENT_BINARY_DIR" : "/home/jessie/Documents/my ereader/build-android-arm64/src/app",
+	"CMAKE_CURRENT_SOURCE_DIR" : "/home/jessie/Documents/my ereader/src/app",
+	"CMAKE_EXECUTABLE" : "/usr/bin/cmake",
+	"CMAKE_LIST_FILES" : 
+	[
+		"/home/jessie/Documents/my ereader/src/app/CMakeLists.txt",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/lib/cmake/Qt6Core/Qt6CoreConfigureFileTemplate.in",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/lib/cmake/Qt6Qml/Qt6QmlModuleDirMappingTemplate.qrc.in",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/lib/cmake/Qt6Core/Qt6CoreConfigureFileTemplate.in",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/lib/cmake/Qt6Qml/Qt6qmldirTemplate.cmake.in",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/lib/cmake/Qt6/QtInstallPaths.cmake",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/lib/cmake/Qt6/QtInstallPaths.cmake",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/lib/cmake/Qt6/QtInstallPaths.cmake",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/lib/cmake/Qt6/QtInstallPaths.cmake",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/lib/cmake/Qt6/QtInstallPaths.cmake",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/lib/cmake/Qt6Core/Qt6CoreConfigureFileTemplate.in",
+		"/home/jessie/Documents/my ereader/build-android-arm64/src/app/.qt/qml_imports/ereader_conf.cmake"
+	],
+	"CMAKE_SOURCE_DIR" : "/home/jessie/Documents/my ereader",
+	"CROSS_CONFIG" : false,
+	"DEP_FILE" : "/home/jessie/Documents/my ereader/build-android-arm64/src/app/ereader_autogen/deps",
+	"DEP_FILE_RULE_NAME" : "ereader_autogen/timestamp",
+	"HEADERS" : [],
+	"HEADER_EXTENSIONS" : [ "h", "hh", "h++", "hm", "hpp", "hxx", "in", "txx" ],
+	"INCLUDE_DIR" : "/home/jessie/Documents/my ereader/build-android-arm64/src/app/ereader_autogen/include",
+	"MOC_COMPILATION_FILE" : "/home/jessie/Documents/my ereader/build-android-arm64/src/app/ereader_autogen/mocs_compilation.cpp",
+	"MOC_DEFINITIONS" : 
+	[
+		"HAVE_LIBARCHIVE=1",
+		"HAVE_MONOCYPHER=1",
+		"QT_CORE_LIB",
+		"QT_GUI_LIB",
+		"QT_NETWORK_LIB",
+		"QT_NO_DEBUG",
+		"QT_OPENGL_LIB",
+		"QT_QMLINTEGRATION_LIB",
+		"QT_QML_LIB",
+		"QT_QUICKCONTROLS2_LIB",
+		"QT_QUICK_LIB",
+		"QT_SQL_LIB",
+		"QT_XML_LIB",
+		"ereader_EXPORTS"
+	],
+	"MOC_DEPEND_FILTERS" : 
+	[
+		[
+			"Q_PLUGIN_METADATA",
+			"[\n][ \t]*Q_PLUGIN_METADATA[ \t]*\\([^\\)]*FILE[ \t]*\"([^\"]+)\""
+		]
+	],
+	"MOC_INCLUDES" : 
+	[
+		"/home/jessie/Documents/my ereader/src/app",
+		"/home/jessie/Documents/my ereader/src/core/include",
+		"/home/jessie/Documents/my ereader/src/formats/include",
+		"/home/jessie/Documents/my ereader/src/crypto/include",
+		"/home/jessie/Documents/my ereader/src/sync/include",
+		"/home/jessie/Documents/my ereader/src/core/include",
+		"/home/jessie/Documents/my ereader/src/tts/include",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/include/QtQml",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/include",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/include/QtCore",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/mkspecs/android-clang",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/include/QtQmlIntegration",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/include/QtNetwork",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/include/QtQuick",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/include/QtGui",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/include/QtOpenGL",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/include/QtQuickControls2",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/include/QtSql",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/include/QtXml",
+		"/home/jessie/Documents/my ereader/third_party/install/android/arm64-v8a/libxml2/include/libxml2",
+		"/home/jessie/Documents/my ereader/third_party/install/android/arm64-v8a/libarchive/include",
+		"/home/jessie/Documents/my ereader/third_party/install/android/arm64-v8a/sqlite/include",
+		"/home/jessie/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
+		"/home/jessie/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1",
+		"/home/jessie/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/lib/clang/21/include",
+		"/home/jessie/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/aarch64-linux-android"
+	],
+	"MOC_MACRO_NAMES" : 
+	[
+		"Q_OBJECT",
+		"Q_GADGET",
+		"Q_NAMESPACE",
+		"Q_NAMESPACE_EXPORT",
+		"Q_GADGET_EXPORT",
+		"Q_ENUM_NS"
+	],
+	"MOC_OPTIONS" : [ "--output-json" ],
+	"MOC_PATH_PREFIX" : false,
+	"MOC_PREDEFS_CMD" : 
+	[
+		"/home/jessie/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++",
+		"-std=gnu++20",
+		"-dM",
+		"-E",
+		"-c",
+		"/usr/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp",
+		"--target=aarch64-none-linux-android24"
+	],
+	"MOC_PREDEFS_FILE" : "/home/jessie/Documents/my ereader/build-android-arm64/src/app/ereader_autogen/moc_predefs.h",
+	"MOC_RELAXED_MODE" : false,
+	"MOC_SKIP" : 
+	[
+		"/home/jessie/Documents/my ereader/build-android-arm64/src/app/.qt/rcc/qrc_ereader_raw_qml_0.cpp",
+		"/home/jessie/Documents/my ereader/build-android-arm64/src/app/.qt/rcc/qrc_qmake_Ereader.cpp",
+		"/home/jessie/Documents/my ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/Main_qml.cpp",
+		"/home/jessie/Documents/my ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/Theme_qml.cpp",
+		"/home/jessie/Documents/my ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qmlcache_loader.cpp",
+		"/home/jessie/Documents/my ereader/build-android-arm64/src/app/ereader_qmltyperegistrations.cpp"
+	],
+	"MULTI_CONFIG" : false,
+	"PARALLEL" : 4,
+	"PARSE_CACHE_FILE" : "/home/jessie/Documents/my ereader/build-android-arm64/src/app/CMakeFiles/ereader_autogen.dir/ParseCache.txt",
+	"QT_MOC_EXECUTABLE" : "/home/jessie/Qt/6.10.2/gcc_64/libexec/moc",
+	"QT_UIC_EXECUTABLE" : "",
+	"QT_VERSION_MAJOR" : 6,
+	"QT_VERSION_MINOR" : 10,
+	"SETTINGS_FILE" : "/home/jessie/Documents/my ereader/build-android-arm64/src/app/CMakeFiles/ereader_autogen.dir/AutogenUsed.txt",
+	"SOURCES" : 
+	[
+		[ "/home/jessie/Documents/my ereader/src/app/main.cpp", "MU", null ]
+	],
+	"UIC_OPTIONS" : [],
+	"UIC_SEARCH_PATHS" : [],
+	"UIC_SKIP" : 
+	[
+		"/home/jessie/Documents/my ereader/build-android-arm64/src/app/.qt/rcc/qrc_ereader_raw_qml_0.cpp",
+		"/home/jessie/Documents/my ereader/build-android-arm64/src/app/.qt/rcc/qrc_qmake_Ereader.cpp",
+		"/home/jessie/Documents/my ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/Main_qml.cpp",
+		"/home/jessie/Documents/my ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/Theme_qml.cpp",
+		"/home/jessie/Documents/my ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qmlcache_loader.cpp",
+		"/home/jessie/Documents/my ereader/build-android-arm64/src/app/ereader_qmltyperegistrations.cpp"
+	],
+	"UIC_UI_FILES" : [],
+	"USE_BETTER_GRAPH" : true,
+	"VERBOSITY" : 0
+}

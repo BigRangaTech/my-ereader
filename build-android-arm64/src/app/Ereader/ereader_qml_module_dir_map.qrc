@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="/">
+    <file alias="/Ereader">/home/jessie/Documents/my ereader/build-android-arm64/src/app/Ereader</file>
+
+  </qresource>
+</RCC>

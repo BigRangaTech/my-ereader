@@ -1,0 +1,72 @@
+# ninja log v6
+23	3849	1770368583630449270	src/sync/CMakeFiles/sync.dir/SyncManager.cpp.o	7a21213f07d6e199
+9	1443	1770368573363521041	/home/jessie/Documents/my ereader/build-android-arm64/src/sync/sync_autogen/mocs_compilation.cpp	ec08d3c5f9ab2ad9
+9	1411	1770368573296521509	/home/jessie/Documents/my ereader/build-android-arm64/src/tts/tts_autogen/mocs_compilation.cpp	30831493ae390f12
+272	350	1770368576996098303	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/memory.c.o	5f613efb3e5d5cd6
+9	1443	1770368573363521041	/home/jessie/Documents/my ereader/build-android-arm64/src/sync/sync_autogen/timestamp	ec08d3c5f9ab2ad9
+11	25	1770368571966530806	/home/jessie/Documents/my ereader/build-android-arm64/src/app/.qt/ereader_qml.txt	3af4ea78f2e655c0
+9	1411	1770368573296521509	src/tts/tts_autogen/mocs_compilation.cpp	30831493ae390f12
+70	3446	1770368572013530478	src/formats/CMakeFiles/formats.dir/FormatRegistry.cpp.o	c512157c5c8314d6
+8	64	1770368571994530611	src/crypto/crypto_autogen/timestamp	aa775b779e48c916
+11	25	1770368571966530806	src/app/.qt/ereader_res.txt	4416859c64909c77
+11	25	1770368571966530806	/home/jessie/Documents/my ereader/build-android-arm64/src/app/.qt/ereader_res.txt	4416859c64909c77
+18	261	1770368576742371168	src/formats/CMakeFiles/formats.dir/__/__/third_party/miniz/miniz_tinfl.c.o	fff31ffbeb288c1c
+65	2861	1770368572009022229	src/crypto/CMakeFiles/crypto.dir/CryptoVault.cpp.o	104fdec17b5bc805
+9	1443	1770368573363521041	src/sync/sync_autogen/timestamp	ec08d3c5f9ab2ad9
+8	64	1770368571994530611	/home/jessie/Documents/my ereader/build-android-arm64/src/crypto/crypto_autogen/timestamp	aa775b779e48c916
+10	64	1770368572006530527	.qt/.qmlls.build.ini	5bad15f326f77d4a
+8	66	1770368571997530589	/home/jessie/Documents/my ereader/build-android-arm64/src/formats/formats_autogen/mocs_compilation.cpp	b1fcf694fc09c283
+18	106	1770368583625449305	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/randombytes.c.o	f9ed291635531b90
+8	64	1770368571994530611	src/crypto/crypto_autogen/mocs_compilation.cpp	aa775b779e48c916
+8	64	1770368571994530611	/home/jessie/Documents/my ereader/build-android-arm64/src/crypto/crypto_autogen/mocs_compilation.cpp	aa775b779e48c916
+8	66	1770368571997530589	src/formats/formats_autogen/timestamp	b1fcf694fc09c283
+73	4763	1770368572016530457	src/formats/CMakeFiles/formats.dir/EpubProvider.cpp.o	209cd607277bb02f
+10	64	1770368572006530527	/home/jessie/Documents/my ereader/build-android-arm64/.qt/.qmlls.build.ini	5bad15f326f77d4a
+17	3102	1770368576740497434	src/formats/CMakeFiles/formats.dir/CbzProvider.cpp.o	18a45b05e7304343
+110	4038	1770368572053530198	src/formats/CMakeFiles/formats.dir/Fb2Provider.cpp.o	b4e2a22b15b1afc1
+65	3374	1770368572009530506	src/crypto/CMakeFiles/crypto.dir/CryptoBackendMonocypher.cpp.o	d747e918150f1523
+18	209	1770368583626525746	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/read.c.o	5c931e3ea077823a
+8	66	1770368571997530589	src/formats/formats_autogen/mocs_compilation.cpp	b1fcf694fc09c283
+273	333	1770368583880447523	src/formats/libformats.a	56c1254ba392d87a
+8	66	1770368571997530589	/home/jessie/Documents/my ereader/build-android-arm64/src/formats/formats_autogen/timestamp	b1fcf694fc09c283
+107	2039	1770368583714448683	src/tts/CMakeFiles/tts.dir/tts_autogen/mocs_compilation.cpp.o	edf4ee731fd77042
+102	4650	1770368572045530254	src/formats/CMakeFiles/formats.dir/MobiProvider.cpp.o	254293e5447d3a2f
+65	2168	1770368572009343273	src/crypto/CMakeFiles/crypto.dir/CryptoBackendNull.cpp.o	ead6b3f374433283
+17	3014	1770368576741195850	src/formats/CMakeFiles/formats.dir/PdfProvider.cpp.o	95dc11466287407f
+22	2287	1770368583629449277	src/sync/CMakeFiles/sync.dir/sync_autogen/mocs_compilation.cpp.o	9191c2a240da6e55
+22	145	1770368576745497399	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/buffer.c.o	a5611a4c07fe7632
+261	464	1770368576985495721	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/index.c.o	134a31a665b504a
+18	164	1770368576742068704	src/formats/CMakeFiles/formats.dir/__/__/third_party/miniz/miniz.c.o	3f29b95914c01846
+9	1443	1770368573363521041	src/sync/sync_autogen/mocs_compilation.cpp	ec08d3c5f9ab2ad9
+19	204	1770368576742497420	src/formats/CMakeFiles/formats.dir/__/__/third_party/miniz/miniz_tdef.c.o	a88fff46a2e94a85
+127	2174	1770368583734448544	src/tts/CMakeFiles/tts.dir/TtsController.cpp.o	35e1556747503854
+164	271	1770368576887496406	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/debug.c.o	3796eaac6b906486
+11	25	1770368571966530806	src/app/.qt/ereader_qml.txt	3af4ea78f2e655c0
+145	277	1770368576868496539	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/compression.c.o	384fd9c67361bef
+204	428	1770368576928496120	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/encryption.c.o	ba67c829f0327a60
+277	468	1770368577001495610	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/meta.c.o	540eccb191ee7c17
+351	646	1770368577074724899	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/opf.c.o	cceed80712de3d2d
+20	651	1770368576743497413	src/formats/CMakeFiles/formats.dir/__/__/third_party/miniz/miniz_zip.c.o	a27bb71522041d65
+430	720	1770368577153494547	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/parse_rawml.c.o	fe8f66bfad8ab3f1
+68	110	1770368572011530492	src/formats/CMakeFiles/formats.dir/formats_autogen/mocs_compilation.cpp.o	ca606ed2f631e65b
+19	272	1770368583627411086	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/util.c.o	78e89cf58e1c0026
+18	3158	1770368576741497427	src/formats/CMakeFiles/formats.dir/TxtProvider.cpp.o	210f2322e19bdf8d
+64	102	1770368572008530513	src/crypto/CMakeFiles/crypto.dir/crypto_autogen/mocs_compilation.cpp.o	cfec0619cc9e66da
+19	137	1770368583627165350	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/structure.c.o	6846b9e61ab10a7f
+9	1411	1770368573296521509	src/tts/tts_autogen/timestamp	30831493ae390f12
+17	3314	1770368576741496024	src/formats/CMakeFiles/formats.dir/DjvuProvider.cpp.o	9116bb0ba28dd0d2
+21	151	1770368583628449284	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/xmlwriter.c.o	9f67f70d079a8283
+9	1411	1770368573296521509	/home/jessie/Documents/my ereader/build-android-arm64/src/tts/tts_autogen/timestamp	30831493ae390f12
+19	126	1770368583626849599	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/sha1.c.o	a6d55249cef991d6
+20	209	1770368583627449291	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/write.c.o	dc5de281fe309959
+10	709	1770368686925458347	build.ninja	95e73dde424d375b
+20	36	1770368686966909128	src/tts/libtts.a	58f7a0da0d8b6e4e
+19	37	1770368686966456931	src/sync/libsync.a	1ba69980d3dec970
+19	70	1770368686964726914	src/crypto/crypto_autogen/timestamp	aa775b779e48c916
+19	70	1770368686964726914	src/crypto/crypto_autogen/mocs_compilation.cpp	aa775b779e48c916
+19	70	1770368686964726914	/home/jessie/Documents/my ereader/build-android-arm64/src/crypto/crypto_autogen/timestamp	aa775b779e48c916
+19	70	1770368686964726914	/home/jessie/Documents/my ereader/build-android-arm64/src/crypto/crypto_autogen/mocs_compilation.cpp	aa775b779e48c916
+71	92	1770368687016726550	src/crypto/CMakeFiles/crypto.dir/crypto_autogen/mocs_compilation.cpp.o	badd7096c3da40c
+71	1196	1770368687018566117	src/crypto/CMakeFiles/crypto.dir/CryptoBackendNull.cpp.o	52fc3f44e3b81ebe
+72	2040	1770368687018866043	src/crypto/CMakeFiles/crypto.dir/CryptoBackendMonocypher.cpp.o	5c9f483f39e7704d
+71	2042	1770368687018265399	src/crypto/CMakeFiles/crypto.dir/CryptoVault.cpp.o	27b371c4f5752933

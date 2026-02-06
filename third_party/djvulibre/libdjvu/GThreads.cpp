@@ -447,7 +447,13 @@ void
 GThread::terminate()
 {
   if (xentry || xarg)
-    pthread_cancel(hthr);
+    {
+#ifndef DJVU_NO_PTHREAD_CANCEL
+      pthread_cancel(hthr);
+#else
+      (void)hthr;
+#endif
+    }
 }
 
 int

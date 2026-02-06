@@ -1,0 +1,11 @@
+crypto_autogen/timestamp: \
+	/home/jessie/Documents/my\ ereader/src/crypto/CMakeLists.txt \
+	/home/jessie/Documents/my\ ereader/src/crypto/CryptoBackendMonocypher.cpp \
+	/home/jessie/Documents/my\ ereader/src/crypto/CryptoBackendNull.cpp \
+	/home/jessie/Documents/my\ ereader/src/crypto/CryptoVault.cpp \
+	/home/jessie/Documents/my\ ereader/third_party/monocypher/src/monocypher.c \
+	/home/jessie/Documents/my\ ereader/third_party/monocypher/src/monocypher.h \
+	/usr/share/cmake-3.31/Modules/FindPackageHandleStandardArgs.cmake \
+	/usr/share/cmake-3.31/Modules/FindPackageMessage.cmake \
+	/usr/share/cmake-3.31/Modules/FindPkgConfig.cmake \
+	/usr/bin/cmake
