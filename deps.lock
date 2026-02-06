@@ -7,3 +7,5 @@ monocypher-snapshot | https://github.com/LoupVaillant/Monocypher | 4.0.2 | monoc
 miniz | https://github.com/richgel999/miniz | unknown | third_party/miniz | third_party/miniz/LICENSE.txt
 libarchive | https://github.com/BigRangaTech/libarchive | v001 | third_party/libarchive | third_party/libarchive/COPYING
 libmobi | https://github.com/BigRangaTech/libmobi | b01.1 | third_party/libmobi | third_party/libmobi/COPYING
+zlib | https://github.com/madler/zlib | v1.3.1 | third_party/zlib | third_party/zlib/LICENSE
+libxml2 | https://github.com/BigRangaTech/libxml2 | v001 | third_party/libxml2 | third_party/libxml2/Copyright

@@ -17,7 +17,6 @@ target_link_libraries(ereader PRIVATE
   Qt6::Quick
   Qt6::Qml
   Qt6::QuickControls2
-  Qt6::Widgets
   Qt6::Network
   Qt6::Sql
   core
@@ -25,6 +24,10 @@ target_link_libraries(ereader PRIVATE
   sync
   tts
 )
+
+if (NOT ANDROID)
+  target_link_libraries(ereader PRIVATE Qt6::Widgets)
+endif()
 
 if (POPPLER_QT6_AVAILABLE)
   target_link_libraries(ereader PRIVATE Poppler::Qt6)

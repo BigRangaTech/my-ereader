@@ -30,6 +30,16 @@ that is built and bundled into prebuilt binaries.
   - Upstream: https://github.com/richgel999/miniz
   - License: `third_party/miniz/LICENSE.txt`
   - Notes: ZIP reader used for EPUB parsing
+- zlib
+  - Source: `third_party/zlib/`
+  - Upstream: https://github.com/madler/zlib (tag `v1.3.1`)
+  - License: `third_party/zlib/LICENSE`
+  - Notes: compression backend for format parsing
+- libxml2
+  - Source: `third_party/libxml2/`
+  - Upstream: https://github.com/BigRangaTech/libxml2 (tag `v001`)
+  - License: `third_party/libxml2/Copyright`
+  - Notes: XML parser for FB2/metadata
 - libarchive
   - Source: `third_party/libarchive/`
   - Upstream: https://github.com/BigRangaTech/libarchive (tag `v001`)

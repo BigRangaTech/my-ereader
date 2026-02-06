@@ -41,6 +41,19 @@ QString normalizeReadingDirection(const QString &value) {
   return "ltr";
 }
 
+QString normalizeFolderPath(const QString &path) {
+  QString trimmed = path.trimmed();
+  if (trimmed.isEmpty()) {
+    return {};
+  }
+  QFileInfo info(trimmed);
+  QString absolute = info.absoluteFilePath();
+  if (absolute.endsWith('/')) {
+    absolute.chop(1);
+  }
+  return absolute;
+}
+
 QStringList normalizeKeyBindingList(const QString &value) {
   QStringList out;
   const QStringList parts = value.split(',', Qt::SkipEmptyParts);
@@ -112,6 +125,10 @@ QVariantMap SettingsManager::keyBindings() const {
     map.insert(it.key(), it.value());
   }
   return map;
+}
+
+QStringList SettingsManager::recentImportFolders() const {
+  return m_recentImportFolders;
 }
 
 int SettingsManager::readingFontSize() const { return m_readingFontSize; }
@@ -247,6 +264,38 @@ void SettingsManager::resetKeyBindings() {
     saveValue(QString("keys/%1").arg(it.key()), it.value().join(", "));
   }
   emit keyBindingsChanged();
+}
+
+void SettingsManager::addRecentImportFolder(const QString &path) {
+  const QString normalized = normalizeFolderPath(path);
+  if (normalized.isEmpty()) {
+    return;
+  }
+  QFileInfo info(normalized);
+  if (!info.exists() || !info.isDir()) {
+    return;
+  }
+  QStringList updated = m_recentImportFolders;
+  updated.removeAll(normalized);
+  updated.prepend(normalized);
+  while (updated.size() > 8) {
+    updated.removeLast();
+  }
+  if (updated == m_recentImportFolders) {
+    return;
+  }
+  m_recentImportFolders = updated;
+  saveValue("library/recent_import_folders", m_recentImportFolders);
+  emit recentImportFoldersChanged();
+}
+
+void SettingsManager::clearRecentImportFolders() {
+  if (m_recentImportFolders.isEmpty()) {
+    return;
+  }
+  m_recentImportFolders.clear();
+  saveValue("library/recent_import_folders", m_recentImportFolders);
+  emit recentImportFoldersChanged();
 }
 
 void SettingsManager::setReadingFontSize(int value) {
@@ -1403,6 +1452,30 @@ void SettingsManager::loadFromSettings() {
     }
     m_keyBindings.insert(it.key(), list);
   }
+  m_recentImportFolders.clear();
+  QVariant recentValue = m_settings.value("library/recent_import_folders");
+  QStringList recentList;
+  if (recentValue.canConvert<QStringList>()) {
+    recentList = recentValue.toStringList();
+  } else {
+    const QString raw = recentValue.toString();
+    if (!raw.isEmpty()) {
+      recentList = {raw};
+    }
+  }
+  for (const QString &entry : recentList) {
+    const QString normalized = normalizeFolderPath(entry);
+    if (normalized.isEmpty()) {
+      continue;
+    }
+    QFileInfo info(normalized);
+    if (!info.exists() || !info.isDir()) {
+      continue;
+    }
+    if (!m_recentImportFolders.contains(normalized)) {
+      m_recentImportFolders.append(normalized);
+    }
+  }
   m_comicMinZoom =
       clampDouble(readFormatValue("cbz", "zoom/min", m_settings.value("comics/min_zoom", 0.5)).toDouble(), 0.2, 7.0);
   m_comicMaxZoom =
@@ -1564,6 +1637,7 @@ void SettingsManager::loadFromSettings() {
   emit comicTwoPageSpreadChanged();
   emit comicSpreadInPortraitChanged();
   emit keyBindingsChanged();
+  emit recentImportFoldersChanged();
   emit comicMinZoomChanged();
   emit comicMaxZoomChanged();
   emit comicSortModeChanged();

@@ -1,5 +1,9 @@
 if (USE_BUNDLED_POPPLER)
-  set(POPPLER_BUNDLED_ROOT "${CMAKE_SOURCE_DIR}/third_party/install/poppler")
+  if (ANDROID)
+    set(POPPLER_BUNDLED_ROOT "${CMAKE_SOURCE_DIR}/third_party/install/android/${ANDROID_ABI}/poppler")
+  else()
+    set(POPPLER_BUNDLED_ROOT "${CMAKE_SOURCE_DIR}/third_party/install/poppler")
+  endif()
 endif()
 
 set(POPPLER_QT6_AVAILABLE FALSE)

@@ -250,6 +250,9 @@ ApplicationWindow {
   property bool nativeFolderDialogOpened: false
 
   function openFolderImport() {
+    if (libraryModel.bulkImportActive) {
+      return
+    }
     nativeFolderDialogOpened = false
     manualFolderDialog.errorText = ""
     if (folderPathField) {
@@ -1275,6 +1278,7 @@ ApplicationWindow {
       nativeFolderDialogOpened = true
       const folder = localPathFromUrl(nativeFolderDialog.folder)
       if (folder.length > 0) {
+        settings.addRecentImportFolder(folder)
         libraryModel.addFolder(folder, true)
       }
     }
@@ -1343,6 +1347,42 @@ ApplicationWindow {
           }
         }
 
+        ColumnLayout {
+          Layout.fillWidth: true
+          spacing: 6
+          visible: settings.recentImportFolders && settings.recentImportFolders.length > 0
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+
+            Text {
+              text: "Recent folders"
+              color: theme.textMuted
+              font.pixelSize: 12
+              font.family: root.uiFont
+            }
+
+            Item { Layout.fillWidth: true }
+
+            Button {
+              text: "Clear"
+              font.family: root.uiFont
+              onClicked: settings.clearRecentImportFolders()
+            }
+          }
+
+          Repeater {
+            model: settings.recentImportFolders || []
+            delegate: Button {
+              text: modelData
+              font.family: root.uiFont
+              Layout.fillWidth: true
+              onClicked: folderPathField.text = modelData
+            }
+          }
+        }
+
         Text {
           text: manualFolderDialog.errorText
           color: theme.accent
@@ -1374,6 +1414,7 @@ ApplicationWindow {
               }
               manualFolderDialog.errorText = ""
               manualFolderDialog.close()
+              settings.addRecentImportFolder(folder)
               libraryModel.addFolder(folder, true)
             }
           }
@@ -3271,7 +3312,7 @@ ApplicationWindow {
               text: "Add"
               onClicked: addMenu.open()
               font.family: root.uiFont
-              enabled: libraryModel.ready
+              enabled: libraryModel.ready && !libraryModel.bulkImportActive
             }
 
             Button {
@@ -3334,6 +3375,12 @@ ApplicationWindow {
               from: 0
               to: Math.max(1, libraryModel.bulkImportTotal)
               value: libraryModel.bulkImportDone
+            }
+
+            Button {
+              text: "Cancel"
+              font.family: root.uiFont
+              onClicked: libraryModel.cancelBulkImport()
             }
           }
         }

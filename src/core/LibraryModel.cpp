@@ -75,7 +75,17 @@ LibraryModel::LibraryModel(QObject *parent) : QAbstractListModel(parent) {
             }
             if (m_bulkImportActive) {
               m_bulkImportDone++;
-              if (m_bulkImportDone >= m_bulkImportTotal) {
+              if (m_bulkImportSequential) {
+                if (m_bulkImportDone >= m_bulkImportTotal || m_bulkImportQueue.isEmpty()) {
+                  m_bulkImportActive = false;
+                  m_bulkImportSequential = false;
+                  m_bulkImportTotal = 0;
+                  m_bulkImportDone = 0;
+                  m_bulkImportQueue.clear();
+                } else {
+                  queueNextImport();
+                }
+              } else if (m_bulkImportDone >= m_bulkImportTotal) {
                 m_bulkImportActive = false;
                 m_bulkImportTotal = 0;
                 m_bulkImportDone = 0;
@@ -376,7 +386,8 @@ bool LibraryModel::addFolder(const QString &folderPath, bool recursive) {
     setLastError("No supported books found in folder");
     return false;
   }
-  return addBooks(found);
+  startBulkImportQueue(found);
+  return true;
 }
 
 bool LibraryModel::updateMetadata(int id,
@@ -725,4 +736,67 @@ void LibraryModel::setLastError(const QString &error) {
   }
   m_lastError = error;
   emit lastErrorChanged();
+}
+
+void LibraryModel::startBulkImportQueue(const QStringList &paths) {
+  QSet<QString> uniquePaths;
+  QStringList queue;
+  for (const QString &path : paths) {
+    const QString trimmed = path.trimmed();
+    if (trimmed.isEmpty()) {
+      continue;
+    }
+    const QString absolute = QFileInfo(trimmed).absoluteFilePath();
+    if (uniquePaths.contains(absolute)) {
+      continue;
+    }
+    if (!QFileInfo::exists(absolute)) {
+      continue;
+    }
+    uniquePaths.insert(absolute);
+    queue.append(absolute);
+  }
+
+  if (queue.isEmpty()) {
+    setLastError("No valid files to add");
+    return;
+  }
+
+  m_bulkImportQueue = queue;
+  m_bulkImportSequential = true;
+  m_bulkImportActive = true;
+  m_bulkImportTotal = queue.size();
+  m_bulkImportDone = 0;
+  setLastError("");
+  emit bulkImportChanged();
+  queueNextImport();
+}
+
+void LibraryModel::queueNextImport() {
+  if (!m_bulkImportSequential || !m_bulkImportActive) {
+    return;
+  }
+  if (m_bulkImportQueue.isEmpty()) {
+    m_bulkImportActive = false;
+    m_bulkImportSequential = false;
+    m_bulkImportTotal = 0;
+    m_bulkImportDone = 0;
+    emit bulkImportChanged();
+    return;
+  }
+  const QString nextPath = m_bulkImportQueue.takeFirst();
+  QMetaObject::invokeMethod(dbWorker(), "addBook", Qt::QueuedConnection,
+                            Q_ARG(QString, nextPath));
+}
+
+void LibraryModel::cancelBulkImport() {
+  if (!m_bulkImportActive) {
+    return;
+  }
+  m_bulkImportQueue.clear();
+  m_bulkImportSequential = false;
+  m_bulkImportActive = false;
+  m_bulkImportTotal = 0;
+  m_bulkImportDone = 0;
+  emit bulkImportChanged();
 }

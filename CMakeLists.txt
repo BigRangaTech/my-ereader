@@ -15,7 +15,22 @@ option(ENABLE_TTS "Enable TextToSpeech" ON)
 option(USE_BUNDLED_POPPLER "Use bundled Poppler (third_party/install/poppler)" ON)
 option(USE_BUNDLED_LIBARCHIVE "Use bundled libarchive (third_party/install/libarchive)" ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick Qml QuickControls2 Network Sql Xml Widgets)
+if (ANDROID)
+  set(ENABLE_TTS OFF CACHE BOOL "Disable TTS on Android" FORCE)
+  list(PREPEND CMAKE_PREFIX_PATH
+    "${CMAKE_SOURCE_DIR}/third_party/install/android/${ANDROID_ABI}/zlib"
+    "${CMAKE_SOURCE_DIR}/third_party/install/android/${ANDROID_ABI}/libxml2"
+    "${CMAKE_SOURCE_DIR}/third_party/install/android/${ANDROID_ABI}/libarchive"
+    "${CMAKE_SOURCE_DIR}/third_party/install/android/${ANDROID_ABI}/poppler"
+    "${CMAKE_SOURCE_DIR}/third_party/install/android/${ANDROID_ABI}/djvulibre"
+  )
+endif()
+
+set(_qt_components Core Gui Quick Qml QuickControls2 Network Sql Xml)
+if (NOT ANDROID)
+  list(APPEND _qt_components Widgets)
+endif()
+find_package(Qt6 REQUIRED COMPONENTS ${_qt_components})
 if(ENABLE_TTS)
   find_package(Qt6TextToSpeech QUIET)
   if (Qt6TextToSpeech_FOUND)

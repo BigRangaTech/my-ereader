@@ -4,6 +4,7 @@
 #include <QSettings>
 #include <QHash>
 #include <QVariantMap>
+#include <QStringList>
 
 class SettingsManager : public QObject {
   Q_OBJECT
@@ -88,6 +89,7 @@ class SettingsManager : public QObject {
   Q_PROPERTY(QString settingsPath READ settingsPath CONSTANT)
   Q_PROPERTY(QString iconPath READ iconPath CONSTANT)
   Q_PROPERTY(QVariantMap keyBindings READ keyBindings NOTIFY keyBindingsChanged)
+  Q_PROPERTY(QStringList recentImportFolders READ recentImportFolders NOTIFY recentImportFoldersChanged)
 
 public:
   explicit SettingsManager(QObject *parent = nullptr);
@@ -173,6 +175,7 @@ public:
   QString settingsPath() const;
   QString iconPath() const;
   QVariantMap keyBindings() const;
+  QStringList recentImportFolders() const;
   Q_INVOKABLE QString formatSettingsPath(const QString &format) const;
   Q_INVOKABLE QString comicFitModeForPath(const QString &path) const;
   Q_INVOKABLE void setComicFitModeForPath(const QString &path, const QString &mode);
@@ -180,6 +183,8 @@ public:
   Q_INVOKABLE QStringList keyBindingList(const QString &action) const;
   Q_INVOKABLE void setKeyBinding(const QString &action, const QString &binding);
   Q_INVOKABLE void resetKeyBindings();
+  Q_INVOKABLE void addRecentImportFolder(const QString &path);
+  Q_INVOKABLE void clearRecentImportFolders();
 
   void setReadingFontSize(int value);
   void setReadingLineHeight(double value);
@@ -352,6 +357,7 @@ signals:
   void comicTwoPageSpreadChanged();
   void comicSpreadInPortraitChanged();
   void keyBindingsChanged();
+  void recentImportFoldersChanged();
 
 private:
   void loadFromSettings();
@@ -444,4 +450,5 @@ private:
   bool m_comicTwoPageSpread = false;
   bool m_comicSpreadInPortrait = false;
   QHash<QString, QStringList> m_keyBindings;
+  QStringList m_recentImportFolders;
 };

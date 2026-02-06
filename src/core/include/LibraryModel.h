@@ -73,6 +73,7 @@ public:
                                         bool updateTags,
                                         bool updateCollection);
   Q_INVOKABLE bool removeBooks(const QVariantList &ids);
+  Q_INVOKABLE void cancelBulkImport();
   Q_INVOKABLE QVariantMap get(int index) const;
   Q_INVOKABLE QVariantList exportAnnotationSync() const;
   Q_INVOKABLE int importAnnotationSync(const QVariantList &payload);
@@ -134,6 +135,8 @@ signals:
 private:
   void reload();
   void setLastError(const QString &error);
+  void startBulkImportQueue(const QStringList &paths);
+  void queueNextImport();
 
   bool m_ready = false;
   QString m_lastError;
@@ -145,6 +148,8 @@ private:
   bool m_bulkImportActive = false;
   int m_bulkImportTotal = 0;
   int m_bulkImportDone = 0;
+  bool m_bulkImportSequential = false;
+  QStringList m_bulkImportQueue;
   int m_totalCount = 0;
   int m_pageSize = 50;
   int m_pageIndex = 0;

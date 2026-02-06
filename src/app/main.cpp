@@ -1,4 +1,8 @@
+#if !defined(Q_OS_ANDROID)
 #include <QApplication>
+#else
+#include <QGuiApplication>
+#endif
 #include <QIcon>
 #include <QDir>
 #include <QFileInfo>
@@ -36,7 +40,11 @@ QString findIconPath() {
 } // namespace
 
 int main(int argc, char *argv[]) {
+#if !defined(Q_OS_ANDROID)
   QApplication app(argc, argv);
+#else
+  QGuiApplication app(argc, argv);
+#endif
   QQuickStyle::setStyle("Basic");
   Logger::init();
 

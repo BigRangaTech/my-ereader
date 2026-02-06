@@ -1,5 +1,9 @@
 if (USE_BUNDLED_LIBARCHIVE)
-  set(LIBARCHIVE_BUNDLED_ROOT "${CMAKE_SOURCE_DIR}/third_party/install/libarchive")
+  if (ANDROID)
+    set(LIBARCHIVE_BUNDLED_ROOT "${CMAKE_SOURCE_DIR}/third_party/install/android/${ANDROID_ABI}/libarchive")
+  else()
+    set(LIBARCHIVE_BUNDLED_ROOT "${CMAKE_SOURCE_DIR}/third_party/install/libarchive")
+  endif()
 endif()
 
 set(LIBARCHIVE_AVAILABLE FALSE)
