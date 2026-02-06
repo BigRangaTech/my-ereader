@@ -906,10 +906,10 @@ sync_autogen/timestamp: \
 	/home/jessie/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/sys/user.h \
 	/home/jessie/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/time.h \
 	/home/jessie/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/xlocale.h \
-	/home/jessie/Documents/my\ ereader/build-android-arm64/src/sync/sync_autogen/moc_predefs.h \
-	/home/jessie/Documents/my\ ereader/src/sync/CMakeLists.txt \
-	/home/jessie/Documents/my\ ereader/src/sync/SyncManager.cpp \
-	/home/jessie/Documents/my\ ereader/src/sync/include/SyncManager.h \
+	/home/jessie/Documents/my-ereader/build-android-arm64/src/sync/sync_autogen/moc_predefs.h \
+	/home/jessie/Documents/my-ereader/src/sync/CMakeLists.txt \
+	/home/jessie/Documents/my-ereader/src/sync/SyncManager.cpp \
+	/home/jessie/Documents/my-ereader/src/sync/include/SyncManager.h \
 	/home/jessie/Qt/6.10.2/android_arm64_v8a/include/QtCore/QByteArray \
 	/home/jessie/Qt/6.10.2/android_arm64_v8a/include/QtCore/QHash \
 	/home/jessie/Qt/6.10.2/android_arm64_v8a/include/QtCore/QList \

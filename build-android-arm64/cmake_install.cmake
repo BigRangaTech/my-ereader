@@ -1,4 +1,4 @@
-# Install script for directory: /home/jessie/Documents/my ereader
+# Install script for directory: /home/jessie/Documents/my-ereader
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -44,38 +44,38 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("/home/jessie/Documents/my ereader/build-android-arm64/src/core/cmake_install.cmake")
+  include("/home/jessie/Documents/my-ereader/build-android-arm64/src/core/cmake_install.cmake")
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("/home/jessie/Documents/my ereader/build-android-arm64/src/crypto/cmake_install.cmake")
+  include("/home/jessie/Documents/my-ereader/build-android-arm64/src/crypto/cmake_install.cmake")
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("/home/jessie/Documents/my ereader/build-android-arm64/src/formats/cmake_install.cmake")
+  include("/home/jessie/Documents/my-ereader/build-android-arm64/src/formats/cmake_install.cmake")
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("/home/jessie/Documents/my ereader/build-android-arm64/src/sync/cmake_install.cmake")
+  include("/home/jessie/Documents/my-ereader/build-android-arm64/src/sync/cmake_install.cmake")
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("/home/jessie/Documents/my ereader/build-android-arm64/src/tts/cmake_install.cmake")
+  include("/home/jessie/Documents/my-ereader/build-android-arm64/src/tts/cmake_install.cmake")
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("/home/jessie/Documents/my ereader/build-android-arm64/src/app/cmake_install.cmake")
+  include("/home/jessie/Documents/my-ereader/build-android-arm64/src/app/cmake_install.cmake")
 endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
 if(CMAKE_INSTALL_LOCAL_ONLY)
-  file(WRITE "/home/jessie/Documents/my ereader/build-android-arm64/install_local_manifest.txt"
+  file(WRITE "/home/jessie/Documents/my-ereader/build-android-arm64/install_local_manifest.txt"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")
 endif()
 if(CMAKE_INSTALL_COMPONENT)
@@ -91,6 +91,6 @@ else()
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
-  file(WRITE "/home/jessie/Documents/my ereader/build-android-arm64/${CMAKE_INSTALL_MANIFEST}"
+  file(WRITE "/home/jessie/Documents/my-ereader/build-android-arm64/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")
 endif()

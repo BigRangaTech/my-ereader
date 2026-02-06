@@ -20,7 +20,18 @@ target_include_directories(formats PUBLIC include)
 target_link_libraries(formats PUBLIC Qt6::Core Qt6::Gui Qt6::Xml)
 
 find_package(ZLIB REQUIRED)
-find_package(LibXml2 REQUIRED)
+
+if (ANDROID AND LIBXML2_LIBRARY AND LIBXML2_INCLUDE_DIR)
+  if (NOT TARGET LibXml2::LibXml2)
+    add_library(LibXml2::LibXml2 SHARED IMPORTED)
+    set_target_properties(LibXml2::LibXml2 PROPERTIES
+      IMPORTED_LOCATION "${LIBXML2_LIBRARY}"
+      INTERFACE_INCLUDE_DIRECTORIES "${LIBXML2_INCLUDE_DIR}"
+    )
+  endif()
+else()
+  find_package(LibXml2 REQUIRED)
+endif()
 
 target_sources(formats PRIVATE
   ../../third_party/miniz/miniz.c

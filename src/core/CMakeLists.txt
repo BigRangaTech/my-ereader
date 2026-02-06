@@ -29,6 +29,7 @@ target_link_libraries(core PUBLIC Qt6::Core Qt6::Sql formats crypto SQLite::SQLi
 
 if (TARGET Qt6::DBus)
   target_link_libraries(core PUBLIC Qt6::DBus)
+  target_compile_definitions(core PRIVATE HAVE_QT_DBUS=1)
 endif()
 
 option(ENABLE_LIBSECRET "Enable libsecret keychain storage" ON)

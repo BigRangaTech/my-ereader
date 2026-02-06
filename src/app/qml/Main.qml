@@ -5,7 +5,6 @@ import Qt.labs.platform 1.1 as Platform
 import Qt.labs.platform 1.1 as Platform
 import QtQuick.Layouts 1.15
 import QtQuick 2.15 as QQ
-import QtTextToSpeech 6.2
 
 import Ereader 1.0
 
@@ -988,158 +987,31 @@ ApplicationWindow {
     id: ttsBackend
   }
 
-  TextToSpeech {
-    id: qmlTts
-    rate: settings.ttsRate
-    pitch: settings.ttsPitch
-    volume: settings.ttsVolume
-    onStateChanged: {
-      if (tts.useQml && state === TextToSpeech.Ready) {
-        tts._speakNext()
-      }
-    }
-    Component.onCompleted: {
-      if (tts.useQml) {
-        tts.refreshQmlVoices()
-      }
-    }
-  }
-
   QtObject {
     id: tts
-    readonly property bool useQml: !ttsBackend.available
-    readonly property bool available: useQml ? (qmlTts.state !== TextToSpeech.Error) : ttsBackend.available
-    readonly property bool speaking: useQml ? (qmlTts.state === TextToSpeech.Speaking) : ttsBackend.speaking
-    property var qmlQueue: []
-    property var qmlVoiceKeys: [""]
-    property var qmlVoiceLabels: ["System default"]
-    property var qmlVoices: [null]
-    property string qmlVoiceKey: ""
-    readonly property int queueLength: useQml ? qmlQueue.length : ttsBackend.queueLength
-    readonly property var voiceKeys: useQml ? qmlVoiceKeys : ttsBackend.voiceKeys
-    readonly property var voiceLabels: useQml ? qmlVoiceLabels : ttsBackend.voiceLabels
-    readonly property string voiceKey: useQml ? qmlVoiceKey : ttsBackend.voiceKey
-
-    function refreshQmlVoices() {
-      var voices = []
-      if (qmlTts.availableVoices !== undefined) {
-        if (typeof qmlTts.availableVoices === "function") {
-          voices = qmlTts.availableVoices()
-        } else {
-          voices = qmlTts.availableVoices
-        }
-      } else if (qmlTts.voices !== undefined) {
-        if (typeof qmlTts.voices === "function") {
-          voices = qmlTts.voices()
-        } else {
-          voices = qmlTts.voices
-        }
-      }
-      var keys = [""]
-      var labels = ["System default"]
-      var voiceObjs = [null]
-      for (var i = 0; i < voices.length; ++i) {
-        var v = voices[i]
-        var name = v.name || ""
-        var localeName = ""
-        if (v.locale !== undefined) {
-          if (typeof v.locale === "string") {
-            localeName = v.locale
-          } else if (v.locale && v.locale.name) {
-            localeName = v.locale.name
-          } else if (v.locale && v.locale.toString) {
-            localeName = v.locale.toString()
-          }
-        }
-        var key = name + "|" + localeName
-        var label = localeName.length > 0 ? (name + " (" + localeName + ")") : name
-        keys.push(key)
-        labels.push(label.length > 0 ? label : "Voice " + (i + 1))
-        voiceObjs.push(v)
-      }
-      qmlVoiceKeys = keys
-      qmlVoiceLabels = labels
-      qmlVoices = voiceObjs
-      if (settings.ttsVoiceKey && settings.ttsVoiceKey.length > 0) {
-        setQmlVoiceKey(settings.ttsVoiceKey)
-      }
-    }
-
-    function setQmlVoiceKey(key) {
-      qmlVoiceKey = key || ""
-      if (!key || key.length === 0) {
-        return
-      }
-      for (var i = 0; i < qmlVoiceKeys.length; ++i) {
-        if (qmlVoiceKeys[i] === key) {
-          var voice = qmlVoices[i]
-          if (voice) {
-            qmlTts.voice = voice
-          }
-          return
-        }
-      }
-    }
+    readonly property bool available: ttsBackend.available
+    readonly property bool speaking: ttsBackend.speaking
+    readonly property int queueLength: ttsBackend.queueLength
+    readonly property var voiceKeys: ttsBackend.voiceKeys
+    readonly property var voiceLabels: ttsBackend.voiceLabels
+    readonly property string voiceKey: ttsBackend.voiceKey
 
     function speak(text) {
       if (!text || text.trim().length === 0) return false
-      if (useQml) {
-        qmlQueue = []
-        qmlTts.stop()
-        return _qmlSpeak(text)
-      }
       return ttsBackend.speak(text)
     }
 
     function enqueue(text) {
       if (!text || text.trim().length === 0) return
-      if (useQml) {
-        var next = qmlQueue.slice()
-        next.push(text)
-        qmlQueue = next
-        if (qmlTts.state === TextToSpeech.Ready) {
-          _speakNext()
-        }
-        return
-      }
       ttsBackend.enqueue(text)
     }
 
     function stop() {
-      if (useQml) {
-        qmlQueue = []
-        qmlTts.stop()
-        return
-      }
       ttsBackend.stop()
     }
 
     function clearQueue() {
-      if (useQml) {
-        qmlQueue = []
-        return
-      }
       ttsBackend.clearQueue()
-    }
-
-    function _speakNext() {
-      if (!useQml || qmlQueue.length === 0) return
-      var next = qmlQueue.slice()
-      var text = next.shift()
-      qmlQueue = next
-      _qmlSpeak(text)
-    }
-
-    function _qmlSpeak(text) {
-      if (typeof qmlTts.say === "function") {
-        qmlTts.say(text)
-        return true
-      }
-      if (typeof qmlTts.speak === "function") {
-        qmlTts.speak(text)
-        return true
-      }
-      return false
     }
   }
 
@@ -1173,12 +1045,6 @@ ApplicationWindow {
     if (settings.ttsVoiceKey.length > 0) {
       ttsBackend.voiceKey = settings.ttsVoiceKey
     }
-    if (tts.useQml) {
-      tts.refreshQmlVoices()
-      if (settings.ttsVoiceKey.length > 0) {
-        tts.setQmlVoiceKey(settings.ttsVoiceKey)
-      }
-    }
   }
 
   Connections {
@@ -1189,9 +1055,6 @@ ApplicationWindow {
     function onTtsVoiceKeyChanged() {
       if (settings.ttsVoiceKey.length > 0) {
         ttsBackend.voiceKey = settings.ttsVoiceKey
-      }
-      if (tts.useQml) {
-        tts.setQmlVoiceKey(settings.ttsVoiceKey)
       }
     }
     function onRememberPassphraseChanged() {
@@ -1205,27 +1068,6 @@ ApplicationWindow {
         }
       } else {
         vault.clearStoredPassphrase()
-      }
-    }
-  }
-
-  Connections {
-    target: qmlTts
-    ignoreUnknownSignals: true
-    function onAvailableVoicesChanged() {
-    if (tts.useQml) {
-      tts.refreshQmlVoices()
-    }
-
-    if (vault.state === VaultController.NeedsSetup && !setupDialog.visible) {
-      setupDialog.open()
-    } else if (vault.state === VaultController.Locked && !unlockDialog.visible) {
-      unlockDialog.open()
-    }
-  }
-    function onVoicesChanged() {
-      if (tts.useQml) {
-        tts.refreshQmlVoices()
       }
     }
   }

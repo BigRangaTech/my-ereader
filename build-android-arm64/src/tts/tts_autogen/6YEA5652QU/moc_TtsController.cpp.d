@@ -1,5 +1,5 @@
-/home/jessie/Documents/my\ ereader/build-android-arm64/src/tts/tts_autogen/6YEA5652QU/moc_TtsController.cpp: /home/jessie/Documents/my\ ereader/src/tts/include/TtsController.h \
-  /home/jessie/Documents/my\ ereader/build-android-arm64/src/tts/tts_autogen/moc_predefs.h \
+/home/jessie/Documents/my-ereader/build-android-arm64/src/tts/tts_autogen/6YEA5652QU/moc_TtsController.cpp: /home/jessie/Documents/my-ereader/src/tts/include/TtsController.h \
+  /home/jessie/Documents/my-ereader/build-android-arm64/src/tts/tts_autogen/moc_predefs.h \
   /home/jessie/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/lib/clang/21/include/__stdarg___gnuc_va_list.h \
   /home/jessie/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/lib/clang/21/include/__stdarg___va_copy.h \
   /home/jessie/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/lib/clang/21/include/__stdarg_header_macro.h \

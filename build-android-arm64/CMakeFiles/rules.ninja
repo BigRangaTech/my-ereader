@@ -339,7 +339,7 @@ rule CXX_MODULE_LIBRARY_LINKER__ereader_
 # Rule for re-running cmake.
 
 rule RERUN_CMAKE
-  command = /usr/bin/cmake --regenerate-during-build -S"/home/jessie/Documents/my ereader" -B"/home/jessie/Documents/my ereader/build-android-arm64"
+  command = /usr/bin/cmake --regenerate-during-build -S/home/jessie/Documents/my-ereader -B/home/jessie/Documents/my-ereader/build-android-arm64
   description = Re-running CMake...
   generator = 1
 

@@ -20,6 +20,11 @@ if (ANDROID)
   set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE BOTH CACHE STRING "Search both sysroot and host for packages" FORCE)
   set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH CACHE STRING "Search both sysroot and host for libraries" FORCE)
   set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH CACHE STRING "Search both sysroot and host for headers" FORCE)
+  set(_android_libxml2_root "${CMAKE_SOURCE_DIR}/third_party/install/android/${ANDROID_ABI}/libxml2")
+  set(LibXml2_ROOT "${_android_libxml2_root}" CACHE PATH "libxml2 root for Android" FORCE)
+  set(LIBXML2_INCLUDE_DIR "${_android_libxml2_root}/include/libxml2" CACHE PATH "libxml2 include dir for Android" FORCE)
+  set(LIBXML2_LIBRARY "${_android_libxml2_root}/lib/libxml2.so" CACHE FILEPATH "libxml2 library for Android" FORCE)
+  unset(_android_libxml2_root)
   list(PREPEND CMAKE_PREFIX_PATH
     "${CMAKE_SOURCE_DIR}/third_party/install/android/${ANDROID_ABI}/zlib"
     "${CMAKE_SOURCE_DIR}/third_party/install/android/${ANDROID_ABI}/libxml2"

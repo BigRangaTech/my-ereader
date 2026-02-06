@@ -1344,7 +1344,7 @@ static void poly_load32x4(const u8 *in, u32 out[4])
 		return;
 	}
 #endif
-#if MONO_LITTLE_ENDIAN && (defined(__ARM_NEON) || defined(__aarch64__))
+#if MONO_LITTLE_ENDIAN && (defined(__ARM_NEON) || defined(__aarch64__)) && !defined(MONOCYPHER_DISABLE_NEON)
 	if (mono_have_neon_cached()) {
 		uint8x16_t v = vld1q_u8(in);
 		vst1q_u32(out, vreinterpretq_u32_u8(v));

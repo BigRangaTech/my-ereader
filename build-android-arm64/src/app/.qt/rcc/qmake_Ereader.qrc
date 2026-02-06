@@ -1,6 +1,6 @@
 <RCC>
   <qresource prefix="/Ereader">
-    <file alias="qmldir">/home/jessie/Documents/my ereader/build-android-arm64/src/app/Ereader/qmldir</file>
+    <file alias="qmldir">/home/jessie/Documents/my-ereader/build-android-arm64/src/app/Ereader/qmldir</file>
   </qresource>
 </RCC>
 

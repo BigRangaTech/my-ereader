@@ -1,17 +1,18 @@
 --bare
 -I
-/home/jessie/Documents/my ereader/build-android-arm64/src/app
+/home/jessie/Documents/my-ereader/build-android-arm64/src/app
 -I
-/home/jessie/Documents/my ereader/build-android-arm64/src/app/Ereader
+/home/jessie/Documents/my-ereader/build-android-arm64/src/app/Ereader
 -I
-/home/jessie/Documents/my ereader/build-android-arm64/src/app
+/home/jessie/Documents/my-ereader/build-android-arm64/src/app
 -I
 /home/jessie/Qt/6.10.2/android_arm64_v8a/qml
 --resource
-/home/jessie/Documents/my ereader/build-android-arm64/src/app/.qt/rcc/qmake_Ereader.qrc
+/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/rcc/qmake_Ereader.qrc
 --resource
-/home/jessie/Documents/my ereader/build-android-arm64/src/app/.qt/rcc/ereader_raw_qml_0.qrc
-/home/jessie/Documents/my ereader/src/app/qml/Main.qml
-/home/jessie/Documents/my ereader/src/app/qml/Theme.qml
+/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/rcc/ereader_raw_qml_0.qrc
+/home/jessie/Documents/my-ereader/src/app/qml/Main.qml
+/home/jessie/Documents/my-ereader/src/app/qml/MainAndroid.qml
+/home/jessie/Documents/my-ereader/src/app/qml/Theme.qml
 --json
-/home/jessie/Documents/my ereader/build-android-arm64/ereader_qmllint.json
+/home/jessie/Documents/my-ereader/build-android-arm64/ereader_qmllint.json

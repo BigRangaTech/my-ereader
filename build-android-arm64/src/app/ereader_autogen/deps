@@ -1,0 +1,9 @@
+ereader_autogen/timestamp: \
+	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/qml_imports/ereader_conf.cmake \
+	/home/jessie/Documents/my-ereader/src/app/CMakeLists.txt \
+	/home/jessie/Documents/my-ereader/src/app/main.cpp \
+	/home/jessie/Qt/6.10.2/android_arm64_v8a/lib/cmake/Qt6/QtInstallPaths.cmake \
+	/home/jessie/Qt/6.10.2/android_arm64_v8a/lib/cmake/Qt6Core/Qt6CoreConfigureFileTemplate.in \
+	/home/jessie/Qt/6.10.2/android_arm64_v8a/lib/cmake/Qt6Qml/Qt6QmlModuleDirMappingTemplate.qrc.in \
+	/home/jessie/Qt/6.10.2/android_arm64_v8a/lib/cmake/Qt6Qml/Qt6qmldirTemplate.cmake.in \
+	/usr/bin/cmake

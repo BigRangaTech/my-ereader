@@ -1,26 +1,26 @@
 {
-	"BUILD_DIR" : "/home/jessie/Documents/my ereader/build-android-arm64/src/sync/sync_autogen",
-	"CMAKE_BINARY_DIR" : "/home/jessie/Documents/my ereader/build-android-arm64",
-	"CMAKE_CURRENT_BINARY_DIR" : "/home/jessie/Documents/my ereader/build-android-arm64/src/sync",
-	"CMAKE_CURRENT_SOURCE_DIR" : "/home/jessie/Documents/my ereader/src/sync",
+	"BUILD_DIR" : "/home/jessie/Documents/my-ereader/build-android-arm64/src/sync/sync_autogen",
+	"CMAKE_BINARY_DIR" : "/home/jessie/Documents/my-ereader/build-android-arm64",
+	"CMAKE_CURRENT_BINARY_DIR" : "/home/jessie/Documents/my-ereader/build-android-arm64/src/sync",
+	"CMAKE_CURRENT_SOURCE_DIR" : "/home/jessie/Documents/my-ereader/src/sync",
 	"CMAKE_EXECUTABLE" : "/usr/bin/cmake",
-	"CMAKE_LIST_FILES" : [ "/home/jessie/Documents/my ereader/src/sync/CMakeLists.txt" ],
-	"CMAKE_SOURCE_DIR" : "/home/jessie/Documents/my ereader",
+	"CMAKE_LIST_FILES" : [ "/home/jessie/Documents/my-ereader/src/sync/CMakeLists.txt" ],
+	"CMAKE_SOURCE_DIR" : "/home/jessie/Documents/my-ereader",
 	"CROSS_CONFIG" : false,
-	"DEP_FILE" : "/home/jessie/Documents/my ereader/build-android-arm64/src/sync/sync_autogen/deps",
+	"DEP_FILE" : "/home/jessie/Documents/my-ereader/build-android-arm64/src/sync/sync_autogen/deps",
 	"DEP_FILE_RULE_NAME" : "sync_autogen/timestamp",
 	"HEADERS" : 
 	[
 		[
-			"/home/jessie/Documents/my ereader/src/sync/include/SyncManager.h",
+			"/home/jessie/Documents/my-ereader/src/sync/include/SyncManager.h",
 			"MU",
 			"6YEA5652QU/moc_SyncManager.cpp",
 			null
 		]
 	],
 	"HEADER_EXTENSIONS" : [ "h", "hh", "h++", "hm", "hpp", "hxx", "in", "txx" ],
-	"INCLUDE_DIR" : "/home/jessie/Documents/my ereader/build-android-arm64/src/sync/sync_autogen/include",
-	"MOC_COMPILATION_FILE" : "/home/jessie/Documents/my ereader/build-android-arm64/src/sync/sync_autogen/mocs_compilation.cpp",
+	"INCLUDE_DIR" : "/home/jessie/Documents/my-ereader/build-android-arm64/src/sync/sync_autogen/include",
+	"MOC_COMPILATION_FILE" : "/home/jessie/Documents/my-ereader/build-android-arm64/src/sync/sync_autogen/mocs_compilation.cpp",
 	"MOC_DEFINITIONS" : [ "HAVE_LIBARCHIVE=1", "QT_CORE_LIB", "QT_NETWORK_LIB", "QT_NO_DEBUG" ],
 	"MOC_DEPEND_FILTERS" : 
 	[
@@ -31,8 +31,8 @@
 	],
 	"MOC_INCLUDES" : 
 	[
-		"/home/jessie/Documents/my ereader/src/sync/include",
-		"/home/jessie/Documents/my ereader/src/core/include",
+		"/home/jessie/Documents/my-ereader/src/sync/include",
+		"/home/jessie/Documents/my-ereader/src/core/include",
 		"/home/jessie/Qt/6.10.2/android_arm64_v8a/include/QtCore",
 		"/home/jessie/Qt/6.10.2/android_arm64_v8a/include",
 		"/home/jessie/Qt/6.10.2/android_arm64_v8a/mkspecs/android-clang",
@@ -63,21 +63,21 @@
 		"/usr/share/cmake-3.31/Modules/CMakeCXXCompilerABI.cpp",
 		"--target=aarch64-none-linux-android24"
 	],
-	"MOC_PREDEFS_FILE" : "/home/jessie/Documents/my ereader/build-android-arm64/src/sync/sync_autogen/moc_predefs.h",
+	"MOC_PREDEFS_FILE" : "/home/jessie/Documents/my-ereader/build-android-arm64/src/sync/sync_autogen/moc_predefs.h",
 	"MOC_RELAXED_MODE" : false,
 	"MOC_SKIP" : [],
 	"MULTI_CONFIG" : false,
 	"PARALLEL" : 4,
-	"PARSE_CACHE_FILE" : "/home/jessie/Documents/my ereader/build-android-arm64/src/sync/CMakeFiles/sync_autogen.dir/ParseCache.txt",
+	"PARSE_CACHE_FILE" : "/home/jessie/Documents/my-ereader/build-android-arm64/src/sync/CMakeFiles/sync_autogen.dir/ParseCache.txt",
 	"QT_MOC_EXECUTABLE" : "/home/jessie/Qt/6.10.2/gcc_64/libexec/moc",
 	"QT_UIC_EXECUTABLE" : "",
 	"QT_VERSION_MAJOR" : 6,
 	"QT_VERSION_MINOR" : 10,
-	"SETTINGS_FILE" : "/home/jessie/Documents/my ereader/build-android-arm64/src/sync/CMakeFiles/sync_autogen.dir/AutogenUsed.txt",
+	"SETTINGS_FILE" : "/home/jessie/Documents/my-ereader/build-android-arm64/src/sync/CMakeFiles/sync_autogen.dir/AutogenUsed.txt",
 	"SOURCES" : 
 	[
 		[
-			"/home/jessie/Documents/my ereader/src/sync/SyncManager.cpp",
+			"/home/jessie/Documents/my-ereader/src/sync/SyncManager.cpp",
 			"MU",
 			null
 		]

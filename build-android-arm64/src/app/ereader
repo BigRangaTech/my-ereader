@@ -2,7 +2,7 @@
 
 /home/jessie/Qt/6.10.2/gcc_64/libexec/qt-android-runner.py \
     --adb "/home/jessie/Android/Sdk/platform-tools/adb" \
-    --build-path "/home/jessie/Documents/my ereader/build-android-arm64/src/app/android-build" \
-    --apk "/home/jessie/Documents/my ereader/build-android-arm64/src/app/android-build/ereader.apk" \
+    --build-path "/home/jessie/Documents/my-ereader/build-android-arm64/src/app/android-build" \
+    --apk "/home/jessie/Documents/my-ereader/build-android-arm64/src/app/android-build/ereader.apk" \
     $@
 

@@ -1,72 +1,310 @@
 # ninja log v6
-23	3849	1770368583630449270	src/sync/CMakeFiles/sync.dir/SyncManager.cpp.o	7a21213f07d6e199
-9	1443	1770368573363521041	/home/jessie/Documents/my ereader/build-android-arm64/src/sync/sync_autogen/mocs_compilation.cpp	ec08d3c5f9ab2ad9
-9	1411	1770368573296521509	/home/jessie/Documents/my ereader/build-android-arm64/src/tts/tts_autogen/mocs_compilation.cpp	30831493ae390f12
-272	350	1770368576996098303	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/memory.c.o	5f613efb3e5d5cd6
-9	1443	1770368573363521041	/home/jessie/Documents/my ereader/build-android-arm64/src/sync/sync_autogen/timestamp	ec08d3c5f9ab2ad9
-11	25	1770368571966530806	/home/jessie/Documents/my ereader/build-android-arm64/src/app/.qt/ereader_qml.txt	3af4ea78f2e655c0
-9	1411	1770368573296521509	src/tts/tts_autogen/mocs_compilation.cpp	30831493ae390f12
-70	3446	1770368572013530478	src/formats/CMakeFiles/formats.dir/FormatRegistry.cpp.o	c512157c5c8314d6
-8	64	1770368571994530611	src/crypto/crypto_autogen/timestamp	aa775b779e48c916
-11	25	1770368571966530806	src/app/.qt/ereader_res.txt	4416859c64909c77
-11	25	1770368571966530806	/home/jessie/Documents/my ereader/build-android-arm64/src/app/.qt/ereader_res.txt	4416859c64909c77
-18	261	1770368576742371168	src/formats/CMakeFiles/formats.dir/__/__/third_party/miniz/miniz_tinfl.c.o	fff31ffbeb288c1c
-65	2861	1770368572009022229	src/crypto/CMakeFiles/crypto.dir/CryptoVault.cpp.o	104fdec17b5bc805
-9	1443	1770368573363521041	src/sync/sync_autogen/timestamp	ec08d3c5f9ab2ad9
-8	64	1770368571994530611	/home/jessie/Documents/my ereader/build-android-arm64/src/crypto/crypto_autogen/timestamp	aa775b779e48c916
-10	64	1770368572006530527	.qt/.qmlls.build.ini	5bad15f326f77d4a
-8	66	1770368571997530589	/home/jessie/Documents/my ereader/build-android-arm64/src/formats/formats_autogen/mocs_compilation.cpp	b1fcf694fc09c283
-18	106	1770368583625449305	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/randombytes.c.o	f9ed291635531b90
-8	64	1770368571994530611	src/crypto/crypto_autogen/mocs_compilation.cpp	aa775b779e48c916
-8	64	1770368571994530611	/home/jessie/Documents/my ereader/build-android-arm64/src/crypto/crypto_autogen/mocs_compilation.cpp	aa775b779e48c916
-8	66	1770368571997530589	src/formats/formats_autogen/timestamp	b1fcf694fc09c283
-73	4763	1770368572016530457	src/formats/CMakeFiles/formats.dir/EpubProvider.cpp.o	209cd607277bb02f
-10	64	1770368572006530527	/home/jessie/Documents/my ereader/build-android-arm64/.qt/.qmlls.build.ini	5bad15f326f77d4a
-17	3102	1770368576740497434	src/formats/CMakeFiles/formats.dir/CbzProvider.cpp.o	18a45b05e7304343
-110	4038	1770368572053530198	src/formats/CMakeFiles/formats.dir/Fb2Provider.cpp.o	b4e2a22b15b1afc1
-65	3374	1770368572009530506	src/crypto/CMakeFiles/crypto.dir/CryptoBackendMonocypher.cpp.o	d747e918150f1523
-18	209	1770368583626525746	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/read.c.o	5c931e3ea077823a
-8	66	1770368571997530589	src/formats/formats_autogen/mocs_compilation.cpp	b1fcf694fc09c283
-273	333	1770368583880447523	src/formats/libformats.a	56c1254ba392d87a
-8	66	1770368571997530589	/home/jessie/Documents/my ereader/build-android-arm64/src/formats/formats_autogen/timestamp	b1fcf694fc09c283
-107	2039	1770368583714448683	src/tts/CMakeFiles/tts.dir/tts_autogen/mocs_compilation.cpp.o	edf4ee731fd77042
-102	4650	1770368572045530254	src/formats/CMakeFiles/formats.dir/MobiProvider.cpp.o	254293e5447d3a2f
-65	2168	1770368572009343273	src/crypto/CMakeFiles/crypto.dir/CryptoBackendNull.cpp.o	ead6b3f374433283
-17	3014	1770368576741195850	src/formats/CMakeFiles/formats.dir/PdfProvider.cpp.o	95dc11466287407f
-22	2287	1770368583629449277	src/sync/CMakeFiles/sync.dir/sync_autogen/mocs_compilation.cpp.o	9191c2a240da6e55
-22	145	1770368576745497399	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/buffer.c.o	a5611a4c07fe7632
-261	464	1770368576985495721	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/index.c.o	134a31a665b504a
-18	164	1770368576742068704	src/formats/CMakeFiles/formats.dir/__/__/third_party/miniz/miniz.c.o	3f29b95914c01846
-9	1443	1770368573363521041	src/sync/sync_autogen/mocs_compilation.cpp	ec08d3c5f9ab2ad9
-19	204	1770368576742497420	src/formats/CMakeFiles/formats.dir/__/__/third_party/miniz/miniz_tdef.c.o	a88fff46a2e94a85
-127	2174	1770368583734448544	src/tts/CMakeFiles/tts.dir/TtsController.cpp.o	35e1556747503854
-164	271	1770368576887496406	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/debug.c.o	3796eaac6b906486
-11	25	1770368571966530806	src/app/.qt/ereader_qml.txt	3af4ea78f2e655c0
-145	277	1770368576868496539	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/compression.c.o	384fd9c67361bef
-204	428	1770368576928496120	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/encryption.c.o	ba67c829f0327a60
-277	468	1770368577001495610	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/meta.c.o	540eccb191ee7c17
-351	646	1770368577074724899	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/opf.c.o	cceed80712de3d2d
-20	651	1770368576743497413	src/formats/CMakeFiles/formats.dir/__/__/third_party/miniz/miniz_zip.c.o	a27bb71522041d65
-430	720	1770368577153494547	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/parse_rawml.c.o	fe8f66bfad8ab3f1
-68	110	1770368572011530492	src/formats/CMakeFiles/formats.dir/formats_autogen/mocs_compilation.cpp.o	ca606ed2f631e65b
-19	272	1770368583627411086	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/util.c.o	78e89cf58e1c0026
-18	3158	1770368576741497427	src/formats/CMakeFiles/formats.dir/TxtProvider.cpp.o	210f2322e19bdf8d
-64	102	1770368572008530513	src/crypto/CMakeFiles/crypto.dir/crypto_autogen/mocs_compilation.cpp.o	cfec0619cc9e66da
-19	137	1770368583627165350	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/structure.c.o	6846b9e61ab10a7f
-9	1411	1770368573296521509	src/tts/tts_autogen/timestamp	30831493ae390f12
-17	3314	1770368576741496024	src/formats/CMakeFiles/formats.dir/DjvuProvider.cpp.o	9116bb0ba28dd0d2
-21	151	1770368583628449284	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/xmlwriter.c.o	9f67f70d079a8283
-9	1411	1770368573296521509	/home/jessie/Documents/my ereader/build-android-arm64/src/tts/tts_autogen/timestamp	30831493ae390f12
-19	126	1770368583626849599	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/sha1.c.o	a6d55249cef991d6
-20	209	1770368583627449291	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/write.c.o	dc5de281fe309959
-10	709	1770368686925458347	build.ninja	95e73dde424d375b
-20	36	1770368686966909128	src/tts/libtts.a	58f7a0da0d8b6e4e
-19	37	1770368686966456931	src/sync/libsync.a	1ba69980d3dec970
-19	70	1770368686964726914	src/crypto/crypto_autogen/timestamp	aa775b779e48c916
-19	70	1770368686964726914	src/crypto/crypto_autogen/mocs_compilation.cpp	aa775b779e48c916
-19	70	1770368686964726914	/home/jessie/Documents/my ereader/build-android-arm64/src/crypto/crypto_autogen/timestamp	aa775b779e48c916
-19	70	1770368686964726914	/home/jessie/Documents/my ereader/build-android-arm64/src/crypto/crypto_autogen/mocs_compilation.cpp	aa775b779e48c916
-71	92	1770368687016726550	src/crypto/CMakeFiles/crypto.dir/crypto_autogen/mocs_compilation.cpp.o	badd7096c3da40c
-71	1196	1770368687018566117	src/crypto/CMakeFiles/crypto.dir/CryptoBackendNull.cpp.o	52fc3f44e3b81ebe
-72	2040	1770368687018866043	src/crypto/CMakeFiles/crypto.dir/CryptoBackendMonocypher.cpp.o	5c9f483f39e7704d
-71	2042	1770368687018265399	src/crypto/CMakeFiles/crypto.dir/CryptoVault.cpp.o	27b371c4f5752933
+95	98123	1770375063843256333	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/android-build/ereader.apk	dd3e9f5e5d0be4d1
+95	98123	1770375063843256333	src/app/android-build/ereader.apk	dd3e9f5e5d0be4d1
+80	7003	1770374754343460964	src/formats/CMakeFiles/formats.dir/MobiProvider.cpp.o	c61e2e0b69fbee5c
+6087	9124	1770374760349566550	src/tts/CMakeFiles/tts.dir/tts_autogen/mocs_compilation.cpp.o	98bc56bd70f5e1a8
+5513	5611	1770374759775568848	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/memory.c.o	171a5fb1816f1707
+10219	15464	1770374764482742014	src/core/CMakeFiles/core.dir/LicenseManager.cpp.o	aa6ad7d399de2e8d
+5883	6156	1770374760145567366	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/write.c.o	a06de912344aff61
+18147	18193	1770374365045095921	/home/jessie/Documents/my ereader/build-android-arm64/src/app/.qt/rcc/qrc_ereader_raw_qml_0.cpp	7355536d468be6f6
+5965	6023	1770374760228567034	src/crypto/libcrypto.a	e2e8e8d4839f297c
+1685	2379	1770374755948621891	src/crypto/CMakeFiles/crypto.dir/__/__/third_party/monocypher/src/monocypher.c.o	4cb31ad79b6dc7ba
+18149	18161	1770374365013096033	/home/jessie/Documents/my ereader/build-android-arm64/src/app/meta_types/qt6ereader_metatypes.json.gen	6e74e6af9f55fe49
+20	1682	1770374755900584359	src/tts/tts_autogen/mocs_compilation.cpp	256235347343b2da
+18221	19941	1770374366773089897	/home/jessie/Documents/my ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/Main_qml.cpp.aotstats	9d8209fc584dca99
+2379	8052	1770374756641581393	src/formats/CMakeFiles/formats.dir/DjvuProvider.cpp.o	f482e7f498355f49
+20	1682	1770374755900584359	src/tts/tts_autogen/timestamp	256235347343b2da
+12451	17784	1770374766713541075	src/core/CMakeFiles/core.dir/SettingsManager.cpp.o	be1fc1f2c7bd4461
+5939	6087	1770374760201567142	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/xmlwriter.c.o	805cc450b6a6f523
+128	2998	1770374754390590403	src/crypto/CMakeFiles/crypto.dir/CryptoBackendNull.cpp.o	edd8ff89cac188b3
+9	1293	1770374348116154943	/home/jessie/Documents/my ereader/build-android-arm64/src/tts/tts_autogen/mocs_compilation.cpp	30831493ae390f12
+2999	8055	1770374757261578911	src/formats/CMakeFiles/formats.dir/TxtProvider.cpp.o	a045acb59a103a7e
+5832	6232	1770374760095567567	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/util.c.o	1753c1cbccc2b9aa
+79	116	1770374754342338060	src/formats/CMakeFiles/formats.dir/formats_autogen/mocs_compilation.cpp.o	a354f760b6074fa7
+5767	5832	1770374760029567831	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/structure.c.o	21e5bdcee419369b
+85	128	1770374754348590572	src/crypto/CMakeFiles/crypto.dir/crypto_autogen/mocs_compilation.cpp.o	1940697e99c400dc
+5748	5939	1770374760011567903	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/sha1.c.o	facd2d84476a076
+9	1293	1770374348116154943	/home/jessie/Documents/my ereader/build-android-arm64/src/tts/tts_autogen/timestamp	30831493ae390f12
+5621	5968	1770374759883965343	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/parse_rawml.c.o	52c2c01f2ef87639
+80	6186	1770374754343830280	src/formats/CMakeFiles/formats.dir/Fb2Provider.cpp.o	e32f858038640ee5
+18101	18146	1770374364989096117	/home/jessie/Documents/my ereader/build-android-arm64/src/app/ereader_autogen/mocs_compilation.cpp	1e8cde42ea7abb0e
+5681	5883	1770374759943568175	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/read.c.o	741d5109dd328d85
+18350	18387	1770374772612517461	src/core/libcore.a	f0f3df55af85a8fa
+1149	5762	1770374755412610203	src/crypto/CMakeFiles/crypto.dir/CryptoBackendMonocypher.cpp.o	82802b63a9f2fefd
+5611	5965	1770374759873568455	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/opf.c.o	baae9fd469bbfd97
+10218	14794	1770374764482158921	src/core/CMakeFiles/core.dir/Logger.cpp.o	a1e9c98faa8a9d59
+18516	20174	1770374774414510248	src/app/.rcc/qmlcache/ereader_qml/Main_qml.cpp	75bab53034844ba6
+26557	26688	1770374780819484609	src/app/libereader_arm64-v8a.so	115b8d0bc6f7d01a
+20408	26178	1770374774671423473	src/app/CMakeFiles/ereader.dir/.rcc/qmlcache/ereader_qml/Main_qml.cpp.o	de8e5342ea1e94e8
+19	85	1770374754281590840	/home/jessie/Documents/my-ereader/build-android-arm64/src/crypto/crypto_autogen/mocs_compilation.cpp	cdddc4358e46ba81
+18146	18149	1770374365002146321	/home/jessie/Documents/my ereader/build-android-arm64/src/app/meta_types/ereader_json_file_list.txt	8547981eaa624bbc
+18101	18146	1770374364989096117	/home/jessie/Documents/my ereader/build-android-arm64/src/app/ereader_autogen/timestamp	1e8cde42ea7abb0e
+18438	18487	1770374772747516921	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/rcc/qrc_ereader_raw_qml_0.cpp	35849e62f53f6edc
+20407	22996	1770374774671125955	src/app/CMakeFiles/ereader.dir/.rcc/qmlcache/ereader_qmlcache_loader.cpp.o	6171aed35dc8fb8
+20410	23223	1770374774672509215	src/app/CMakeFiles/ereader.dir/.rcc/qmlcache/ereader_qml/Theme_qml.cpp.o	4f9fcde26312b6d2
+18517	18599	1770374772858135077	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/Theme_qml.cpp.aotstats	62ce56f608e3b0b6
+18222	18299	1770374365147760706	/home/jessie/Documents/my ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/Theme_qml.cpp	250942edc52ab52d
+9	997	1770374347826155954	/home/jessie/Documents/my ereader/build-android-arm64/src/sync/sync_autogen/mocs_compilation.cpp	ec08d3c5f9ab2ad9
+20407	20447	1770374774670765255	src/app/CMakeFiles/ereader.dir/.qt/rcc/qrc_qmake_Ereader.cpp.o	8ec5c2de5143a72d
+18222	20155	1770374366986089154	/home/jessie/Documents/my ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp.aotstats	356e2dfb205b8c2
+18516	20405	1770374774646509320	src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp.aotstats	272352c3a7ab7c23
+15117	15174	1770374769379530403	src/sync/libsync.a	1ba69980d3dec970
+20406	24652	1770374774670004446	src/app/CMakeFiles/ereader.dir/main.cpp.o	a6da8d270737f3de
+8087	10216	1770374764462550086	src/core/core_autogen/mocs_compilation.cpp	3fbcd48ec4bbecb4
+23	54	1770374965758744268	src/app/ereader_autogen/timestamp	23330f08f76fc0ea
+18222	18299	1770374365147760706	/home/jessie/Documents/my ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/Theme_qml.cpp.aotstats	250942edc52ab52d
+26458	26504	1770374373311852626	/home/jessie/Documents/my ereader/build-android-arm64/src/app/CMakeFiles/ereader_prepare_apk_dir	fa0424c4a0463791
+20	1146	1770374755363586508	/home/jessie/Documents/my-ereader/build-android-arm64/src/sync/sync_autogen/timestamp	bdf8257355560b3f
+20408	26556	1770374774671694792	src/app/CMakeFiles/ereader.dir/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp.o	47f3096f7a8952d7
+18452	18516	1770374772754936854	src/app/Ereader/ereader.qmltypes	4ca3ca4c8699b7ee
+18517	18599	1770374772858135077	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/Theme_qml.cpp	62ce56f608e3b0b6
+20	1146	1770374755363586508	/home/jessie/Documents/my-ereader/build-android-arm64/src/sync/sync_autogen/mocs_compilation.cpp	bdf8257355560b3f
+14794	18350	1770374769057945100	src/core/CMakeFiles/core.dir/VaultController.cpp.o	e64d38fe6a757efb
+10	75	1770374346923159102	/home/jessie/Documents/my ereader/build-android-arm64/.qt/.qmlls.build.ini	5bad15f326f77d4a
+83	5631	1770374754345590584	src/formats/CMakeFiles/formats.dir/CbzProvider.cpp.o	dc10e8f9060e3821
+18440	18452	1770374772702517101	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/meta_types/qt6ereader_metatypes.json	1981ddaaa8884873
+24	53	1770375221566432771	src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+18452	18516	1770374772754936854	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/Ereader/ereader.qmltypes	4ca3ca4c8699b7ee
+18516	20405	1770374774646509320	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp.aotstats	272352c3a7ab7c23
+19	85	1770374754281590840	/home/jessie/Documents/my-ereader/build-android-arm64/src/crypto/crypto_autogen/timestamp	cdddc4358e46ba81
+54	57	1770374965789744144	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/meta_types/ereader_json_file_list.txt	310a41269f085445
+18516	20174	1770374774414510248	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/Main_qml.cpp.aotstats	75bab53034844ba6
+18516	20405	1770374774646509320	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp	272352c3a7ab7c23
+54	57	1770374965789744144	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/meta_types/ereader_json_file_list.txt.timestamp	310a41269f085445
+21	70	1770374754331590639	/home/jessie/Documents/my-ereader/build-android-arm64/.qt/.qmlls.build.ini	6d6bde33edb4f096
+10216	16885	1770374764480136656	src/core/CMakeFiles/core.dir/core_autogen/mocs_compilation.cpp.o	c006cafa87ad5256
+18440	18452	1770374772702517101	src/app/meta_types/qt6ereader_metatypes.json.gen	1981ddaaa8884873
+18516	20174	1770374774414510248	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/Main_qml.cpp	75bab53034844ba6
+23	54	1770374965758744268	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/ereader_autogen/timestamp	23330f08f76fc0ea
+18146	18152	1770374365004583137	/home/jessie/Documents/my ereader/build-android-arm64/src/app/.qt/rcc/qrc_qmake_Ereader.cpp	c75d812aa8eabc97
+8087	10216	1770374764462550086	/home/jessie/Documents/my-ereader/build-android-arm64/src/core/core_autogen/mocs_compilation.cpp	3fbcd48ec4bbecb4
+18146	18149	1770374365002146321	/home/jessie/Documents/my ereader/build-android-arm64/src/app/meta_types/ereader_json_file_list.txt.timestamp	8547981eaa624bbc
+18161	18221	1770374365050820827	/home/jessie/Documents/my ereader/build-android-arm64/src/app/ereader_qmltyperegistrations.cpp	59f1228b277f1243
+18440	18452	1770374772702517101	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/meta_types/qt6ereader_metatypes.json.gen	1981ddaaa8884873
+24	53	1770375221566432771	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+8087	10216	1770374764462550086	/home/jessie/Documents/my-ereader/build-android-arm64/src/core/core_autogen/timestamp	3fbcd48ec4bbecb4
+20	1682	1770374755900584359	/home/jessie/Documents/my-ereader/build-android-arm64/src/tts/tts_autogen/mocs_compilation.cpp	256235347343b2da
+18437	18451	1770374772708696849	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qmlcache_loader.cpp	d6dd0f8f49b3a24f
+18149	18161	1770374365013096033	/home/jessie/Documents/my ereader/build-android-arm64/src/app/meta_types/qt6ereader_metatypes.json	6e74e6af9f55fe49
+18147	18160	1770374365007826445	/home/jessie/Documents/my ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qmlcache_loader.cpp	850bb923f2194272
+20	1146	1770374755363586508	src/sync/sync_autogen/mocs_compilation.cpp	bdf8257355560b3f
+4593	4904	1770374758855572530	src/formats/CMakeFiles/formats.dir/__/__/third_party/miniz/miniz_tdef.c.o	8171ba5ce2da5000
+20	78	1770374754282590836	/home/jessie/Documents/my-ereader/build-android-arm64/src/formats/formats_autogen/timestamp	5066cfbe1ab3a9c9
+18222	20155	1770374366986089154	/home/jessie/Documents/my ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp	356e2dfb205b8c2
+5634	5748	1770374759897568359	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/randombytes.c.o	e3ef02d339036ac4
+6023	12451	1770374760285566806	src/sync/CMakeFiles/sync.dir/SyncManager.cpp.o	f5b44288e8c84a78
+9124	9156	1770374763388150148	src/tts/libtts.a	58f7a0da0d8b6e4e
+18437	18451	1770374772708696849	src/app/.rcc/qmlcache/ereader_qmlcache_loader.cpp	d6dd0f8f49b3a24f
+10222	15689	1770374764484549998	src/core/CMakeFiles/core.dir/ReaderController.cpp.o	dbcdf2be2b7b9246
+20	1682	1770374755900584359	/home/jessie/Documents/my-ereader/build-android-arm64/src/tts/tts_autogen/timestamp	256235347343b2da
+21	37	1770374754296590780	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/ereader_qml.txt	55b76e7e5a277cc8
+20	78	1770374754282590836	/home/jessie/Documents/my-ereader/build-android-arm64/src/formats/formats_autogen/mocs_compilation.cpp	5066cfbe1ab3a9c9
+4401	4593	1770374758663573299	src/formats/CMakeFiles/formats.dir/__/__/third_party/miniz/miniz.c.o	515c78dddbfc867a
+21	35	1770374754295590784	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/ereader_res.txt	1015bed6ffffd24c
+20407	23037	1770374774670436151	src/app/CMakeFiles/ereader.dir/ereader_qmltyperegistrations.cpp.o	c745a1d1988a2540
+10218	16051	1770374764481371496	src/core/CMakeFiles/core.dir/AnnotationModel.cpp.o	1d84b8ed45626f5
+18437	18443	1770374772705494159	src/app/.qt/rcc/qrc_qmake_Ereader.cpp	ca4291d5319cd889
+18452	18516	1770374772754936854	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/ereader_qmltyperegistrations.cpp	4ca3ca4c8699b7ee
+54	57	1770374965789744144	src/app/meta_types/ereader_json_file_list.txt.timestamp	310a41269f085445
+54	57	1770374965789744144	src/app/meta_types/ereader_json_file_list.txt	310a41269f085445
+18438	18487	1770374772747516921	src/app/.qt/rcc/qrc_ereader_raw_qml_0.cpp	35849e62f53f6edc
+18516	20405	1770374774646509320	src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp	272352c3a7ab7c23
+23	54	1770374965758744268	src/app/ereader_autogen/mocs_compilation.cpp	23330f08f76fc0ea
+13661	17617	1770374767923536231	src/core/CMakeFiles/core.dir/UpdateManager.cpp.o	ad6cb945b0d26ef2
+18517	18599	1770374772858135077	src/app/.rcc/qmlcache/ereader_qml/Theme_qml.cpp	62ce56f608e3b0b6
+9	997	1770374347826155954	/home/jessie/Documents/my ereader/build-android-arm64/src/sync/sync_autogen/timestamp	ec08d3c5f9ab2ad9
+23	54	1770374965758744268	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/ereader_autogen/mocs_compilation.cpp	23330f08f76fc0ea
+10	30	1770374346879159256	/home/jessie/Documents/my ereader/build-android-arm64/src/app/.qt/ereader_qml.txt	3af4ea78f2e655c0
+20	1146	1770374755363586508	src/sync/sync_autogen/timestamp	bdf8257355560b3f
+18516	20174	1770374774414510248	src/app/.rcc/qmlcache/ereader_qml/Main_qml.cpp.aotstats	75bab53034844ba6
+21	35	1770374754295590784	src/app/.qt/ereader_res.txt	1015bed6ffffd24c
+8087	10216	1770374764462550086	src/core/core_autogen/timestamp	3fbcd48ec4bbecb4
+18221	19941	1770374366773089897	/home/jessie/Documents/my ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/Main_qml.cpp	9d8209fc584dca99
+116	4401	1770374754378590451	src/crypto/CMakeFiles/crypto.dir/CryptoVault.cpp.o	2b0b88460e4b3ddb
+4554	4711	1770374758817572682	src/formats/CMakeFiles/formats.dir/__/__/third_party/miniz/miniz_tinfl.c.o	160f5f46dbc81072
+8	70	1770374346907159158	/home/jessie/Documents/my ereader/build-android-arm64/src/formats/formats_autogen/mocs_compilation.cpp	b1fcf694fc09c283
+8188	10319	1770374357156123426	/home/jessie/Documents/my ereader/build-android-arm64/src/core/core_autogen/timestamp	e4388daa04647a9b
+11	23	1770374346874159273	/home/jessie/Documents/my ereader/build-android-arm64/src/app/.qt/ereader_res.txt	4416859c64909c77
+8188	10319	1770374357156123426	/home/jessie/Documents/my ereader/build-android-arm64/src/core/core_autogen/mocs_compilation.cpp	e4388daa04647a9b
+18437	18443	1770374772705494159	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/rcc/qrc_qmake_Ereader.cpp	ca4291d5319cd889
+10217	17730	1770374764481058396	src/core/CMakeFiles/core.dir/DbWorker.cpp.o	b7bc64557418ae41
+8	65	1770374346906159162	/home/jessie/Documents/my ereader/build-android-arm64/src/crypto/crypto_autogen/timestamp	aa775b779e48c916
+21	70	1770374754331590639	.qt/.qmlls.build.ini	6d6bde33edb4f096
+5968	9327	1770374760230567026	src/sync/CMakeFiles/sync.dir/sync_autogen/mocs_compilation.cpp.o	6439291cf0c1f4ca
+18452	18516	1770374772754936854	src/app/ereader_qmltyperegistrations.cpp	4ca3ca4c8699b7ee
+85	5619	1770374754347590575	src/formats/CMakeFiles/formats.dir/PdfProvider.cpp.o	dbe5ef64eaab9dc2
+19	85	1770374754281590840	src/crypto/crypto_autogen/mocs_compilation.cpp	cdddc4358e46ba81
+10218	16927	1770374764481894255	src/core/CMakeFiles/core.dir/LibraryModel.cpp.o	4524b9b0e9e70f11
+19	85	1770374754281590840	src/crypto/crypto_autogen/timestamp	cdddc4358e46ba81
+79	4552	1770374754342816141	src/formats/CMakeFiles/formats.dir/FormatRegistry.cpp.o	86782ce0294e2165
+18161	18221	1770374365050820827	/home/jessie/Documents/my ereader/build-android-arm64/src/app/Ereader/ereader.qmltypes	59f1228b277f1243
+8	65	1770374346906159162	/home/jessie/Documents/my ereader/build-android-arm64/src/crypto/crypto_autogen/mocs_compilation.cpp	aa775b779e48c916
+10218	15114	1770374764481647895	src/core/CMakeFiles/core.dir/KeychainStore.cpp.o	1af9d19ba387b902
+20	78	1770374754282590836	src/formats/formats_autogen/timestamp	5066cfbe1ab3a9c9
+79	6927	1770374754343161295	src/formats/CMakeFiles/formats.dir/EpubProvider.cpp.o	b9b76597bee96624
+20410	20558	1770374774673887428	src/app/CMakeFiles/ereader.dir/.qt/rcc/qrc_ereader_raw_qml_0.cpp.o	92eac560aee0ab41
+20	78	1770374754282590836	src/formats/formats_autogen/mocs_compilation.cpp	5066cfbe1ab3a9c9
+18517	18599	1770374772858135077	src/app/.rcc/qmlcache/ereader_qml/Theme_qml.cpp.aotstats	62ce56f608e3b0b6
+8056	8087	1770374762318558668	src/formats/libformats.a	56c1254ba392d87a
+8	70	1770374346907159158	/home/jessie/Documents/my ereader/build-android-arm64/src/formats/formats_autogen/timestamp	b1fcf694fc09c283
+20406	20443	1770374774668509231	src/app/CMakeFiles/ereader.dir/ereader_autogen/mocs_compilation.cpp.o	81ac2c72cbb46b9c
+18440	18452	1770374772702517101	src/app/meta_types/qt6ereader_metatypes.json	1981ddaaa8884873
+4904	5037	1770374759166571285	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/buffer.c.o	1ed31af1b5a798fb
+5377	5531	1770374759639569392	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/index.c.o	9ba15e30c7ee8a66
+21	37	1770374754296590780	src/app/.qt/ereader_qml.txt	55b76e7e5a277cc8
+5037	5146	1770374759299570753	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/compression.c.o	24e62f23041ae9a0
+6156	8897	1770374760418566274	src/tts/CMakeFiles/tts.dir/TtsController.cpp.o	af6e2024fca7723
+10217	13661	1770374764480697125	src/core/CMakeFiles/core.dir/AsyncUtil.cpp.o	2f18a141f690113f
+5147	5232	1770374759409570312	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/debug.c.o	82645e37de325421
+5232	5509	1770374759494569972	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/encryption.c.o	e3987e8a903cb43c
+4714	5377	1770374758976572046	src/formats/CMakeFiles/formats.dir/__/__/third_party/miniz/miniz_zip.c.o	a868c887a7883b96
+5531	5672	1770374759793568775	src/formats/CMakeFiles/formats.dir/__/__/third_party/libmobi/src/meta.c.o	ede4153fd49988a0
+23	54	1770375890474106006	src/app/ereader_autogen/timestamp	23330f08f76fc0ea
+23	54	1770375890474106006	src/app/ereader_autogen/mocs_compilation.cpp	23330f08f76fc0ea
+23	54	1770375890474106006	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/ereader_autogen/timestamp	23330f08f76fc0ea
+23	54	1770375890474106006	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/ereader_autogen/mocs_compilation.cpp	23330f08f76fc0ea
+54	57	1770375890506105853	src/app/meta_types/ereader_json_file_list.txt	310a41269f085445
+54	57	1770375890506105853	src/app/meta_types/ereader_json_file_list.txt.timestamp	310a41269f085445
+54	57	1770375890506105853	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/meta_types/ereader_json_file_list.txt	310a41269f085445
+54	57	1770375890506105853	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/meta_types/ereader_json_file_list.txt.timestamp	310a41269f085445
+57	84	1770375890508105843	src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+57	84	1770375890508105843	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+84	3452	1770375893889089632	src/app/android-build/ereader.apk	dd3e9f5e5d0be4d1
+84	3452	1770375893889089632	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/android-build/ereader.apk	dd3e9f5e5d0be4d1
+24	52	1770375903505043526	src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+24	52	1770375903505043526	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+22	54	1770376146247879605	src/app/ereader_autogen/timestamp	23330f08f76fc0ea
+22	54	1770376146247879605	src/app/ereader_autogen/mocs_compilation.cpp	23330f08f76fc0ea
+22	54	1770376146247879605	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/ereader_autogen/timestamp	23330f08f76fc0ea
+22	54	1770376146247879605	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/ereader_autogen/mocs_compilation.cpp	23330f08f76fc0ea
+54	57	1770376146279879452	src/app/meta_types/ereader_json_file_list.txt	310a41269f085445
+54	57	1770376146279879452	src/app/meta_types/ereader_json_file_list.txt.timestamp	310a41269f085445
+54	57	1770376146279879452	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/meta_types/ereader_json_file_list.txt	310a41269f085445
+54	57	1770376146279879452	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/meta_types/ereader_json_file_list.txt.timestamp	310a41269f085445
+57	3256	1770376146282879437	src/app/CMakeFiles/ereader.dir/main.cpp.o	a6da8d270737f3de
+3257	3411	1770376149482864094	src/app/libereader_arm64-v8a.so	115b8d0bc6f7d01a
+3411	3461	1770376149636863356	src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+3411	3461	1770376149636863356	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+3461	6208	1770376152420850007	src/app/android-build/ereader.apk	dd3e9f5e5d0be4d1
+3461	6208	1770376152420850007	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/android-build/ereader.apk	dd3e9f5e5d0be4d1
+23	51	1770376158685819968	src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+23	51	1770376158685819968	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+23	36	1770376459337058777	src/app/.qt/ereader_qml.txt	55b76e7e5a277cc8
+23	36	1770376459337058777	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/ereader_qml.txt	55b76e7e5a277cc8
+36	66	1770376459337378356	src/app/ereader_autogen/timestamp	23330f08f76fc0ea
+36	66	1770376459337378356	src/app/ereader_autogen/mocs_compilation.cpp	23330f08f76fc0ea
+36	66	1770376459337378356	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/ereader_autogen/timestamp	23330f08f76fc0ea
+36	66	1770376459337378356	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/ereader_autogen/mocs_compilation.cpp	23330f08f76fc0ea
+67	70	1770376459368378207	src/app/meta_types/ereader_json_file_list.txt	310a41269f085445
+67	70	1770376459368378207	src/app/meta_types/ereader_json_file_list.txt.timestamp	310a41269f085445
+67	70	1770376459368378207	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/meta_types/ereader_json_file_list.txt	310a41269f085445
+67	70	1770376459368378207	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/meta_types/ereader_json_file_list.txt.timestamp	310a41269f085445
+67	119	1770376459417377972	src/app/.qt/rcc/qrc_ereader_raw_qml_0.cpp	35849e62f53f6edc
+67	119	1770376459417377972	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/rcc/qrc_ereader_raw_qml_0.cpp	35849e62f53f6edc
+70	1916	1770376461195369447	src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp	272352c3a7ab7c23
+70	1916	1770376461195369447	src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp.aotstats	272352c3a7ab7c23
+70	1916	1770376461195369447	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp	272352c3a7ab7c23
+70	1916	1770376461195369447	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp.aotstats	272352c3a7ab7c23
+1917	2011	1770376461219950983	src/app/CMakeFiles/ereader.dir/.qt/rcc/qrc_ereader_raw_qml_0.cpp.o	92eac560aee0ab41
+1916	5198	1770376461217369342	src/app/CMakeFiles/ereader.dir/main.cpp.o	a6da8d270737f3de
+1917	7065	1770376461218369337	src/app/CMakeFiles/ereader.dir/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp.o	47f3096f7a8952d7
+7065	7202	1770376466366344654	src/app/libereader_arm64-v8a.so	115b8d0bc6f7d01a
+7202	7252	1770376466503343997	src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+7202	7252	1770376466503343997	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+7252	10004	1770376469291330629	src/app/android-build/ereader.apk	dd3e9f5e5d0be4d1
+7252	10004	1770376469291330629	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/android-build/ereader.apk	dd3e9f5e5d0be4d1
+26	53	1770376485813251411	src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+26	53	1770376485813251411	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+23	53	1770377550922971931	src/app/ereader_autogen/timestamp	23330f08f76fc0ea
+23	53	1770377550922971931	src/app/ereader_autogen/mocs_compilation.cpp	23330f08f76fc0ea
+23	53	1770377550922971931	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/ereader_autogen/timestamp	23330f08f76fc0ea
+23	53	1770377550922971931	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/ereader_autogen/mocs_compilation.cpp	23330f08f76fc0ea
+53	56	1770377550952971773	src/app/meta_types/ereader_json_file_list.txt	310a41269f085445
+53	56	1770377550952971773	src/app/meta_types/ereader_json_file_list.txt.timestamp	310a41269f085445
+53	56	1770377550952971773	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/meta_types/ereader_json_file_list.txt	310a41269f085445
+53	56	1770377550952971773	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/meta_types/ereader_json_file_list.txt.timestamp	310a41269f085445
+56	3633	1770377550955971757	src/app/CMakeFiles/ereader.dir/main.cpp.o	a6da8d270737f3de
+3634	3776	1770377554533952904	src/app/libereader_arm64-v8a.so	115b8d0bc6f7d01a
+3776	3828	1770377554675952156	src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+3776	3828	1770377554675952156	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+3828	6829	1770377557713936149	src/app/android-build/ereader.apk	dd3e9f5e5d0be4d1
+3828	6829	1770377557713936149	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/android-build/ereader.apk	dd3e9f5e5d0be4d1
+23	50	1770377576522837041	src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+23	50	1770377576522837041	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+23	52	1770377738520983451	src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+23	52	1770377738520983451	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+26	39	1770378202672965288	src/app/.qt/ereader_qml.txt	55b76e7e5a277cc8
+26	39	1770378202672965288	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/ereader_qml.txt	55b76e7e5a277cc8
+39	93	1770378202725537492	src/app/.qt/rcc/qrc_ereader_raw_qml_0.cpp	35849e62f53f6edc
+39	93	1770378202725537492	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/rcc/qrc_ereader_raw_qml_0.cpp	35849e62f53f6edc
+39	2136	1770378204744526854	src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp	272352c3a7ab7c23
+39	2136	1770378204744526854	src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp.aotstats	272352c3a7ab7c23
+39	2136	1770378204744526854	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp	272352c3a7ab7c23
+39	2136	1770378204744526854	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp.aotstats	272352c3a7ab7c23
+2136	2233	1770378204771931819	src/app/CMakeFiles/ereader.dir/.qt/rcc/qrc_ereader_raw_qml_0.cpp.o	92eac560aee0ab41
+2136	7772	1770378204770526717	src/app/CMakeFiles/ereader.dir/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp.o	47f3096f7a8952d7
+7772	7919	1770378210406497020	src/app/libereader_arm64-v8a.so	115b8d0bc6f7d01a
+7919	7969	1770378210554496241	src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+7919	7969	1770378210554496241	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+7969	10990	1770378213608480149	src/app/android-build/ereader.apk	dd3e9f5e5d0be4d1
+7969	10990	1770378213608480149	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/android-build/ereader.apk	dd3e9f5e5d0be4d1
+25	37	1770378538742615045	src/app/.qt/ereader_qml.txt	55b76e7e5a277cc8
+25	37	1770378538742615045	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/ereader_qml.txt	55b76e7e5a277cc8
+37	87	1770378538791766710	src/app/.qt/rcc/qrc_ereader_raw_qml_0.cpp	35849e62f53f6edc
+37	87	1770378538791766710	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/rcc/qrc_ereader_raw_qml_0.cpp	35849e62f53f6edc
+37	1979	1770378540660756862	src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp	272352c3a7ab7c23
+37	1979	1770378540660756862	src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp.aotstats	272352c3a7ab7c23
+37	1979	1770378540660756862	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp	272352c3a7ab7c23
+37	1979	1770378540660756862	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp.aotstats	272352c3a7ab7c23
+1980	2084	1770378540686756725	src/app/CMakeFiles/ereader.dir/.qt/rcc/qrc_ereader_raw_qml_0.cpp.o	92eac560aee0ab41
+1979	7304	1770378540685756730	src/app/CMakeFiles/ereader.dir/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp.o	47f3096f7a8952d7
+7304	7447	1770378546010728672	src/app/libereader_arm64-v8a.so	115b8d0bc6f7d01a
+7447	7501	1770378546153727919	src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+7447	7501	1770378546153727919	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+7501	10248	1770378548940713234	src/app/android-build/ereader.apk	dd3e9f5e5d0be4d1
+7501	10248	1770378548940713234	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/android-build/ereader.apk	dd3e9f5e5d0be4d1
+28	46	1770379333437284977	src/app/.qt/ereader_qml.txt	55b76e7e5a277cc8
+28	46	1770379333437284977	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/ereader_qml.txt	55b76e7e5a277cc8
+46	97	1770379333486567958	src/app/.qt/rcc/qrc_ereader_raw_qml_0.cpp	35849e62f53f6edc
+46	97	1770379333486567958	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/rcc/qrc_ereader_raw_qml_0.cpp	35849e62f53f6edc
+46	1835	1770379335204558879	src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp	272352c3a7ab7c23
+46	1835	1770379335204558879	src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp.aotstats	272352c3a7ab7c23
+46	1835	1770379335204558879	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp	272352c3a7ab7c23
+46	1835	1770379335204558879	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp.aotstats	272352c3a7ab7c23
+1836	1942	1770379335228558752	src/app/CMakeFiles/ereader.dir/.qt/rcc/qrc_ereader_raw_qml_0.cpp.o	92eac560aee0ab41
+1835	6884	1770379335227558758	src/app/CMakeFiles/ereader.dir/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp.o	47f3096f7a8952d7
+6884	7057	1770379340276532076	src/app/libereader_arm64-v8a.so	115b8d0bc6f7d01a
+7057	7107	1770379340449531162	src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+7057	7107	1770379340449531162	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+7107	9749	1770379343128517005	src/app/android-build/ereader.apk	dd3e9f5e5d0be4d1
+7107	9749	1770379343128517005	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/android-build/ereader.apk	dd3e9f5e5d0be4d1
+29	42	1770379641184072780	src/app/.qt/ereader_qml.txt	55b76e7e5a277cc8
+29	42	1770379641184072780	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/ereader_qml.txt	55b76e7e5a277cc8
+43	93	1770379641233924862	src/app/.qt/rcc/qrc_ereader_raw_qml_0.cpp	35849e62f53f6edc
+43	93	1770379641233924862	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/rcc/qrc_ereader_raw_qml_0.cpp	35849e62f53f6edc
+42	1892	1770379643008913199	src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp	272352c3a7ab7c23
+42	1892	1770379643008913199	src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp.aotstats	272352c3a7ab7c23
+42	1892	1770379643008913199	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp	272352c3a7ab7c23
+42	1892	1770379643008913199	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp.aotstats	272352c3a7ab7c23
+1893	1984	1770379643035913022	src/app/CMakeFiles/ereader.dir/.qt/rcc/qrc_ereader_raw_qml_0.cpp.o	92eac560aee0ab41
+1892	6939	1770379643034913028	src/app/CMakeFiles/ereader.dir/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp.o	47f3096f7a8952d7
+6939	7078	1770379648081879865	src/app/libereader_arm64-v8a.so	115b8d0bc6f7d01a
+7078	7144	1770379648220878952	src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+7078	7144	1770379648220878952	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+7144	9808	1770379650933861125	src/app/android-build/ereader.apk	dd3e9f5e5d0be4d1
+7144	9808	1770379650933861125	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/android-build/ereader.apk	dd3e9f5e5d0be4d1
+26	38	1770380028069359691	src/app/.qt/ereader_qml.txt	55b76e7e5a277cc8
+26	38	1770380028069359691	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/ereader_qml.txt	55b76e7e5a277cc8
+39	86	1770380028115382775	src/app/.qt/rcc/qrc_ereader_raw_qml_0.cpp	35849e62f53f6edc
+39	86	1770380028115382775	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/rcc/qrc_ereader_raw_qml_0.cpp	35849e62f53f6edc
+38	1902	1770380029912370967	src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp	272352c3a7ab7c23
+38	1902	1770380029912370967	src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp.aotstats	272352c3a7ab7c23
+38	1902	1770380029912370967	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp	272352c3a7ab7c23
+38	1902	1770380029912370967	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp.aotstats	272352c3a7ab7c23
+1903	1995	1770380029934370823	src/app/CMakeFiles/ereader.dir/.qt/rcc/qrc_ereader_raw_qml_0.cpp.o	92eac560aee0ab41
+1902	7398	1770380029933370829	src/app/CMakeFiles/ereader.dir/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp.o	47f3096f7a8952d7
+7399	7544	1770380035430334709	src/app/libereader_arm64-v8a.so	115b8d0bc6f7d01a
+7544	7600	1770380035575333756	src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+7544	7600	1770380035575333756	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/CMakeFiles/ereader_prepare_apk_dir	2ba85bf1e2acabb9
+7600	10385	1770380038398315207	src/app/android-build/ereader.apk	dd3e9f5e5d0be4d1
+7600	10385	1770380038398315207	/home/jessie/Documents/my-ereader/build-android-arm64/src/app/android-build/ereader.apk	dd3e9f5e5d0be4d1

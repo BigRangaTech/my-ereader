@@ -1,7 +1,7 @@
-#if !defined(Q_OS_ANDROID)
-#include <QApplication>
-#else
+#if defined(ANDROID)
 #include <QGuiApplication>
+#else
+#include <QApplication>
 #endif
 #include <QIcon>
 #include <QDir>
@@ -40,10 +40,14 @@ QString findIconPath() {
 } // namespace
 
 int main(int argc, char *argv[]) {
-#if !defined(Q_OS_ANDROID)
-  QApplication app(argc, argv);
-#else
+#if defined(ANDROID)
+  qputenv("QSG_RHI_BACKEND", "opengl");
+  qputenv("QT_OPENGL", "es2");
+  qputenv("QSG_RENDER_LOOP", "basic");
+  qputenv("QSG_NO_THREADED_RENDERER", "1");
   QGuiApplication app(argc, argv);
+#else
+  QApplication app(argc, argv);
 #endif
   QQuickStyle::setStyle("Basic");
   Logger::init();
@@ -88,7 +92,11 @@ int main(int argc, char *argv[]) {
       },
       Qt::QueuedConnection);
 
+#if defined(ANDROID)
+  engine.load(QUrl(QStringLiteral("qrc:/Ereader/qml/MainAndroid.qml")));
+#else
   engine.loadFromModule("Ereader", "Main");
+#endif
 
   return app.exec();
 }

@@ -1,0 +1,6 @@
+[
+    {
+        "merged": "com.bigrangatech.myereader-debug-12:/xml_qtprovider_paths.xml.flat",
+        "source": "com.bigrangatech.myereader-android-build-13:/xml/qtprovider_paths.xml"
+    }
+]

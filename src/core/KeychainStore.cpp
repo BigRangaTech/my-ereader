@@ -2,6 +2,7 @@
 
 #include <QByteArray>
 #include <QCryptographicHash>
+#include <QDebug>
 #include <QEventLoop>
 #include <QFile>
 #include <QSettings>
@@ -12,6 +13,7 @@
 #include "include/AppPaths.h"
 #include "../crypto/include/CryptoBackend.h"
 
+#ifdef HAVE_QT_DBUS
 #include <QtDBus/QDBusConnection>
 #include <QtDBus/QDBusInterface>
 #include <QtDBus/QDBusMessage>
@@ -20,13 +22,12 @@
 #include <QtDBus/QDBusPendingCallWatcher>
 #include <QtDBus/QDBusPendingReply>
 #include <QtDBus/QDBusUnixFileDescriptor>
+#endif
 
 #include <fcntl.h>
 #include <unistd.h>
 
 #ifdef HAVE_LIBSECRET
-#include <QDebug>
-
 #ifdef signals
 #undef signals
 #endif
@@ -61,6 +62,23 @@ QString portalConfigPath() {
   return AppPaths::configFile("vault.ini");
 }
 
+QByteArray deriveKey(const QByteArray &secret, int keyBytes) {
+  QByteArray seed = secret + QByteArrayLiteral("my-ereader-key-v1");
+  QByteArray hash = QCryptographicHash::hash(seed, QCryptographicHash::Sha256);
+  if (keyBytes <= hash.size()) {
+    return hash.left(keyBytes);
+  }
+  QByteArray out;
+  out.reserve(keyBytes);
+  QByteArray current = hash;
+  while (out.size() < keyBytes) {
+    out.append(current);
+    current = QCryptographicHash::hash(current, QCryptographicHash::Sha256);
+  }
+  return out.left(keyBytes);
+}
+
+#ifdef HAVE_QT_DBUS
 bool portalAvailable() {
   if (!QCoreApplication::instance()) {
     return false;
@@ -102,22 +120,6 @@ public:
     }
   }
 }; 
-
-QByteArray deriveKey(const QByteArray &secret, int keyBytes) {
-  QByteArray seed = secret + QByteArrayLiteral("my-ereader-key-v1");
-  QByteArray hash = QCryptographicHash::hash(seed, QCryptographicHash::Sha256);
-  if (keyBytes <= hash.size()) {
-    return hash.left(keyBytes);
-  }
-  QByteArray out;
-  out.reserve(keyBytes);
-  QByteArray current = hash;
-  while (out.size() < keyBytes) {
-    out.append(current);
-    current = QCryptographicHash::hash(current, QCryptographicHash::Sha256);
-  }
-  return out.left(keyBytes);
-}
 
 QByteArray portalSecret(QString *outToken, QString *error) {
   if (!QCoreApplication::instance()) {
@@ -278,6 +280,23 @@ QByteArray portalSecret(QString *outToken, QString *error) {
 
   return secret;
 }
+#else
+bool portalAvailable() {
+  return false;
+}
+
+bool portalDataPresent() {
+  return false;
+}
+
+QByteArray portalSecret(QString *outToken, QString *error) {
+  Q_UNUSED(outToken)
+  if (error) {
+    *error = "Secret portal unavailable (Qt DBus missing)";
+  }
+  return {};
+}
+#endif
 } // namespace
 
 bool KeychainStore::isAvailable() const {
