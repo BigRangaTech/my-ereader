@@ -47,9 +47,15 @@ ANDROID_API=24 \
 You must provide these sources (vendored or cloned):
 - `third_party/zlib` (zlib source)
 - `third_party/libxml2` (libxml2 source)
+- `third_party/freetype` (freetype source)
+- `third_party/libjpeg-turbo` (libjpeg source)
+- `third_party/libpng` (libpng source)
 
 The flatpak manifest uses a pinned libxml2 repo. Use the same pinned source for Android.
 zlib is pinned to v1.3.1 in `deps.lock`.
+freetype is pinned to VER-2-13-2 in `deps.lock`.
+libjpeg-turbo is pinned to 3.0.2 in `deps.lock`.
+libpng is pinned to v1.6.43 in `deps.lock`.
 
 ## Next steps
 1. Vendor missing sources (`zlib`, `libxml2`) into `third_party/`.

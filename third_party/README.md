@@ -40,6 +40,21 @@ that is built and bundled into prebuilt binaries.
   - Upstream: https://github.com/BigRangaTech/libxml2 (tag `v001`)
   - License: `third_party/libxml2/Copyright`
   - Notes: XML parser for FB2/metadata
+- freetype
+  - Source: `third_party/freetype/`
+  - Upstream: https://github.com/freetype/freetype (tag `VER-2-13-2`)
+  - License: `third_party/freetype/LICENSE.TXT`
+  - Notes: Font rasterization for Poppler
+- libjpeg-turbo
+  - Source: `third_party/libjpeg-turbo/`
+  - Upstream: https://github.com/libjpeg-turbo/libjpeg-turbo (tag `3.0.2`)
+  - License: `third_party/libjpeg-turbo/LICENSE.md`
+  - Notes: JPEG decoder for Poppler
+- libpng
+  - Source: `third_party/libpng/`
+  - Upstream: https://github.com/pnggroup/libpng (tag `v1.6.43`)
+  - License: `third_party/libpng/LICENSE`
+  - Notes: PNG decoder for Poppler
 - libarchive
   - Source: `third_party/libarchive/`
   - Upstream: https://github.com/BigRangaTech/libarchive (tag `v001`)

@@ -9,3 +9,6 @@ libarchive | https://github.com/BigRangaTech/libarchive | v001 | third_party/lib
 libmobi | https://github.com/BigRangaTech/libmobi | b01.1 | third_party/libmobi | third_party/libmobi/COPYING
 zlib | https://github.com/madler/zlib | v1.3.1 | third_party/zlib | third_party/zlib/LICENSE
 libxml2 | https://github.com/BigRangaTech/libxml2 | v001 | third_party/libxml2 | third_party/libxml2/Copyright
+freetype | https://github.com/freetype/freetype | VER-2-13-2 | third_party/freetype | third_party/freetype/LICENSE.TXT
+libjpeg-turbo | https://github.com/libjpeg-turbo/libjpeg-turbo | 3.0.2 | third_party/libjpeg-turbo | third_party/libjpeg-turbo/LICENSE.md
+libpng | https://github.com/pnggroup/libpng | v1.6.43 | third_party/libpng | third_party/libpng/LICENSE

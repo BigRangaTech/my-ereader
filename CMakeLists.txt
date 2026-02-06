@@ -20,6 +20,9 @@ if (ANDROID)
   list(PREPEND CMAKE_PREFIX_PATH
     "${CMAKE_SOURCE_DIR}/third_party/install/android/${ANDROID_ABI}/zlib"
     "${CMAKE_SOURCE_DIR}/third_party/install/android/${ANDROID_ABI}/libxml2"
+    "${CMAKE_SOURCE_DIR}/third_party/install/android/${ANDROID_ABI}/freetype"
+    "${CMAKE_SOURCE_DIR}/third_party/install/android/${ANDROID_ABI}/libjpeg-turbo"
+    "${CMAKE_SOURCE_DIR}/third_party/install/android/${ANDROID_ABI}/libpng"
     "${CMAKE_SOURCE_DIR}/third_party/install/android/${ANDROID_ABI}/libarchive"
     "${CMAKE_SOURCE_DIR}/third_party/install/android/${ANDROID_ABI}/poppler"
     "${CMAKE_SOURCE_DIR}/third_party/install/android/${ANDROID_ABI}/djvulibre"
