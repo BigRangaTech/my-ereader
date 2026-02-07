@@ -684,6 +684,8 @@ EGL_LIBRARY-ADVANCED:INTERNAL=1
 FIND_PACKAGE_MESSAGE_DETAILS_EGL:INTERNAL=[/home/jessie/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include][1][/home/jessie/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/24/libEGL.so][v1.5()]
 //Details about finding GLESv2
 FIND_PACKAGE_MESSAGE_DETAILS_GLESv2:INTERNAL=[/home/jessie/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include][/home/jessie/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/24/libGLESv2.so][1][1][v()]
+//Details about finding Python3
+FIND_PACKAGE_MESSAGE_DETAILS_Python3:INTERNAL=[/usr/bin/python3][cfound components: Interpreter ][v3.13.7()]
 //Details about finding SQLite3
 FIND_PACKAGE_MESSAGE_DETAILS_SQLite3:INTERNAL=[/home/jessie/Documents/my ereader/third_party/install/android/arm64-v8a/sqlite/include][/home/jessie/Documents/my ereader/third_party/install/android/arm64-v8a/sqlite/lib/libsqlite3.so][v3.51.2()]
 //Details about finding Threads
@@ -1712,6 +1714,17 @@ _CMAKE_C_LINKER_PUSHPOP_STATE_SUPPORTED:INTERNAL=TRUE
 _CMAKE_LINKER_PUSHPOP_STATE_SUPPORTED:INTERNAL=TRUE
 //CMAKE_INSTALL_PREFIX during last run
 _GNUInstallDirs_LAST_CMAKE_INSTALL_PREFIX:INTERNAL=/usr/local
+//Compiler reason failure
+_Python3_Compiler_REASON_FAILURE:INTERNAL=
+//Development reason failure
+_Python3_Development_REASON_FAILURE:INTERNAL=
+//Path to a program.
+_Python3_EXECUTABLE:INTERNAL=/usr/bin/python3
+//Python3 Properties
+_Python3_INTERPRETER_PROPERTIES:INTERNAL=Python;3;13;7;64;32;;;abi3;/usr/lib/python3.13;/usr/lib/python3.13;/usr/local/lib/python3.13/dist-packages;/usr/local/lib/python3.13/dist-packages
+_Python3_INTERPRETER_SIGNATURE:INTERNAL=4c8bfa8951e99fa32e4000a94f8c04a2
+//NumPy reason failure
+_Python3_NumPy_REASON_FAILURE:INTERNAL=
 __pkg_config_arguments_PC_SQLite3:INTERNAL=QUIET;sqlite3
 __pkg_config_checked_LIBSECRET:INTERNAL=1
 __pkg_config_checked_LIBSODIUM:INTERNAL=1

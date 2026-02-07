@@ -43,8 +43,6 @@ int main(int argc, char *argv[]) {
 #if defined(ANDROID)
   qputenv("QSG_RHI_BACKEND", "opengl");
   qputenv("QT_OPENGL", "es2");
-  qputenv("QSG_RENDER_LOOP", "basic");
-  qputenv("QSG_NO_THREADED_RENDERER", "1");
   QGuiApplication app(argc, argv);
 #else
   QApplication app(argc, argv);

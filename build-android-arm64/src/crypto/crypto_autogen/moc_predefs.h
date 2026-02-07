@@ -2,6 +2,7 @@ clang++: warning: argument unused during compilation: '-c' [-Wunused-command-lin
 #define ABI_ID "ELF"
 #define HAVE_LIBARCHIVE 1
 #define HAVE_MONOCYPHER 1
+#define HAVE_POPPLER_QT6 1
 #define MONOCYPHER_DISABLE_NEON 1
 #define MONOCYPHER_STRERROR 1
 #define QT_CORE_LIB 1

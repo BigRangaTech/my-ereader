@@ -91,6 +91,7 @@
 	[
 		"HAVE_LIBARCHIVE=1",
 		"HAVE_MONOCYPHER=1",
+		"HAVE_POPPLER_QT6=1",
 		"QT_CORE_LIB",
 		"QT_GUI_LIB",
 		"QT_NO_DEBUG",
@@ -116,6 +117,7 @@
 		"/home/jessie/Qt/6.10.2/android_arm64_v8a/include/QtGui",
 		"/home/jessie/Qt/6.10.2/android_arm64_v8a/include/QtXml",
 		"/home/jessie/Documents/my-ereader/third_party/install/android/arm64-v8a/libxml2/include/libxml2",
+		"/home/jessie/Documents/my-ereader/third_party/install/android/arm64-v8a/poppler/include/poppler/qt6",
 		"/home/jessie/Documents/my-ereader/third_party/install/android/arm64-v8a/libarchive/include",
 		"/home/jessie/Documents/my-ereader/third_party/install/android/arm64-v8a/sqlite/include",
 		"/home/jessie/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",

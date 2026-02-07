@@ -4,6 +4,13 @@
         <item>arm64-v8a;xml2</item>
         <item>arm64-v8a;archive</item>
         <item>arm64-v8a;sqlite3</item>
+        <item>arm64-v8a;z</item>
+        <item>arm64-v8a;freetype</item>
+        <item>arm64-v8a;jpeg</item>
+        <item>arm64-v8a;png16</item>
+        <item>arm64-v8a;poppler</item>
+        <item>arm64-v8a;poppler-qt6</item>
+        <item>arm64-v8a;djvulibre</item>
     </array>
     <array name="load_local_libs">
         <item>arm64-v8a;libplugins_platforms_qtforandroid_arm64-v8a.so</item>

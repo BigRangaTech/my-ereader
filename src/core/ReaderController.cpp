@@ -6,7 +6,17 @@
 #include <QMetaObject>
 #include <QPointer>
 #include <QSettings>
+#include <QDir>
+#include <QStandardPaths>
+#include <QUrl>
+#include <QCryptographicHash>
 #include <algorithm>
+
+#ifdef Q_OS_ANDROID
+#include <QJniEnvironment>
+#include <QJniObject>
+#include <QtCore/qcoreapplication_platform.h>
+#endif
 
 #include "AsyncUtil.h"
 #include "include/AppPaths.h"
@@ -33,6 +43,142 @@ int preRenderPagesForFormat(const QString &format) {
   QSettings settings(path, QSettings::IniFormat);
   return clampInt(settings.value("render/pre_render_pages", 2).toInt(), 1, 12);
 }
+
+#ifdef Q_OS_ANDROID
+QString extensionFromMime(const QString &mime) {
+  const QString lower = mime.toLower();
+  if (lower == "application/epub+zip") return "epub";
+  if (lower == "application/pdf") return "pdf";
+  if (lower == "text/plain") return "txt";
+  if (lower == "application/x-mobipocket-ebook") return "mobi";
+  if (lower == "application/x-cbz" || lower == "application/vnd.comicbook+zip") return "cbz";
+  if (lower == "application/x-cbr" || lower == "application/vnd.comicbook-rar") return "cbr";
+  if (lower == "image/vnd.djvu") return "djvu";
+  return {};
+}
+
+QString resolveContentUriToCache(const QString &uri, QString *error) {
+  QJniEnvironment env;
+  const QJniObject context = QNativeInterface::QAndroidApplication::context();
+  if (!context.isValid()) {
+    if (error) *error = "Android context unavailable";
+    return {};
+  }
+
+  const QJniObject jUri = QJniObject::callStaticObjectMethod(
+      "android/net/Uri",
+      "parse",
+      "(Ljava/lang/String;)Landroid/net/Uri;",
+      QJniObject::fromString(uri).object<jstring>());
+  if (!jUri.isValid()) {
+    if (error) *error = "Invalid content URI";
+    return {};
+  }
+
+  const QJniObject resolver = context.callObjectMethod(
+      "getContentResolver", "()Landroid/content/ContentResolver;");
+  if (!resolver.isValid()) {
+    if (error) *error = "Content resolver unavailable";
+    return {};
+  }
+
+  QString displayName;
+  QString extension;
+
+  const QJniObject displayNameField = QJniObject::getStaticObjectField(
+      "android/provider/OpenableColumns",
+      "DISPLAY_NAME",
+      "Ljava/lang/String;");
+  jobjectArray projection = env->NewObjectArray(
+      1,
+      env->FindClass("java/lang/String"),
+      displayNameField.object<jstring>());
+  const QJniObject cursor = resolver.callObjectMethod(
+      "query",
+      "(Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)"
+      "Landroid/database/Cursor;",
+      jUri.object<jobject>(),
+      projection,
+      nullptr,
+      nullptr,
+      nullptr);
+  if (cursor.isValid()) {
+    const jboolean moved = cursor.callMethod<jboolean>("moveToFirst");
+    if (moved) {
+      const jint nameIndex = cursor.callMethod<jint>("getColumnIndex", "(Ljava/lang/String;)I",
+                                                     displayNameField.object<jstring>());
+      if (nameIndex >= 0) {
+        const QJniObject nameObj = cursor.callObjectMethod(
+            "getString", "(I)Ljava/lang/String;", nameIndex);
+        displayName = nameObj.toString();
+        extension = QFileInfo(displayName).suffix().toLower();
+      }
+    }
+    cursor.callMethod<void>("close");
+  }
+
+  if (extension.isEmpty()) {
+    const QJniObject mimeObj = resolver.callObjectMethod(
+        "getType", "(Landroid/net/Uri;)Ljava/lang/String;", jUri.object<jobject>());
+    extension = extensionFromMime(mimeObj.toString());
+  }
+
+  const QString cacheRoot = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+  if (cacheRoot.isEmpty()) {
+    if (error) *error = "Cache location unavailable";
+    return {};
+  }
+
+  const QString cacheDir = QDir(cacheRoot).filePath("imports");
+  QDir().mkpath(cacheDir);
+  const QString hash = QCryptographicHash::hash(uri.toUtf8(), QCryptographicHash::Sha1).toHex();
+  const QString suffix = extension.isEmpty() ? "bin" : extension;
+  const QString cachePath = QDir(cacheDir).filePath(QString("%1.%2").arg(hash, suffix));
+
+  if (QFileInfo::exists(cachePath) && QFileInfo(cachePath).size() > 0) {
+    return cachePath;
+  }
+
+  const QJniObject inputStream = resolver.callObjectMethod(
+      "openInputStream",
+      "(Landroid/net/Uri;)Ljava/io/InputStream;",
+      jUri.object<jobject>());
+  if (!inputStream.isValid()) {
+    if (error) *error = "Failed to open content stream";
+    return {};
+  }
+
+  QFile outFile(cachePath);
+  if (!outFile.open(QIODevice::WriteOnly)) {
+    if (error) *error = "Failed to write cache file";
+    inputStream.callMethod<void>("close");
+    return {};
+  }
+
+  const int bufferSize = 8192;
+  jbyteArray buffer = env->NewByteArray(bufferSize);
+  while (true) {
+    const jint read = inputStream.callMethod<jint>("read", "([B)I", buffer);
+    if (read <= 0) {
+      break;
+    }
+    jbyte *data = env->GetByteArrayElements(buffer, nullptr);
+    outFile.write(reinterpret_cast<const char *>(data), read);
+    env->ReleaseByteArrayElements(buffer, data, JNI_ABORT);
+  }
+  env->DeleteLocalRef(buffer);
+  outFile.close();
+  inputStream.callMethod<void>("close");
+
+  if (env->ExceptionCheck()) {
+    env->ExceptionClear();
+    if (error) *error = "Failed while reading content URI";
+    return {};
+  }
+
+  return cachePath;
+}
+#endif
 } // namespace
 
 ReaderController::ReaderController(QObject *parent) : QObject(parent) {
@@ -57,8 +203,18 @@ bool ReaderController::openFile(const QString &path) {
   }
 
   QString error;
-  auto document = m_registry->open(path, &error);
-  return applyDocument(std::move(document), path, &error);
+  QString resolvedPath = path;
+#ifdef Q_OS_ANDROID
+  if (resolvedPath.startsWith("content://")) {
+    resolvedPath = resolveContentUriToCache(path, &error);
+    if (resolvedPath.isEmpty()) {
+      setLastError(error.isEmpty() ? "Failed to open content URI" : error);
+      return false;
+    }
+  }
+#endif
+  auto document = m_registry->open(resolvedPath, &error);
+  return applyDocument(std::move(document), resolvedPath, &error);
 }
 
 void ReaderController::openFileAsync(const QString &path) {
@@ -68,9 +224,26 @@ void ReaderController::openFileAsync(const QString &path) {
   }
   setBusy(true);
   const int requestId = ++m_openRequestId;
-  const QString absPath = QFileInfo(path).absoluteFilePath();
-  runInBackground([this, requestId, absPath]() {
+  const QString requestedPath = path;
+  runInBackground([this, requestId, requestedPath]() {
     QString error;
+    QString resolvedPath = requestedPath;
+#ifdef Q_OS_ANDROID
+    if (resolvedPath.startsWith("content://")) {
+      resolvedPath = resolveContentUriToCache(requestedPath, &error);
+      if (resolvedPath.isEmpty()) {
+        QMetaObject::invokeMethod(this, [this, requestId, error]() {
+          if (requestId != m_openRequestId) {
+            return;
+          }
+          setLastError(error.isEmpty() ? "Failed to open content URI" : error);
+          setBusy(false);
+        }, Qt::QueuedConnection);
+        return;
+      }
+    }
+#endif
+    const QString absPath = QFileInfo(resolvedPath).absoluteFilePath();
     auto registry = FormatRegistry::createDefault();
     auto document = registry->open(absPath, &error);
     QMetaObject::invokeMethod(this, [this, requestId, absPath, error, doc = std::move(document)]() mutable {

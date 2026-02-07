@@ -12,3 +12,4 @@
 -qrcFiles
 /home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/rcc/qmake_Ereader.qrc
 /home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/rcc/ereader_raw_qml_0.qrc
+/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/rcc/djvutools.qrc

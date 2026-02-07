@@ -130,4 +130,11 @@ android-build/ereader.apk:  \
     /home/jessie/Documents/my-ereader/third_party/install/android/arm64-v8a/libxml2/lib/libxml2.so \
     /home/jessie/Documents/my-ereader/third_party/install/android/arm64-v8a/libarchive/lib/libarchive.so \
     /home/jessie/Documents/my-ereader/third_party/install/android/arm64-v8a/sqlite/lib/libsqlite3.so \
+    /home/jessie/Documents/my-ereader/third_party/install/android/arm64-v8a/zlib/lib/libz.so \
+    /home/jessie/Documents/my-ereader/third_party/install/android/arm64-v8a/freetype/lib/libfreetype.so \
+    /home/jessie/Documents/my-ereader/third_party/install/android/arm64-v8a/libjpeg-turbo/lib/libjpeg.so \
+    /home/jessie/Documents/my-ereader/third_party/install/android/arm64-v8a/libpng/lib/libpng16.so \
+    /home/jessie/Documents/my-ereader/third_party/install/android/arm64-v8a/poppler/lib/libpoppler.so \
+    /home/jessie/Documents/my-ereader/third_party/install/android/arm64-v8a/poppler/lib/libpoppler-qt6.so \
+    /home/jessie/Documents/my-ereader/third_party/install/android/arm64-v8a/djvulibre/lib/libdjvulibre.so \
     /home/jessie/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib//aarch64-linux-android/libc++_shared.so

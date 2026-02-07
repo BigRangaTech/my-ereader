@@ -4600,7 +4600,7 @@
                         {
                             "codegenResult": 2,
                             "column": 7,
-                            "durationMicroseconds": 0,
+                            "durationMicroseconds": 1000,
                             "functionName": "rebuildFilterOptions",
                             "line": 2935,
                             "message": "Cannot access value for name libraryModel"

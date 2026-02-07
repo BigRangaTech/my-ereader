@@ -19,17 +19,36 @@ ApplicationWindow {
   readonly property string monoFont: "JetBrains Mono"
   property var imageReaderItem: null
   readonly property bool isAndroid: Qt.platform.os === "android"
-  readonly property rect safeArea: Screen.availableGeometry
-  readonly property real safeLeft: Math.max(0, safeArea.x)
-  readonly property real safeTop: Math.max(0, safeArea.y)
-  readonly property real safeRight: Math.max(0, Screen.width - (safeArea.x + safeArea.width))
-  readonly property real safeBottom: Math.max(0, Screen.height - (safeArea.y + safeArea.height))
+  readonly property var screenGeom: Screen.geometry
+  readonly property var availGeom: Screen.availableGeometry
+  readonly property real safeLeft: (screenGeom && availGeom)
+                                  ? Math.max(0, availGeom.x - screenGeom.x)
+                                  : 0
+  readonly property real safeTop: (screenGeom && availGeom)
+                                 ? Math.max(0, availGeom.y - screenGeom.y)
+                                 : 0
+  readonly property real safeRight: (screenGeom && availGeom)
+                                   ? Math.max(0, (screenGeom.x + screenGeom.width) - (availGeom.x + availGeom.width))
+                                   : 0
+  readonly property real safeBottom: (screenGeom && availGeom)
+                                    ? Math.max(0, (screenGeom.y + screenGeom.height) - (availGeom.y + availGeom.height))
+                                    : 0
+  function computeSafeBottomPadding() {
+    if (!root.isAndroid) return safeBottom
+    var fallback = Math.round(16 * Screen.devicePixelRatio)
+    return Math.max(safeBottom, fallback)
+  }
+  readonly property real safeBottomPadding: computeSafeBottomPadding()
+  readonly property real safeTopPadding: root.isAndroid
+                                         ? Math.max(safeTop, Math.round(8 * Screen.devicePixelRatio))
+                                         : safeTop
   readonly property real uiBaseWidth: 1920
   readonly property real uiBaseHeight: 1080
   readonly property real uiMinWidth: 854
   readonly property real uiMinHeight: 480
   readonly property real uiMaxWidth: 3840
   readonly property real uiMaxHeight: 2160
+  property bool androidDebugOverlay: false
   readonly property real uiScale: isAndroid ? 1.0 : Math.min(
     Math.max(uiMinWidth, Math.min(uiMaxWidth, width)) / uiBaseWidth,
     Math.max(uiMinHeight, Math.min(uiMaxHeight, height)) / uiBaseHeight
@@ -64,52 +83,56 @@ ApplicationWindow {
     target: root.contentItem
     property: "scale"
     value: root.uiScale
+    when: !root.isAndroid
   }
 
   Binding {
     target: root.contentItem
     property: "transformOrigin"
     value: Item.TopLeft
+    when: !root.isAndroid
   }
 
   Binding {
     target: root.contentItem
     property: "width"
     value: root.width / root.uiScale
+    when: !root.isAndroid
   }
 
   Binding {
     target: root.contentItem
     property: "height"
     value: root.height / root.uiScale
+    when: !root.isAndroid
   }
 
   Binding {
     target: root.overlay ? root.overlay : null
     property: "scale"
     value: root.uiScale
-    when: root.overlay && root.overlay.parent !== root.contentItem
+    when: !root.isAndroid && (root.overlay ? (root.overlay.parent !== root.contentItem) : false)
   }
 
   Binding {
     target: root.overlay ? root.overlay : null
     property: "transformOrigin"
     value: Item.TopLeft
-    when: root.overlay && root.overlay.parent !== root.contentItem
+    when: !root.isAndroid && (root.overlay ? (root.overlay.parent !== root.contentItem) : false)
   }
 
   Binding {
     target: root.overlay ? root.overlay : null
     property: "width"
     value: root.width / root.uiScale
-    when: root.overlay && root.overlay.parent !== root.contentItem
+    when: !root.isAndroid && (root.overlay ? (root.overlay.parent !== root.contentItem) : false)
   }
 
   Binding {
     target: root.overlay ? root.overlay : null
     property: "height"
     value: root.height / root.uiScale
-    when: root.overlay && root.overlay.parent !== root.contentItem
+    when: !root.isAndroid && (root.overlay ? (root.overlay.parent !== root.contentItem) : false)
   }
 
   footer: TabBar {
@@ -119,7 +142,8 @@ ApplicationWindow {
     onCurrentIndexChanged: root.currentTab = currentIndex
     leftPadding: root.safeLeft
     rightPadding: root.safeRight
-    bottomPadding: root.safeBottom
+    bottomPadding: root.safeBottomPadding
+    height: implicitHeight + root.safeBottomPadding
 
     background: Rectangle {
       color: theme.panel
@@ -175,7 +199,7 @@ ApplicationWindow {
     anchors.left: parent.left
     anchors.top: parent.top
     anchors.leftMargin: 16 + root.safeLeft
-    anchors.topMargin: 16 + root.safeTop
+    anchors.topMargin: 16 + root.safeTopPadding
     z: 10
     onClicked: navDrawer.open()
   }
@@ -1202,7 +1226,9 @@ ApplicationWindow {
     id: fileDialog
     title: "Add book"
     fileMode: FileDialog.OpenFile
-    nameFilters: ["Books (*.epub *.pdf *.mobi *.azw *.azw3 *.fb2 *.cbz *.cbr *.djvu *.djv *.txt)"]
+    nameFilters: root.isAndroid
+                 ? ["All files (*)"]
+                 : ["Books (*.epub *.pdf *.mobi *.azw *.azw3 *.fb2 *.cbz *.cbr *.djvu *.djv *.txt)"]
     onAccepted: {
       const path = localPathFromUrl(selectedFile)
       if (path.length > 0) {
@@ -2077,8 +2103,8 @@ ApplicationWindow {
     modal: true
     standardButtons: Dialog.Ok
     closePolicy: Popup.NoAutoClose
-    width: Math.min(520, root.width - 80)
-    height: Math.min(520, root.height - 80)
+    width: root.isAndroid ? Math.min(420, root.width - 24) : Math.min(520, root.width - 80)
+    height: root.isAndroid ? Math.min(520, root.height - 24) : Math.min(520, root.height - 80)
 
     property string errorText: ""
     property bool noPassphrase: false
@@ -2132,16 +2158,16 @@ ApplicationWindow {
 
     footer: ColumnLayout {
       width: parent.width
-      spacing: 10
+      spacing: root.isAndroid ? 8 : 10
       Button {
         Layout.fillWidth: true
-        Layout.preferredHeight: 48
+        Layout.preferredHeight: root.isAndroid ? 44 : 48
         text: "Create"
         onClicked: setupDialog.handleAccept()
       }
       Button {
         Layout.fillWidth: true
-        Layout.preferredHeight: 48
+        Layout.preferredHeight: root.isAndroid ? 44 : 48
         text: "Cancel"
         onClicked: setupDialog.close()
       }
@@ -2151,10 +2177,19 @@ ApplicationWindow {
       color: theme.panel
       radius: 12
 
-      ColumnLayout {
+      ScrollView {
+        id: setupScroll
         anchors.fill: parent
-        anchors.margins: 20
-        spacing: 14
+        clip: true
+        ScrollBar.vertical.policy: ScrollBar.AsNeeded
+
+        ColumnLayout {
+          id: setupColumn
+          width: Math.max(1, setupScroll.availableWidth - (root.isAndroid ? 16 : 40))
+          anchors.top: parent.top
+          anchors.topMargin: (root.isAndroid ? 8 : 20) + root.safeTopPadding
+          anchors.horizontalCenter: parent.horizontalCenter
+          spacing: root.isAndroid ? 10 : 14
 
         Text {
           text: "Create a passphrase for your encrypted library."
@@ -2166,7 +2201,7 @@ ApplicationWindow {
         TextField {
           id: passField
           Layout.fillWidth: true
-          Layout.preferredHeight: 48
+          Layout.preferredHeight: root.isAndroid ? 44 : 48
           echoMode: TextInput.Password
           placeholderText: "Passphrase"
           enabled: !setupDialog.noPassphrase
@@ -2176,7 +2211,7 @@ ApplicationWindow {
         TextField {
           id: confirmField
           Layout.fillWidth: true
-          Layout.preferredHeight: 48
+          Layout.preferredHeight: root.isAndroid ? 44 : 48
           echoMode: TextInput.Password
           placeholderText: "Confirm passphrase"
           enabled: !setupDialog.noPassphrase
@@ -2280,6 +2315,12 @@ ApplicationWindow {
             font.family: root.uiFont
           }
         }
+
+        Item {
+          Layout.fillWidth: true
+          height: (root.isAndroid ? 12 : 20) + root.safeBottomPadding
+        }
+        }
       }
     }
   }
@@ -2290,8 +2331,8 @@ ApplicationWindow {
     modal: true
     standardButtons: Dialog.NoButton
     closePolicy: Popup.NoAutoClose
-    width: Math.min(520, root.width - 80)
-    height: Math.min(420, root.height - 80)
+    width: root.isAndroid ? Math.min(420, root.width - 24) : Math.min(520, root.width - 80)
+    height: root.isAndroid ? Math.min(420, root.height - 24) : Math.min(420, root.height - 80)
 
     property string errorText: ""
     property bool noPassphrase: false
@@ -2322,16 +2363,16 @@ ApplicationWindow {
 
     footer: ColumnLayout {
       width: parent.width
-      spacing: 10
+      spacing: root.isAndroid ? 8 : 10
       Button {
         Layout.fillWidth: true
-        Layout.preferredHeight: 48
+        Layout.preferredHeight: root.isAndroid ? 44 : 48
         text: "Unlock"
         onClicked: unlockDialog.handleAccept()
       }
       Button {
         Layout.fillWidth: true
-        Layout.preferredHeight: 48
+        Layout.preferredHeight: root.isAndroid ? 44 : 48
         text: "Cancel"
         onClicked: unlockDialog.close()
       }
@@ -2341,10 +2382,19 @@ ApplicationWindow {
       color: theme.panel
       radius: 12
 
-      ColumnLayout {
+      ScrollView {
+        id: unlockScroll
         anchors.fill: parent
-        anchors.margins: 20
-        spacing: 14
+        clip: true
+        ScrollBar.vertical.policy: ScrollBar.AsNeeded
+
+        ColumnLayout {
+          id: unlockColumn
+          width: Math.max(1, unlockScroll.availableWidth - (root.isAndroid ? 16 : 40))
+          anchors.top: parent.top
+          anchors.topMargin: (root.isAndroid ? 8 : 20) + root.safeTopPadding
+          anchors.horizontalCenter: parent.horizontalCenter
+          spacing: root.isAndroid ? 10 : 14
 
         Text {
           text: "Enter your passphrase."
@@ -2356,7 +2406,7 @@ ApplicationWindow {
         TextField {
           id: unlockField
           Layout.fillWidth: true
-          Layout.preferredHeight: 48
+          Layout.preferredHeight: root.isAndroid ? 44 : 48
           echoMode: TextInput.Password
           placeholderText: "Passphrase"
           enabled: !unlockDialog.noPassphrase
@@ -2421,6 +2471,12 @@ ApplicationWindow {
             font.family: root.uiFont
           }
         }
+
+        Item {
+          Layout.fillWidth: true
+          height: (root.isAndroid ? 12 : 20) + root.safeBottomPadding
+        }
+        }
       }
     }
   }
@@ -2431,8 +2487,8 @@ ApplicationWindow {
     modal: true
     standardButtons: Dialog.Ok
     closePolicy: Popup.NoAutoClose
-    width: Math.min(520, root.width - 80)
-    height: Math.min(360, root.height - 80)
+    width: root.isAndroid ? Math.min(420, root.width - 24) : Math.min(520, root.width - 80)
+    height: root.isAndroid ? Math.min(360, root.height - 24) : Math.min(360, root.height - 80)
 
     property string errorText: ""
 
@@ -2457,10 +2513,19 @@ ApplicationWindow {
       color: theme.panel
       radius: 12
 
-      ColumnLayout {
+      ScrollView {
+        id: lockScroll
         anchors.fill: parent
-        anchors.margins: 20
-        spacing: 14
+        clip: true
+        ScrollBar.vertical.policy: ScrollBar.AsNeeded
+
+        ColumnLayout {
+          id: lockColumn
+          width: Math.max(1, lockScroll.availableWidth - (root.isAndroid ? 16 : 40))
+          anchors.top: parent.top
+          anchors.topMargin: (root.isAndroid ? 8 : 20) + root.safeTopPadding
+          anchors.horizontalCenter: parent.horizontalCenter
+          spacing: root.isAndroid ? 10 : 14
 
         Text {
           text: "Re-enter passphrase to lock."
@@ -2472,7 +2537,7 @@ ApplicationWindow {
         TextField {
           id: lockField
           Layout.fillWidth: true
-          Layout.preferredHeight: 48
+          Layout.preferredHeight: root.isAndroid ? 44 : 48
           echoMode: TextInput.Password
           placeholderText: "Passphrase"
         }
@@ -2482,6 +2547,12 @@ ApplicationWindow {
           color: theme.accent
           font.pixelSize: 12
           font.family: root.uiFont
+        }
+
+        Item {
+          Layout.fillWidth: true
+          height: (root.isAndroid ? 12 : 20) + root.safeBottomPadding
+        }
         }
       }
     }
@@ -2582,6 +2653,7 @@ ApplicationWindow {
           Layout.fillHeight: true
           contentWidth: textBlock.width
           contentHeight: textBlock.height
+          flickableDirection: Flickable.VerticalFlick
           clip: true
 
           TextEdit {
@@ -2589,7 +2661,9 @@ ApplicationWindow {
             width: textScroll.width
             height: contentHeight
             readOnly: true
-            selectByMouse: true
+            selectByMouse: !root.isAndroid
+            activeFocusOnPress: !root.isAndroid
+            cursorVisible: !root.isAndroid
             text: root.displayTextForReader()
             color: theme.textPrimary
             font.pixelSize: root.textFontSizeFor(reader.currentFormat)
@@ -2616,11 +2690,14 @@ ApplicationWindow {
     Item {
       id: imageReaderView
       clip: true
+      property real controlBarHeight: root.isAndroid ? 44 : 72
+      property real controlFontSize: root.isAndroid ? 11 : 14
       property real zoom: 1.0
       property real minZoom: settings.comicMinZoom
       property real maxZoom: settings.comicMaxZoom
       property real zoomStep: settings.comicZoomStep
       property real pinchStartZoom: 1.0
+      property bool pinching: false
       property string fitMode: "page" // page, width, height
       property real baseScale: 1.0
       property real sourceW: 1.0
@@ -2701,14 +2778,19 @@ ApplicationWindow {
         if (spreadH <= 0) spreadH = sourceH
 
         var spacing = secondaryAvailable ? spreadSpacing : 0
-        var availableW = Math.max(1, imageFlick.width - spacing)
-        var availableH = Math.max(1, imageFlick.height)
+        var availableW = imageFlick.width - spacing
+        var availableH = imageFlick.height
+        if (!isFinite(availableW) || availableW <= 0) availableW = 1
+        if (!isFinite(availableH) || availableH <= 0) availableH = 1
         if (fitMode === "width") {
           baseScale = availableW / spreadW
         } else if (fitMode === "height") {
           baseScale = availableH / spreadH
         } else {
           baseScale = Math.min(availableW / spreadW, availableH / spreadH)
+        }
+        if (!isFinite(baseScale) || baseScale <= 0) {
+          baseScale = 1.0
         }
       }
       anchors.fill: parent
@@ -2739,63 +2821,87 @@ ApplicationWindow {
         }
       }
 
-      ColumnLayout {
+      Item {
         anchors.fill: parent
-        anchors.margins: 8
-        spacing: 8
 
         Rectangle {
-          Layout.fillWidth: true
-          Layout.preferredHeight: 72
+          id: imageControlsBar
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.top: parent.top
+          anchors.leftMargin: root.isAndroid ? 2 : 8
+          anchors.rightMargin: root.isAndroid ? 2 : 8
+          anchors.topMargin: root.isAndroid ? 2 : 8
+          height: imageReaderView.controlBarHeight
           radius: 8
           color: theme.panelHighlight
+          clip: true
 
-          RowLayout {
+          Flickable {
+            id: imageControlsFlick
             anchors.fill: parent
-            anchors.margins: 12
-            spacing: 12
+            anchors.margins: root.isAndroid ? 4 : 10
+            contentWidth: imageControlsRow.implicitWidth + 4
+            contentHeight: height
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            interactive: root.isAndroid
+
+            RowLayout {
+              id: imageControlsRow
+              height: imageControlsFlick.height
+              spacing: root.isAndroid ? 6 : 12
 
             Button {
               text: "Prev"
+              font.pixelSize: imageReaderView.controlFontSize
               onClicked: root.advanceComicImage(-1)
               enabled: canAdvance(-1)
             }
 
             Button {
               text: "Next"
+              font.pixelSize: imageReaderView.controlFontSize
               onClicked: root.advanceComicImage(1)
               enabled: canAdvance(1)
             }
 
             Button {
               text: "Fit Page"
+              font.pixelSize: imageReaderView.controlFontSize
               onClicked: applyFitMode("page")
             }
 
             Button {
               text: "Fit Width"
+              font.pixelSize: imageReaderView.controlFontSize
               onClicked: applyFitMode("width")
+              visible: !root.isAndroid
             }
 
             Button {
               text: "Fit Height"
+              font.pixelSize: imageReaderView.controlFontSize
               onClicked: applyFitMode("height")
+              visible: !root.isAndroid
             }
 
             Button {
               text: "-"
+              font.pixelSize: imageReaderView.controlFontSize
               onClicked: zoom = clampZoom(zoom - zoomStep)
             }
 
             Button {
               text: "+"
+              font.pixelSize: imageReaderView.controlFontSize
               onClicked: zoom = clampZoom(zoom + zoomStep)
             }
 
             Text {
               text: qsTr("%1%").arg(Math.round(zoom * 100))
               color: theme.textMuted
-              font.pixelSize: 12
+              font.pixelSize: imageReaderView.controlFontSize
               font.family: root.uiFont
             }
 
@@ -2820,12 +2926,13 @@ ApplicationWindow {
             }
 
             Slider {
-              Layout.preferredWidth: 180
+              Layout.preferredWidth: root.isAndroid ? 120 : 180
               from: 1
               to: Math.max(1, reader.imageCount)
               stepSize: 1
               value: reader.imageCount > 0 ? reader.currentImageIndex + 1 : 1
               onMoved: reader.goToImage(Math.max(0, Math.round(value - 1)))
+              visible: !root.isAndroid
             }
 
             Text {
@@ -2841,16 +2948,27 @@ ApplicationWindow {
               font.pixelSize: 12
               font.family: root.uiFont
             }
+            }
           }
         }
 
         Flickable {
           id: imageFlick
-          Layout.fillWidth: true
-          Layout.fillHeight: true
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.top: imageControlsBar.bottom
+          anchors.bottom: parent.bottom
+          anchors.leftMargin: root.isAndroid ? 2 : 8
+          anchors.rightMargin: root.isAndroid ? 2 : 8
+          anchors.bottomMargin: root.isAndroid ? 2 : 8
+          anchors.topMargin: root.isAndroid ? 4 : 8
           contentWidth: Math.max(imageRow.width, width)
           contentHeight: Math.max(imageRow.height, height)
+          interactive: imageReaderView.zoom > 1.01 || imageReaderView.pinching
           clip: true
+          boundsBehavior: Flickable.StopAtBounds
+          onWidthChanged: imageReaderView.recomputeBase()
+          onHeightChanged: imageReaderView.recomputeBase()
 
           WheelHandler {
             acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
@@ -2860,10 +2978,55 @@ ApplicationWindow {
             }
           }
 
-          PinchArea {
-            anchors.fill: parent
-            onPinchStarted: pinchStartZoom = zoom
-            onPinchUpdated: zoom = clampZoom(pinchStartZoom * pinch.scale)
+          PinchHandler {
+            id: comicPinchHandler
+            target: null
+            enabled: reader.hasImages
+            minimumScale: imageReaderView.minZoom
+            maximumScale: imageReaderView.maxZoom
+            grabPermissions: PointerHandler.CanTakeOverFromAnything
+            onActiveChanged: {
+              imageReaderView.pinching = active
+              if (active) {
+                imageReaderView.pinchStartZoom = imageReaderView.zoom
+              }
+            }
+            onScaleChanged: {
+              if (active) {
+                imageReaderView.zoom = imageReaderView.clampZoom(imageReaderView.pinchStartZoom * scale)
+              }
+            }
+          }
+
+          DragHandler {
+            id: comicSwipeHandler
+            target: null
+            enabled: reader.hasImages && !pinching && zoom <= 1.01
+            xAxis.enabled: true
+            yAxis.enabled: false
+            minimumPointCount: 1
+            maximumPointCount: 1
+            grabPermissions: PointerHandler.CanTakeOverFromAnything
+
+            property real startX: 0
+            property real startY: 0
+
+            onActiveChanged: {
+              if (active) {
+                startX = centroid.position.x
+                startY = centroid.position.y
+                return
+              }
+              const dx = centroid.position.x - startX
+              const dy = centroid.position.y - startY
+              if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
+                if (dx < 0) {
+                  root.advanceComicImage(1)
+                } else {
+                  root.advanceComicImage(-1)
+                }
+              }
+            }
           }
 
           TapHandler {
@@ -2902,8 +3065,12 @@ ApplicationWindow {
             layoutDirection: settings.comicReadingDirection === "rtl"
                             ? Qt.RightToLeft
                             : Qt.LeftToRight
-            x: Math.max(0, (imageFlick.width - width) / 2)
-            y: Math.max(0, (imageFlick.height - height) / 2)
+            x: (isFinite(width) && isFinite(imageFlick.width))
+               ? Math.max(0, (imageFlick.width - width) / 2)
+               : 0
+            y: (isFinite(height) && isFinite(imageFlick.height))
+               ? Math.max(0, (imageFlick.height - height) / 2)
+               : 0
 
             Image {
               id: imageItem
@@ -2979,8 +3146,30 @@ ApplicationWindow {
             }
           }
 
-          ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
-          ScrollBar.horizontal: ScrollBar { policy: ScrollBar.AsNeeded }
+          // ScrollBars disabled on Android builds to avoid qmlcachegen issues.
+        }
+
+        Rectangle {
+          visible: root.androidDebugOverlay
+          anchors.left: imageFlick.left
+          anchors.right: imageFlick.right
+          anchors.top: imageFlick.top
+          height: root.isAndroid ? 90 : 0
+          radius: 8
+          color: "#80000000"
+          z: 10
+
+          Text {
+            anchors.fill: parent
+            anchors.margins: 8
+            color: "#ffffff"
+            font.pixelSize: 11
+            font.family: root.monoFont
+            text: "flick=" + Math.round(imageFlick.width) + "x" + Math.round(imageFlick.height)
+                  + " row=" + Math.round(imageRow.width) + "x" + Math.round(imageRow.height)
+                  + " base=" + baseScale.toFixed(3) + " zoom=" + zoom.toFixed(2)
+                  + " src=" + Math.round(sourceW) + "x" + Math.round(sourceH)
+          }
         }
       }
     }
@@ -2991,8 +3180,8 @@ ApplicationWindow {
     anchors.fill: parent
     anchors.leftMargin: root.safeLeft
     anchors.rightMargin: root.safeRight
-    anchors.topMargin: root.safeTop
-    anchors.bottomMargin: (bottomTabs.visible ? bottomTabs.height : 0) + root.safeBottom
+    anchors.topMargin: root.safeTopPadding
+    anchors.bottomMargin: bottomTabs.visible ? 0 : root.safeBottomPadding
 
     StackLayout {
       id: mainPages
@@ -3175,15 +3364,18 @@ ApplicationWindow {
           height: parent ? parent.height : 0
 
           ScrollView {
+            id: settingsScroll
             anchors.fill: parent
-            contentWidth: parent.width
+            clip: true
+            ScrollBar.vertical.policy: ScrollBar.AsNeeded
 
         ColumnLayout {
-          anchors.left: parent.left
-          anchors.right: parent.right
+          id: settingsColumn
+          width: Math.max(1, settingsScroll.availableWidth - (root.isAndroid ? 16 : 44))
           anchors.top: parent.top
-          anchors.margins: 22
-          spacing: 20
+          anchors.topMargin: (root.isAndroid ? 8 : 22) + root.safeTopPadding
+          x: Math.max(0, (settingsScroll.availableWidth - width) / 2)
+          spacing: root.isAndroid ? 12 : 20
 
           Text {
             text: "Settings"
@@ -3196,8 +3388,10 @@ ApplicationWindow {
             Layout.fillWidth: true
             radius: 16
             color: theme.panel
+            implicitHeight: syncPanelContent.implicitHeight + 36
 
             ColumnLayout {
+              id: syncPanelContent
               anchors.fill: parent
               anchors.margins: 18
               spacing: 14
@@ -3281,8 +3475,10 @@ ApplicationWindow {
             Layout.fillWidth: true
             radius: 16
             color: theme.panel
+            implicitHeight: securityPanelContent.implicitHeight + 36
 
             ColumnLayout {
+              id: securityPanelContent
               anchors.fill: parent
               anchors.margins: 18
               spacing: 14
@@ -3348,8 +3544,10 @@ ApplicationWindow {
             Layout.fillWidth: true
             radius: 16
             color: theme.panel
+            implicitHeight: readingPanelContent.implicitHeight + 36
 
             ColumnLayout {
+              id: readingPanelContent
               anchors.fill: parent
               anchors.margins: 18
               spacing: 14
@@ -3383,8 +3581,10 @@ ApplicationWindow {
             Layout.fillWidth: true
             radius: 16
             color: theme.panel
+            implicitHeight: systemPanelContent.implicitHeight + 36
 
             ColumnLayout {
+              id: systemPanelContent
               anchors.fill: parent
               anchors.margins: 18
               spacing: 14
@@ -3420,6 +3620,11 @@ ApplicationWindow {
                 onClicked: aboutDialog.open()
               }
             }
+          }
+
+          Item {
+            Layout.fillWidth: true
+            height: (root.isAndroid ? 12 : 22) + root.safeBottomPadding
           }
         }
           }
@@ -4599,23 +4804,35 @@ ApplicationWindow {
         }
       }
 
-      Column {
+      Item {
         anchors.fill: parent
-        anchors.margins: 24
-        spacing: 16
+        anchors.margins: root.isAndroid ? 2 : 24
 
         Rectangle {
-          height: 64
+          id: readerTopBar
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.top: parent.top
+          height: root.isAndroid ? 48 : 64
           radius: 16
           color: theme.panel
-          width: parent.width
           z: 2
           visible: root.readerChromeVisible
 
-          RowLayout {
+          Flickable {
+            id: readerTopFlick
             anchors.fill: parent
-            anchors.margins: 18
-            spacing: 16
+            anchors.margins: root.isAndroid ? 8 : 18
+            contentWidth: readerTopRow.implicitWidth + 4
+            contentHeight: height
+            boundsBehavior: Flickable.StopAtBounds
+            interactive: root.isAndroid
+            clip: true
+
+            RowLayout {
+              id: readerTopRow
+              height: readerTopFlick.height
+              spacing: root.isAndroid ? 8 : 16
 
             Button {
               text: "Back"
@@ -4629,7 +4846,7 @@ ApplicationWindow {
             Text {
               text: reader.currentTitle
               color: theme.textPrimary
-              font.pixelSize: 18
+              font.pixelSize: root.isAndroid ? 16 : 18
               font.family: root.uiFont
               elide: Text.ElideRight
               Layout.fillWidth: true
@@ -4654,14 +4871,19 @@ ApplicationWindow {
               font.pixelSize: 20
               onClicked: readerMenu.open()
             }
+            }
           }
         }
 
         Rectangle {
+          id: readerFrame
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.top: root.readerChromeVisible ? readerTopBar.bottom : parent.top
+          anchors.bottom: parent.bottom
+          anchors.topMargin: root.readerChromeVisible ? (root.isAndroid ? 6 : 16) : 0
           radius: 18
           color: theme.panel
-          width: parent.width
-          height: parent.height - 96
           clip: true
           z: 1
 
@@ -4670,10 +4892,47 @@ ApplicationWindow {
             onTapped: root.readerChromeVisible = !root.readerChromeVisible
           }
 
+          DragHandler {
+            id: readerSwipeHandler
+            target: null
+            enabled: !reader.hasImages
+            xAxis.enabled: true
+            yAxis.enabled: false
+            minimumPointCount: 1
+            maximumPointCount: 1
+            grabPermissions: PointerHandler.CanTakeOverFromAnything
+
+            property real startX: 0
+            property real startY: 0
+
+            onActiveChanged: {
+              if (active) {
+                startX = centroid.position.x
+                startY = centroid.position.y
+                return
+              }
+              const dx = centroid.position.x - startX
+              const dy = centroid.position.y - startY
+              if (reader.hasImages && imageReaderItem && imageReaderItem.zoom > 1.01) {
+                return
+              }
+              if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
+                if (dx < 0) {
+                  root.advanceReader(1)
+                } else {
+                  root.advanceReader(-1)
+                }
+              }
+            }
+          }
+
           Loader {
             id: readerContent
             anchors.fill: parent
-            anchors.margins: 12
+            anchors.leftMargin: root.isAndroid ? 2 : 12
+            anchors.rightMargin: root.isAndroid ? 2 : 12
+            anchors.topMargin: root.isAndroid ? 2 : 12
+            anchors.bottomMargin: root.isAndroid ? 2 : 12
             active: true
             clip: true
             sourceComponent: reader.hasImages ? imageReader : textReader
@@ -4686,16 +4945,27 @@ ApplicationWindow {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.bottom: parent.bottom
-            anchors.margins: 12
-            height: 68
+            anchors.margins: root.isAndroid ? 4 : 12
+            height: root.isAndroid ? 52 : 68
             radius: 14
             color: theme.panel
-            visible: root.readerChromeVisible
+            visible: root.readerChromeVisible && !reader.hasImages
+            z: 3
 
-            RowLayout {
+            Flickable {
+              id: readerBottomFlick
               anchors.fill: parent
-              anchors.margins: 12
-              spacing: 10
+              anchors.margins: root.isAndroid ? 6 : 12
+              contentWidth: readerBottomRow.implicitWidth + 4
+              contentHeight: height
+              clip: true
+              boundsBehavior: Flickable.StopAtBounds
+              interactive: root.isAndroid
+
+              RowLayout {
+                id: readerBottomRow
+                height: readerBottomFlick.height
+                spacing: root.isAndroid ? 8 : 10
 
               Button {
                 text: "Prev"
@@ -4739,6 +5009,7 @@ ApplicationWindow {
                   when: !readerPageField.activeFocus
                 }
                 visible: root.readerPaginationCount() > 0
+              }
               }
             }
           }

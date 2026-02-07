@@ -162,8 +162,13 @@ build_poppler() {
   fi
   local qt_cmake_root="$QT_ANDROID_PREFIX/lib/cmake"
   local qt_cmake_dir="$qt_cmake_root/Qt6"
+  local qt_widgets_dir="$qt_cmake_root/Qt6Widgets"
   if [[ ! -d "$qt_cmake_dir" ]]; then
     echo "Qt6 CMake config not found at $qt_cmake_dir" >&2
+    return 1
+  fi
+  if [[ ! -d "$qt_widgets_dir" ]]; then
+    echo "Qt6Widgets CMake config not found at $qt_widgets_dir" >&2
     return 1
   fi
   local freetype_prefix="$INSTALL_ROOT/freetype"
@@ -174,6 +179,7 @@ build_poppler() {
     -DQt6Core_DIR="$qt_cmake_root/Qt6Core" \
     -DQt6Gui_DIR="$qt_cmake_root/Qt6Gui" \
     -DQt6Xml_DIR="$qt_cmake_root/Qt6Xml" \
+    -DQt6Widgets_DIR="$qt_widgets_dir" \
     -DBUILD_QT6_TESTS=OFF \
     -DBUILD_GTK_TESTS=OFF \
     -DBUILD_CPP_TESTS=OFF \
@@ -189,6 +195,8 @@ build_poppler() {
     -DENABLE_QT6=ON \
     -DENABLE_NSS3=OFF \
     -DENABLE_LIBTIFF=OFF \
+    -DENABLE_LIBOPENJPEG=none \
+    -DENABLE_LCMS=OFF \
     -DENABLE_DCTDECODER=libjpeg \
     -DFREETYPE_INCLUDE_DIRS="$freetype_prefix/include/freetype2" \
     -DFREETYPE_LIBRARY="$freetype_prefix/lib/libfreetype.so" \

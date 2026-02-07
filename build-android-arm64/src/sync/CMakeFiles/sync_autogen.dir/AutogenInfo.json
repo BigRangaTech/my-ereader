@@ -21,7 +21,14 @@
 	"HEADER_EXTENSIONS" : [ "h", "hh", "h++", "hm", "hpp", "hxx", "in", "txx" ],
 	"INCLUDE_DIR" : "/home/jessie/Documents/my-ereader/build-android-arm64/src/sync/sync_autogen/include",
 	"MOC_COMPILATION_FILE" : "/home/jessie/Documents/my-ereader/build-android-arm64/src/sync/sync_autogen/mocs_compilation.cpp",
-	"MOC_DEFINITIONS" : [ "HAVE_LIBARCHIVE=1", "QT_CORE_LIB", "QT_NETWORK_LIB", "QT_NO_DEBUG" ],
+	"MOC_DEFINITIONS" : 
+	[
+		"HAVE_LIBARCHIVE=1",
+		"HAVE_POPPLER_QT6=1",
+		"QT_CORE_LIB",
+		"QT_NETWORK_LIB",
+		"QT_NO_DEBUG"
+	],
 	"MOC_DEPEND_FILTERS" : 
 	[
 		[

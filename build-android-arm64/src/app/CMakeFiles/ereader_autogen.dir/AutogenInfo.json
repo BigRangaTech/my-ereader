@@ -10,6 +10,11 @@
 		"/home/jessie/Qt/6.10.2/android_arm64_v8a/lib/cmake/Qt6Core/Qt6CoreConfigureFileTemplate.in",
 		"/home/jessie/Qt/6.10.2/android_arm64_v8a/lib/cmake/Qt6Qml/Qt6QmlModuleDirMappingTemplate.qrc.in",
 		"/home/jessie/Qt/6.10.2/android_arm64_v8a/lib/cmake/Qt6Core/Qt6CoreConfigureFileTemplate.in",
+		"/home/jessie/Qt/6.10.2/android_arm64_v8a/lib/cmake/Qt6Core/Qt6CoreConfigureFileTemplate.in",
+		"/usr/share/cmake-3.31/Modules/FindPython3.cmake",
+		"/usr/share/cmake-3.31/Modules/FindPython/Support.cmake",
+		"/usr/share/cmake-3.31/Modules/FindPackageHandleStandardArgs.cmake",
+		"/usr/share/cmake-3.31/Modules/FindPackageMessage.cmake",
 		"/home/jessie/Qt/6.10.2/android_arm64_v8a/lib/cmake/Qt6Qml/Qt6qmldirTemplate.cmake.in",
 		"/home/jessie/Qt/6.10.2/android_arm64_v8a/lib/cmake/Qt6/QtInstallPaths.cmake",
 		"/home/jessie/Qt/6.10.2/android_arm64_v8a/lib/cmake/Qt6/QtInstallPaths.cmake",
@@ -31,6 +36,7 @@
 	[
 		"HAVE_LIBARCHIVE=1",
 		"HAVE_MONOCYPHER=1",
+		"HAVE_POPPLER_QT6=1",
 		"QT_CORE_LIB",
 		"QT_GUI_LIB",
 		"QT_NETWORK_LIB",
@@ -73,6 +79,7 @@
 		"/home/jessie/Qt/6.10.2/android_arm64_v8a/include/QtSql",
 		"/home/jessie/Qt/6.10.2/android_arm64_v8a/include/QtXml",
 		"/home/jessie/Documents/my-ereader/third_party/install/android/arm64-v8a/libxml2/include/libxml2",
+		"/home/jessie/Documents/my-ereader/third_party/install/android/arm64-v8a/poppler/include/poppler/qt6",
 		"/home/jessie/Documents/my-ereader/third_party/install/android/arm64-v8a/libarchive/include",
 		"/home/jessie/Documents/my-ereader/third_party/install/android/arm64-v8a/sqlite/include",
 		"/home/jessie/Android/Sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
@@ -105,6 +112,7 @@
 	"MOC_RELAXED_MODE" : false,
 	"MOC_SKIP" : 
 	[
+		"/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/rcc/qrc_djvutools.cpp",
 		"/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/rcc/qrc_ereader_raw_qml_0.cpp",
 		"/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/rcc/qrc_qmake_Ereader.cpp",
 		"/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp",
@@ -129,6 +137,7 @@
 	"UIC_SEARCH_PATHS" : [],
 	"UIC_SKIP" : 
 	[
+		"/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/rcc/qrc_djvutools.cpp",
 		"/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/rcc/qrc_ereader_raw_qml_0.cpp",
 		"/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/rcc/qrc_qmake_Ereader.cpp",
 		"/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.rcc/qmlcache/ereader_qml/MainAndroid_qml.cpp",

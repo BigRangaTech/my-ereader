@@ -6,4 +6,8 @@ ereader_autogen/timestamp: \
 	/home/jessie/Qt/6.10.2/android_arm64_v8a/lib/cmake/Qt6Core/Qt6CoreConfigureFileTemplate.in \
 	/home/jessie/Qt/6.10.2/android_arm64_v8a/lib/cmake/Qt6Qml/Qt6QmlModuleDirMappingTemplate.qrc.in \
 	/home/jessie/Qt/6.10.2/android_arm64_v8a/lib/cmake/Qt6Qml/Qt6qmldirTemplate.cmake.in \
+	/usr/share/cmake-3.31/Modules/FindPackageHandleStandardArgs.cmake \
+	/usr/share/cmake-3.31/Modules/FindPackageMessage.cmake \
+	/usr/share/cmake-3.31/Modules/FindPython/Support.cmake \
+	/usr/share/cmake-3.31/Modules/FindPython3.cmake \
 	/usr/bin/cmake

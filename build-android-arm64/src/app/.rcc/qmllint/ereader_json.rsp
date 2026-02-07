@@ -11,6 +11,8 @@
 /home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/rcc/qmake_Ereader.qrc
 --resource
 /home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/rcc/ereader_raw_qml_0.qrc
+--resource
+/home/jessie/Documents/my-ereader/build-android-arm64/src/app/.qt/rcc/djvutools.qrc
 /home/jessie/Documents/my-ereader/src/app/qml/Main.qml
 /home/jessie/Documents/my-ereader/src/app/qml/MainAndroid.qml
 /home/jessie/Documents/my-ereader/src/app/qml/Theme.qml

@@ -96,12 +96,19 @@ QString formatExtension(const QString &format) {
 QString findTool(const QString &name) {
   const QString root = repoRoot();
   const QString appDir = QCoreApplication::applicationDirPath();
+#ifdef Q_OS_ANDROID
+  const QString extractedDir = QDir(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation))
+      .filePath("djvulibre/bin");
+#endif
   const QStringList searchDirs = {
       QDir(root).filePath("third_party/install/djvulibre/bin"),
       QDir(root).filePath("third_party/djvulibre/bin"),
       QDir(root).filePath("third_party/djvulibre-bin/bin"),
       QDir(appDir).filePath("tools/djvulibre/bin"),
       QDir(appDir).filePath("djvulibre/bin"),
+#ifdef Q_OS_ANDROID
+      extractedDir,
+#endif
   };
 
   for (const QString &dir : searchDirs) {
@@ -110,6 +117,28 @@ QString findTool(const QString &name) {
       return candidate;
     }
   }
+#ifdef Q_OS_ANDROID
+  const QString resourcePath = QString(":/djvulibre/bin/%1").arg(name);
+  if (QFileInfo::exists(resourcePath)) {
+    QDir().mkpath(extractedDir);
+    const QString outPath = QDir(extractedDir).filePath(name);
+    QFile outFile(outPath);
+    if (!outFile.exists() || outFile.size() == 0) {
+      QFile inFile(resourcePath);
+      if (inFile.open(QIODevice::ReadOnly) && outFile.open(QIODevice::WriteOnly)) {
+        outFile.write(inFile.readAll());
+        outFile.close();
+        inFile.close();
+        outFile.setPermissions(QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner |
+                               QFile::ReadGroup | QFile::ExeGroup |
+                               QFile::ReadOther | QFile::ExeOther);
+      }
+    }
+    if (QFileInfo::exists(outPath)) {
+      return outPath;
+    }
+  }
+#endif
   return QStandardPaths::findExecutable(name);
 }
 
