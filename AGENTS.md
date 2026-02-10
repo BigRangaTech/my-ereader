@@ -36,8 +36,10 @@ Active work centers on UI, sync, security/vault, and Flatpak packaging.
 
 ## Current task in progress
 Desktop Settings UI refactor completed:
-- Per-format settings live in `formatSettingsDialog`.
-- `keyboardDialog` and `formatSettingsDialog` are wired in `Main.qml`.
+- `settingsDialog` is now a short panel with buttons to open dedicated dialogs.
+- New desktop dialogs: `syncSettingsDialog`, `securitySettingsDialog`, `ttsSettingsDialog`, `updatesSettingsDialog`, `advancedSettingsDialog`.
+- Per-format settings live in `formatSettingsDialog` and keyboard shortcuts in `keyboardDialog`.
+- Desktop sub-settings dialogs now have footer `Back` + `Close` buttons (back returns to main Settings).
 
 ## Android UI notes
 - If the system file picker greys out CBZ/CBR, Android SAF may be filtering by MIME type. Current workaround is `All files (*)` on Android.

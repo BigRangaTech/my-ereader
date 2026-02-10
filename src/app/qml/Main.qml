@@ -4400,7 +4400,7 @@ ApplicationWindow {
     id: keyboardDialog
     title: "Keyboard Shortcuts"
     modal: true
-    standardButtons: Dialog.Close
+    standardButtons: Dialog.NoButton
     width: Math.min(640, root.width - 80)
     height: Math.min(520, root.height - 80)
 
@@ -4722,13 +4722,32 @@ ApplicationWindow {
         }
       }
     }
+
+    footer: RowLayout {
+      width: parent.width
+      spacing: 10
+      Button {
+        text: "Back"
+        font.family: root.uiFont
+        onClicked: {
+          keyboardDialog.close()
+          settingsDialog.open()
+        }
+      }
+      Item { Layout.fillWidth: true }
+      Button {
+        text: "Close"
+        font.family: root.uiFont
+        onClicked: keyboardDialog.close()
+      }
+    }
   }
 
   Dialog {
     id: formatSettingsDialog
     title: "Format Settings"
     modal: true
-    standardButtons: Dialog.Close
+    standardButtons: Dialog.NoButton
     property int tabIndex: 0
     width: Math.min(860, root.width - 80)
     height: Math.min(720, root.height - 80)
@@ -6774,24 +6793,27 @@ ApplicationWindow {
               height: 1
               color: theme.panelHighlight
             }
-
-            RowLayout {
-              Layout.fillWidth: true
-              spacing: 12
-
-              Button {
-                text: "Back to Settings"
-                onClicked: {
-                  formatSettingsDialog.close()
-                  settingsDialog.open()
-                }
-                font.family: root.uiFont
-              }
-
-              Item { Layout.fillWidth: true }
-            }
           }
         }
+      }
+    }
+
+    footer: RowLayout {
+      width: parent.width
+      spacing: 10
+      Button {
+        text: "Back"
+        font.family: root.uiFont
+        onClicked: {
+          formatSettingsDialog.close()
+          settingsDialog.open()
+        }
+      }
+      Item { Layout.fillWidth: true }
+      Button {
+        text: "Close"
+        font.family: root.uiFont
+        onClicked: formatSettingsDialog.close()
       }
     }
   }
@@ -6809,90 +6831,298 @@ ApplicationWindow {
       radius: 16
 
       ScrollView {
+        id: settingsPanelScroll
+        anchors.fill: parent
+        anchors.margins: 12
+
+        ColumnLayout {
+          width: settingsPanelScroll.availableWidth
+          spacing: 18
+
+          Text {
+            text: "Settings"
+            color: theme.textPrimary
+            font.pixelSize: 22
+            font.family: root.uiFont
+          }
+
+          Rectangle {
+            id: readingPanel
+            Layout.fillWidth: true
+            implicitHeight: readingPanelContent.implicitHeight + 32
+            radius: 12
+            color: theme.panelHighlight
+
+            ColumnLayout {
+              id: readingPanelContent
+              anchors.fill: parent
+              anchors.margins: 16
+              spacing: 10
+
+              Text {
+                text: "Reading"
+                color: theme.textPrimary
+                font.pixelSize: 16
+                font.family: root.uiFont
+              }
+
+              RowLayout {
+                Layout.fillWidth: true
+                spacing: 10
+
+                Button {
+                  text: "Format settings"
+                  Layout.fillWidth: true
+                  font.family: root.uiFont
+                  onClicked: {
+                    settingsDialog.close()
+                    formatSettingsDialog.open()
+                  }
+                }
+
+                Button {
+                  text: "Keyboard shortcuts"
+                  Layout.fillWidth: true
+                  font.family: root.uiFont
+                  onClicked: {
+                    settingsDialog.close()
+                    keyboardDialog.open()
+                  }
+                }
+              }
+            }
+          }
+
+          Rectangle {
+            id: syncPanel
+            Layout.fillWidth: true
+            implicitHeight: syncPanelContent.implicitHeight + 32
+            radius: 12
+            color: theme.panelHighlight
+
+            ColumnLayout {
+              id: syncPanelContent
+              anchors.fill: parent
+              anchors.margins: 16
+              spacing: 10
+
+              Text {
+                text: "Sync"
+                color: theme.textPrimary
+                font.pixelSize: 16
+                font.family: root.uiFont
+              }
+
+              Text {
+                text: syncManager.enabled ? syncManager.status : "Sync disabled"
+                color: theme.textMuted
+                font.pixelSize: 12
+                font.family: root.uiFont
+                visible: text.length > 0
+              }
+
+              Button {
+                text: "Open sync settings"
+                Layout.fillWidth: true
+                font.family: root.uiFont
+                onClicked: {
+                  settingsDialog.close()
+                  syncSettingsDialog.open()
+                }
+              }
+            }
+          }
+
+          Rectangle {
+            id: securityPanel
+            Layout.fillWidth: true
+            implicitHeight: securityPanelContent.implicitHeight + 32
+            radius: 12
+            color: theme.panelHighlight
+
+            ColumnLayout {
+              id: securityPanelContent
+              anchors.fill: parent
+              anchors.margins: 16
+              spacing: 10
+
+              Text {
+                text: "Security"
+                color: theme.textPrimary
+                font.pixelSize: 16
+                font.family: root.uiFont
+              }
+
+              Text {
+                text: settings.autoLockEnabled ? "Auto-lock enabled" : "Auto-lock disabled"
+                color: theme.textMuted
+                font.pixelSize: 12
+                font.family: root.uiFont
+              }
+
+              Button {
+                text: "Open security settings"
+                Layout.fillWidth: true
+                font.family: root.uiFont
+                onClicked: {
+                  settingsDialog.close()
+                  securitySettingsDialog.open()
+                }
+              }
+            }
+          }
+
+          Rectangle {
+            id: ttsPanel
+            Layout.fillWidth: true
+            implicitHeight: ttsPanelContent.implicitHeight + 32
+            radius: 12
+            color: theme.panelHighlight
+
+            ColumnLayout {
+              id: ttsPanelContent
+              anchors.fill: parent
+              anchors.margins: 16
+              spacing: 10
+
+              Text {
+                text: "Text To Speech"
+                color: theme.textPrimary
+                font.pixelSize: 16
+                font.family: root.uiFont
+              }
+
+              Button {
+                text: "Open TTS settings"
+                Layout.fillWidth: true
+                font.family: root.uiFont
+                onClicked: {
+                  settingsDialog.close()
+                  ttsSettingsDialog.open()
+                }
+              }
+            }
+          }
+
+          Rectangle {
+            id: updatesPanel
+            Layout.fillWidth: true
+            implicitHeight: updatesPanelContent.implicitHeight + 32
+            radius: 12
+            color: theme.panelHighlight
+
+            ColumnLayout {
+              id: updatesPanelContent
+              anchors.fill: parent
+              anchors.margins: 16
+              spacing: 10
+
+              Text {
+                text: "Updates"
+                color: theme.textPrimary
+                font.pixelSize: 16
+                font.family: root.uiFont
+              }
+
+              Text {
+                text: updateManager.status
+                color: theme.textMuted
+                font.pixelSize: 12
+                font.family: root.uiFont
+                visible: updateManager.status.length > 0
+              }
+
+              RowLayout {
+                Layout.fillWidth: true
+                spacing: 10
+
+                Button {
+                  text: "Manage updates"
+                  Layout.fillWidth: true
+                  font.family: root.uiFont
+                  onClicked: {
+                    settingsDialog.close()
+                    updatesSettingsDialog.open()
+                  }
+                }
+
+                Button {
+                  text: "Details"
+                  Layout.fillWidth: true
+                  font.family: root.uiFont
+                  onClicked: updateDialog.open()
+                }
+              }
+            }
+          }
+
+          Rectangle {
+            id: systemPanel
+            Layout.fillWidth: true
+            implicitHeight: systemPanelContent.implicitHeight + 32
+            radius: 12
+            color: theme.panelHighlight
+
+            ColumnLayout {
+              id: systemPanelContent
+              anchors.fill: parent
+              anchors.margins: 16
+              spacing: 10
+
+              Text {
+                text: "System"
+                color: theme.textPrimary
+                font.pixelSize: 16
+                font.family: root.uiFont
+              }
+
+              RowLayout {
+                Layout.fillWidth: true
+                spacing: 10
+
+                Button {
+                  text: "Advanced settings"
+                  Layout.fillWidth: true
+                  font.family: root.uiFont
+                  onClicked: {
+                    settingsDialog.close()
+                    advancedSettingsDialog.open()
+                  }
+                }
+
+                Button {
+                  text: "About"
+                  Layout.fillWidth: true
+                  font.family: root.uiFont
+                  onClicked: aboutDialog.open()
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Dialog {
+    id: syncSettingsDialog
+    title: "Sync Settings"
+    modal: true
+    standardButtons: Dialog.NoButton
+    width: Math.min(860, root.width - 80)
+    height: Math.min(720, root.height - 80)
+
+    contentItem: Rectangle {
+      color: theme.panel
+      radius: 16
+
+      ScrollView {
         anchors.fill: parent
         anchors.margins: 12
 
         ColumnLayout {
           width: parent.width
           spacing: 18
-
-          Text {
-            text: "Updates"
-            color: theme.textPrimary
-            font.pixelSize: 20
-            font.family: root.uiFont
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Check for updates"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 160
-            }
-
-            Button {
-              text: "Check"
-              font.family: root.uiFont
-              enabled: updateManager.canUpdate
-              onClicked: {
-                updateDialog.open()
-                updateManager.checkForUpdates()
-              }
-            }
-
-            Button {
-              text: "Apply"
-              font.family: root.uiFont
-              enabled: updateManager.canUpdate && updateManager.state === UpdateManager.UpdateAvailable
-              onClicked: {
-                updateDialog.open()
-                updateManager.applyUpdate()
-              }
-            }
-
-            Text {
-              text: updateManager.status
-              color: theme.textMuted
-              font.pixelSize: 12
-              font.family: root.uiFont
-            }
-          }
-
-          Rectangle {
-            Layout.fillWidth: true
-            height: 1
-            color: theme.panelHighlight
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Text {
-              text: "Keyboard shortcuts"
-              color: theme.textMuted
-              font.pixelSize: 13
-              font.family: root.uiFont
-              Layout.preferredWidth: 160
-            }
-
-            Button {
-              text: "Open"
-              font.family: root.uiFont
-              onClicked: keyboardDialog.open()
-            }
-
-            Button {
-              text: "Format settings"
-              font.family: root.uiFont
-              onClicked: formatSettingsDialog.open()
-            }
-          }
 
           Text {
             text: "Sync"
@@ -7161,7 +7391,6 @@ ApplicationWindow {
 
                 ColumnLayout {
                   Layout.fillWidth: true
-                  spacing: 2
 
                   Text {
                     text: modelData.name + (modelData.paired ? " • paired" : "")
@@ -7211,12 +7440,49 @@ ApplicationWindow {
               }
             }
           }
+        }
+      }
+    }
 
-          Rectangle {
-            Layout.fillWidth: true
-            height: 1
-            color: theme.panelHighlight
-          }
+    footer: RowLayout {
+      width: parent.width
+      spacing: 10
+      Button {
+        text: "Back"
+        font.family: root.uiFont
+        onClicked: {
+          syncSettingsDialog.close()
+          settingsDialog.open()
+        }
+      }
+      Item { Layout.fillWidth: true }
+      Button {
+        text: "Close"
+        font.family: root.uiFont
+        onClicked: syncSettingsDialog.close()
+      }
+    }
+  }
+
+  Dialog {
+    id: securitySettingsDialog
+    title: "Security Settings"
+    modal: true
+    standardButtons: Dialog.NoButton
+    width: Math.min(720, root.width - 80)
+    height: Math.min(560, root.height - 80)
+
+    contentItem: Rectangle {
+      color: theme.panel
+      radius: 16
+
+      ScrollView {
+        anchors.fill: parent
+        anchors.margins: 12
+
+        ColumnLayout {
+          width: parent.width
+          spacing: 18
 
           Text {
             text: "Security"
@@ -7322,12 +7588,49 @@ ApplicationWindow {
             font.pixelSize: 12
             font.family: root.uiFont
           }
+        }
+      }
+    }
 
-          Rectangle {
-            Layout.fillWidth: true
-            height: 1
-            color: theme.panelHighlight
-          }
+    footer: RowLayout {
+      width: parent.width
+      spacing: 10
+      Button {
+        text: "Back"
+        font.family: root.uiFont
+        onClicked: {
+          securitySettingsDialog.close()
+          settingsDialog.open()
+        }
+      }
+      Item { Layout.fillWidth: true }
+      Button {
+        text: "Close"
+        font.family: root.uiFont
+        onClicked: securitySettingsDialog.close()
+      }
+    }
+  }
+
+  Dialog {
+    id: ttsSettingsDialog
+    title: "Text To Speech"
+    modal: true
+    standardButtons: Dialog.NoButton
+    width: Math.min(720, root.width - 80)
+    height: Math.min(600, root.height - 80)
+
+    contentItem: Rectangle {
+      color: theme.panel
+      radius: 16
+
+      ScrollView {
+        anchors.fill: parent
+        anchors.margins: 12
+
+        ColumnLayout {
+          width: parent.width
+          spacing: 18
 
           Text {
             text: "Text To Speech"
@@ -7460,11 +7763,153 @@ ApplicationWindow {
               Layout.preferredWidth: 48
             }
           }
+        }
+      }
+    }
 
-          Rectangle {
+    footer: RowLayout {
+      width: parent.width
+      spacing: 10
+      Button {
+        text: "Back"
+        font.family: root.uiFont
+        onClicked: {
+          ttsSettingsDialog.close()
+          settingsDialog.open()
+        }
+      }
+      Item { Layout.fillWidth: true }
+      Button {
+        text: "Close"
+        font.family: root.uiFont
+        onClicked: ttsSettingsDialog.close()
+      }
+    }
+  }
+
+  Dialog {
+    id: updatesSettingsDialog
+    title: "Updates"
+    modal: true
+    standardButtons: Dialog.NoButton
+    width: Math.min(620, root.width - 80)
+    height: Math.min(520, root.height - 80)
+
+    contentItem: Rectangle {
+      color: theme.panel
+      radius: 16
+
+      ScrollView {
+        anchors.fill: parent
+        anchors.margins: 12
+
+        ColumnLayout {
+          width: parent.width
+          spacing: 18
+
+          Text {
+            text: "Updates"
+            color: theme.textPrimary
+            font.pixelSize: 20
+            font.family: root.uiFont
+          }
+
+          RowLayout {
             Layout.fillWidth: true
-            height: 1
-            color: theme.panelHighlight
+            spacing: 12
+
+            Button {
+              text: "Check"
+              font.family: root.uiFont
+              enabled: updateManager.canUpdate
+              onClicked: {
+                updateDialog.open()
+                updateManager.checkForUpdates()
+              }
+            }
+
+            Button {
+              text: "Apply"
+              font.family: root.uiFont
+              enabled: updateManager.canUpdate && updateManager.state === UpdateManager.UpdateAvailable
+              onClicked: {
+                updateDialog.open()
+                updateManager.applyUpdate()
+              }
+            }
+
+            Item { Layout.fillWidth: true }
+
+            Button {
+              text: "Details"
+              font.family: root.uiFont
+              onClicked: updateDialog.open()
+            }
+          }
+
+          Text {
+            text: updateManager.status
+            color: theme.textMuted
+            font.pixelSize: 12
+            font.family: root.uiFont
+            visible: updateManager.status.length > 0
+          }
+
+          Text {
+            text: "Current version: " + Qt.application.version
+            color: theme.textMuted
+            font.pixelSize: 12
+            font.family: root.uiFont
+          }
+        }
+      }
+    }
+
+    footer: RowLayout {
+      width: parent.width
+      spacing: 10
+      Button {
+        text: "Back"
+        font.family: root.uiFont
+        onClicked: {
+          updatesSettingsDialog.close()
+          settingsDialog.open()
+        }
+      }
+      Item { Layout.fillWidth: true }
+      Button {
+        text: "Close"
+        font.family: root.uiFont
+        onClicked: updatesSettingsDialog.close()
+      }
+    }
+  }
+
+  Dialog {
+    id: advancedSettingsDialog
+    title: "Advanced Settings"
+    modal: true
+    standardButtons: Dialog.NoButton
+    width: Math.min(720, root.width - 80)
+    height: Math.min(520, root.height - 80)
+
+    contentItem: Rectangle {
+      color: theme.panel
+      radius: 16
+
+      ScrollView {
+        anchors.fill: parent
+        anchors.margins: 12
+
+        ColumnLayout {
+          width: parent.width
+          spacing: 18
+
+          Text {
+            text: "Advanced"
+            color: theme.textPrimary
+            font.pixelSize: 20
+            font.family: root.uiFont
           }
 
           RowLayout {
@@ -7498,8 +7943,26 @@ ApplicationWindow {
         }
       }
     }
-  }
 
+    footer: RowLayout {
+      width: parent.width
+      spacing: 10
+      Button {
+        text: "Back"
+        font.family: root.uiFont
+        onClicked: {
+          advancedSettingsDialog.close()
+          settingsDialog.open()
+        }
+      }
+      Item { Layout.fillWidth: true }
+      Button {
+        text: "Close"
+        font.family: root.uiFont
+        onClicked: advancedSettingsDialog.close()
+      }
+    }
+  }
   Dialog {
     id: aboutDialog
     title: "About & Licenses"
