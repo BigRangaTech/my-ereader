@@ -478,7 +478,10 @@ ApplicationWindow {
            setupDialog.visible || unlockDialog.visible || lockDialog.visible ||
            updateDialog.visible || restartDialog.visible ||
            keyboardDialog.visible || formatSettingsDialog.visible ||
-           settingsDialog.visible || aboutDialog.visible
+           settingsDialog.visible || syncSettingsDialog.visible ||
+           securitySettingsDialog.visible || ttsSettingsDialog.visible ||
+           updatesSettingsDialog.visible || advancedSettingsDialog.visible ||
+           aboutDialog.visible
   }
 
   function isTextInputFocused() {

@@ -19,6 +19,7 @@ ApplicationWindow {
   readonly property string monoFont: "JetBrains Mono"
   property var imageReaderItem: null
   readonly property bool isAndroid: Qt.platform.os === "android"
+  readonly property bool isPortrait: height >= width
   readonly property var screenGeom: Screen.geometry
   readonly property var availGeom: Screen.availableGeometry
   readonly property real safeLeft: (screenGeom && availGeom)
@@ -2576,15 +2577,15 @@ ApplicationWindow {
         spacing: 8
 
         Rectangle {
-          height: 72
+          height: root.isAndroid ? (root.isPortrait ? 48 : 56) : 72
           radius: 12
           color: theme.panelHighlight
           Layout.fillWidth: true
 
           RowLayout {
             anchors.fill: parent
-            anchors.margins: 12
-            spacing: 12
+            anchors.margins: root.isAndroid ? (root.isPortrait ? 8 : 10) : 12
+            spacing: root.isAndroid ? (root.isPortrait ? 8 : 10) : 12
 
             Button {
               text: "Prev"
@@ -2653,6 +2654,7 @@ ApplicationWindow {
           Layout.fillHeight: true
           contentWidth: textBlock.width
           contentHeight: textBlock.height
+          flickableDirection: Flickable.VerticalFlick
           clip: true
 
           TextEdit {
@@ -2689,14 +2691,16 @@ ApplicationWindow {
     Item {
       id: imageReaderView
       clip: true
-      property real controlBarHeight: root.isAndroid ? 44 : 72
-      property real controlFontSize: root.isAndroid ? 11 : 14
+      property real controlBarHeight: root.isAndroid ? (root.isPortrait ? 40 : 44) : 72
+      property real controlFontSize: root.isAndroid ? (root.isPortrait ? 10 : 11) : 14
+      property real controlMargin: root.isAndroid ? (root.isPortrait ? 3 : 4) : 10
       property real zoom: 1.0
       property real minZoom: settings.comicMinZoom
       property real maxZoom: settings.comicMaxZoom
       property real zoomStep: settings.comicZoomStep
       property real pinchStartZoom: 1.0
       property bool pinching: false
+      property real targetZoom: 1.0
       property string fitMode: "page" // page, width, height
       property real baseScale: 1.0
       property real sourceW: 1.0
@@ -2828,9 +2832,9 @@ ApplicationWindow {
           anchors.left: parent.left
           anchors.right: parent.right
           anchors.top: parent.top
-          anchors.leftMargin: root.isAndroid ? 2 : 8
-          anchors.rightMargin: root.isAndroid ? 2 : 8
-          anchors.topMargin: root.isAndroid ? 2 : 8
+          anchors.leftMargin: root.isAndroid ? (root.isPortrait ? 1 : 2) : 8
+          anchors.rightMargin: root.isAndroid ? (root.isPortrait ? 1 : 2) : 8
+          anchors.topMargin: root.isAndroid ? (root.isPortrait ? 1 : 2) : 8
           height: imageReaderView.controlBarHeight
           radius: 8
           color: theme.panelHighlight
@@ -2839,7 +2843,7 @@ ApplicationWindow {
           Flickable {
             id: imageControlsFlick
             anchors.fill: parent
-            anchors.margins: root.isAndroid ? 4 : 10
+            anchors.margins: imageReaderView.controlMargin
             contentWidth: imageControlsRow.implicitWidth + 4
             contentHeight: height
             clip: true
@@ -2963,7 +2967,7 @@ ApplicationWindow {
           anchors.topMargin: root.isAndroid ? 4 : 8
           contentWidth: Math.max(imageRow.width, width)
           contentHeight: Math.max(imageRow.height, height)
-          interactive: !imageReaderView.pinching
+          interactive: imageReaderView.zoom > 1.01 || imageReaderView.pinching
           clip: true
           boundsBehavior: Flickable.StopAtBounds
           onWidthChanged: imageReaderView.recomputeBase()
@@ -2988,11 +2992,16 @@ ApplicationWindow {
               imageReaderView.pinching = active
               if (active) {
                 imageReaderView.pinchStartZoom = imageReaderView.zoom
+                imageReaderView.targetZoom = imageReaderView.zoom
               }
             }
             onScaleChanged: {
               if (active) {
-                imageReaderView.zoom = imageReaderView.clampZoom(imageReaderView.pinchStartZoom * scale)
+                const desired = imageReaderView.clampZoom(imageReaderView.pinchStartZoom * scale)
+                imageReaderView.targetZoom = desired
+                imageReaderView.zoom = imageReaderView.clampZoom(
+                  imageReaderView.zoom + (desired - imageReaderView.zoom) * 0.35
+                )
               }
             }
           }
@@ -3005,7 +3014,7 @@ ApplicationWindow {
             yAxis.enabled: false
             minimumPointCount: 1
             maximumPointCount: 1
-            grabPermissions: PointerHandler.ApprovesTakeOverByAnything
+            grabPermissions: PointerHandler.CanTakeOverFromAnything
 
             property real startX: 0
             property real startY: 0
@@ -4812,7 +4821,7 @@ ApplicationWindow {
           anchors.left: parent.left
           anchors.right: parent.right
           anchors.top: parent.top
-          height: root.isAndroid ? 48 : 64
+          height: root.isAndroid ? (root.isPortrait ? 44 : 48) : 64
           radius: 16
           color: theme.panel
           z: 2
@@ -4821,7 +4830,7 @@ ApplicationWindow {
           Flickable {
             id: readerTopFlick
             anchors.fill: parent
-            anchors.margins: root.isAndroid ? 8 : 18
+            anchors.margins: root.isAndroid ? (root.isPortrait ? 6 : 8) : 18
             contentWidth: readerTopRow.implicitWidth + 4
             contentHeight: height
             boundsBehavior: Flickable.StopAtBounds

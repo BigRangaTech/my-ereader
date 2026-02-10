@@ -32,15 +32,12 @@ Active work centers on UI, sync, security/vault, and Flatpak packaging.
 - **Android reader top bar:** top bar controls are now in a horizontal Flickable on Android to prevent buttons from going off-screen.
 - **Android reader pinch:** image flick disables interaction while pinching or when zoomed for panning; image swipe handler can take over from other handlers for single-finger page swipes.
 - **Android settings panels:** settings section cards now derive implicit height from content to avoid overlapping/squished layout.
+- **Android reader sizing:** portrait mode uses slightly smaller top bars and controls; pinch zoom smoothing added to reduce jitter.
 
 ## Current task in progress
-Refactor Settings UI: convert long settings list into shorter settings panel with buttons to open:
-1) **Keyboard Shortcuts** dialog
-2) **Format Settings** dialog (contains all per-format settings)
-
-Work pending:
-- Move the large per-format settings block out of `settingsDialog` and into a new `formatSettingsDialog`.
-- Insert `keyboardDialog` and `formatSettingsDialog` into `Main.qml`.
+Desktop Settings UI refactor completed:
+- Per-format settings live in `formatSettingsDialog`.
+- `keyboardDialog` and `formatSettingsDialog` are wired in `Main.qml`.
 
 ## Android UI notes
 - If the system file picker greys out CBZ/CBR, Android SAF may be filtering by MIME type. Current workaround is `All files (*)` on Android.
